@@ -151,6 +151,22 @@ class FinanceProvider extends ChangeNotifier {
     await refreshAll();
   }
 
+  Future<void> updateSavingsGoal({
+    required int id,
+    required String title,
+    required double targetAmount,
+    required String createdAt,
+  }) async {
+    final goal = SavingsGoal(
+      id: id,
+      title: title,
+      targetAmount: targetAmount,
+      createdAt: createdAt,
+    );
+    await DatabaseHelper.instance.updateSavingsGoal(goal);
+    await refreshAll();
+  }
+
   Future<void> addSavingTransaction({
     required int goalId,
     required double amount,

@@ -125,8 +125,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }).toList();
 
     // Compute totals for this month/filter
-    final double monthIncome = filtered.fold(0.0, (acc, tx) => tx.type == 'income' ? acc + tx.amount : acc);
-    final double monthExpense = filtered.fold(0.0, (acc, tx) => tx.type == 'expense' ? acc + tx.amount : acc);
+    final double monthIncome = filtered
+        .where((tx) => !(tx.type == 'income' && tx.savingsGoalId != null))
+        .fold(0.0, (acc, tx) => tx.type == 'income' ? acc + tx.amount : acc);
+    final double monthExpense = filtered.fold(0.0, (acc, tx) {
+      if (tx.type == 'expense') {
+        return acc + tx.amount;
+      } else if (tx.type == 'income' && tx.savingsGoalId != null) {
+        return acc - tx.amount;
+      }
+      return acc;
+    });
 
     // Group by date
     final Map<String, List<FinanceTransaction>> grouped = {};

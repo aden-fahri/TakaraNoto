@@ -417,9 +417,7 @@ class _BudgetTile extends StatelessWidget {
                               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.darkPlum)),
                           Text(
                             hasBudget
-                                ? (budget.budgetType == 'daily_limit'
-                                    ? 'Sisa: ${provider.formatCurrency(remaining)} (${provider.formatCurrency(budget.limitAmount)}/hr)'
-                                    : 'Sisa: ${provider.formatCurrency(remaining)} (Tujuan)')
+                                ? 'Sisa: ${provider.formatCurrency(remaining)}'
                                 : 'Belum diatur',
                             style: const TextStyle(fontSize: 11, color: AppTheme.mutedLightPlum),
                           ),
@@ -432,11 +430,9 @@ class _BudgetTile extends StatelessWidget {
                         children: [
                           Text(provider.formatCurrency(limit),
                               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.darkPlum)),
-                          Text(
-                            budget.budgetType == 'daily_limit'
-                                ? 'Batas bulanan'
-                                : 'Target tujuan',
-                            style: const TextStyle(fontSize: 10, color: AppTheme.mutedLightPlum),
+                          const Text(
+                            'Batas bulanan',
+                            style: TextStyle(fontSize: 10, color: AppTheme.mutedLightPlum),
                           ),
                         ],
                       ),

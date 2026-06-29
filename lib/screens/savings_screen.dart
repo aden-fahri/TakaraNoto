@@ -30,6 +30,13 @@ class SavingsScreen extends StatelessWidget {
     );
   }
 
+  void _showEditGoalDialog(BuildContext context, SavingsGoal goal) {
+    showDialog(
+      context: context,
+      builder: (ctx) => _EditSavingsGoalDialog(goal: goal),
+    );
+  }
+
   void _showAddSavingDialog(BuildContext context, SavingsGoal goal) {
     showDialog(
       context: context,
@@ -304,7 +311,7 @@ class SavingsScreen extends StatelessWidget {
                                             child: Column(
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
-                                                // Header: Title & Trash icon
+                                                // Header: Title & Edit & Trash icon
                                                 Row(
                                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                   children: [
@@ -318,6 +325,17 @@ class SavingsScreen extends StatelessWidget {
                                                         ),
                                                       ),
                                                     ),
+                                                    IconButton(
+                                                      onPressed: () => _showEditGoalDialog(context, goal),
+                                                      padding: EdgeInsets.zero,
+                                                      constraints: const BoxConstraints(),
+                                                      icon: const Icon(
+                                                        Icons.edit_outlined,
+                                                        size: 18,
+                                                        color: AppTheme.mutedLightPlum,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 12),
                                                     IconButton(
                                                       onPressed: () => _showDeleteConfirmDialog(context, goal),
                                                       padding: EdgeInsets.zero,
@@ -1151,3 +1169,172 @@ class _WithdrawFundsDialogState extends State<_WithdrawFundsDialog> {
     );
   }
 }
+
+// ─── Dialog: Edit Savings Goal ────────────────────────────────────────────────
+class _EditSavingsGoalDialog extends StatefulWidget {
+  final SavingsGoal goal;
+  const _EditSavingsGoalDialog({required this.goal});
+
+  @override
+  State<_EditSavingsGoalDialog> createState() => _EditSavingsGoalDialogState();
+}
+
+class _EditSavingsGoalDialogState extends State<_EditSavingsGoalDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _titleCtrl;
+  late final TextEditingController _amountCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleCtrl = TextEditingController(text: widget.goal.title);
+    _amountCtrl = TextEditingController(
+      text: NumberFormat.decimalPattern('id').format(widget.goal.targetAmount),
+    );
+  }
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _amountCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onAmountChanged(String text) {
+    if (text.isEmpty) return;
+    final clean = text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (clean.isEmpty) {
+      _amountCtrl.text = '';
+      return;
+    }
+    final formatted = NumberFormat.decimalPattern('id').format(double.parse(clean));
+    _amountCtrl.value = TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+
+    final cleanAmount = _amountCtrl.text.replaceAll('.', '');
+    final amount = double.tryParse(cleanAmount);
+    if (amount == null || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Masukkan nominal target yang valid!')),
+      );
+      return;
+    }
+
+    final title = _titleCtrl.text.trim();
+
+    Provider.of<FinanceProvider>(context, listen: false).updateSavingsGoal(
+      id: widget.goal.id!,
+      title: title,
+      targetAmount: amount,
+      createdAt: widget.goal.createdAt,
+    );
+
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Target "$title" berhasil diperbarui!')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Ubah Target Tabungan'),
+      content: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Nama Target',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.mutedLightPlum),
+              ),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: _titleCtrl,
+                autofocus: true,
+                style: const TextStyle(fontSize: 14, color: AppTheme.darkPlum),
+                decoration: InputDecoration(
+                  hintText: 'Misal: Beli Laptop Baru',
+                  fillColor: AppTheme.surfaceHeroLight.withValues(alpha: 0.3),
+                  filled: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppTheme.borderLight),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppTheme.darkPlum, width: 1.5),
+                  ),
+                ),
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return 'Nama target tidak boleh kosong';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                'Nominal Target (Rp)',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.mutedLightPlum),
+              ),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: _amountCtrl,
+                keyboardType: TextInputType.number,
+                style: const TextStyle(fontSize: 14, color: AppTheme.darkPlum, fontWeight: FontWeight.w700),
+                onChanged: _onAmountChanged,
+                decoration: InputDecoration(
+                  hintText: '0',
+                  fillColor: AppTheme.surfaceHeroLight.withValues(alpha: 0.3),
+                  filled: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppTheme.borderLight),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppTheme.darkPlum, width: 1.5),
+                  ),
+                ),
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return 'Nominal target tidak boleh kosong';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Batal'),
+        ),
+        ElevatedButton(
+          onPressed: _submit,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.darkPlum,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+          child: const Text('Simpan Perubahan', style: TextStyle(fontWeight: FontWeight.w700)),
+        ),
+      ],
+    );
+  }
+}
+

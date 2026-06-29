@@ -525,7 +525,11 @@ class _WeeklyBarChart extends StatelessWidget {
         }
 
         if (tx.type == 'income') {
-          weeklyIncome[weekIndex] += tx.amount;
+          if (tx.savingsGoalId != null) {
+            weeklyExpense[weekIndex] -= tx.amount;
+          } else {
+            weeklyIncome[weekIndex] += tx.amount;
+          }
         } else {
           weeklyExpense[weekIndex] += tx.amount;
         }

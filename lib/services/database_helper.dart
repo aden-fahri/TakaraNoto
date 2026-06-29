@@ -380,6 +380,25 @@ class DatabaseHelper {
     return await db.delete('savings_goals', where: 'id = ?', whereArgs: [id]);
   }
 
+  Future<int> updateSavingsGoal(SavingsGoal goal) async {
+    if (kIsWeb) {
+      final idx = _webSavingsGoals.indexWhere((g) => g.id == goal.id);
+      if (idx != -1) {
+        _webSavingsGoals[idx] = goal;
+        return 1;
+      }
+      return 0;
+    }
+
+    final db = await instance.database;
+    return await db.update(
+      'savings_goals',
+      goal.toMap(),
+      where: 'id = ?',
+      whereArgs: [goal.id],
+    );
+  }
+
   // --- Aggregate Queries ---
 
   Future<List<Map<String, dynamic>>> getCategorySpending(String monthYear) async {
