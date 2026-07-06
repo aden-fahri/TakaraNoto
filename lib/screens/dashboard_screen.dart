@@ -4,6 +4,8 @@ import '../providers/finance_provider.dart';
 import '../models/transaction.dart';
 import '../theme/app_theme.dart';
 import '../widgets/add_transaction_modal.dart';
+import 'topup_screen.dart';
+import 'monthly_balance_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -132,6 +134,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             provider: provider,
             onPrev: () => _prevMonth(provider),
             onNext: () => _nextMonth(provider),
+            onBalanceTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MonthlyBalanceScreen())),
           ),
 
           // ══ SCROLLABLE CONTENT ════════════════════════════════════════════
@@ -148,6 +151,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       children: [
                         // Quick stats row
                         _QuickStatsRow(txCount: monthlyTxs.length),
+                        const SizedBox(height: 16),
+
+                        // E-Wallet shortcut card
+                        _EWalletCard(
+                          balance: provider.topupBalance,
+                          provider: provider,
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TopupScreen())),
+                        ),
                         const SizedBox(height: 28),
 
                         // Section header
@@ -224,7 +235,7 @@ class _DashboardBanner extends StatelessWidget {
   final double balance, income, expense;
   final Color balanceColor;
   final FinanceProvider provider;
-  final VoidCallback onPrev, onNext;
+  final VoidCallback onPrev, onNext, onBalanceTap;
 
   const _DashboardBanner({
     required this.greeting,
@@ -236,6 +247,7 @@ class _DashboardBanner extends StatelessWidget {
     required this.provider,
     required this.onPrev,
     required this.onNext,
+    required this.onBalanceTap,
   });
 
   @override
@@ -366,13 +378,22 @@ class _DashboardBanner extends StatelessWidget {
                         ),
                         const SizedBox(height: 14),
 
-                        // Balance label + value
-                        const Text(
-                          'Saldo Bersih',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: AppTheme.mutedDarkLavender,
+                        // Balance label + value (tappable to open monthly history)
+                        GestureDetector(
+                          onTap: onBalanceTap,
+                          child: Row(
+                            children: [
+                              const Text(
+                                'Saldo Bersih',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppTheme.mutedDarkLavender,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.arrow_forward_ios_rounded, size: 9, color: AppTheme.mutedDarkLavender),
+                            ],
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -533,6 +554,108 @@ class _QuickChip extends StatelessWidget {
     );
   }
 }
+
+// ─── E-Wallet Card ─────────────────────────────────────────────────────────────
+class _EWalletCard extends StatelessWidget {
+  final double balance;
+  final FinanceProvider provider;
+  final VoidCallback onTap;
+  const _EWalletCard({required this.balance, required this.provider, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? AppTheme.lighterPlum : Colors.white;
+    final borderCol = isDark ? AppTheme.borderDark : AppTheme.borderLight;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: borderCol),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.1 : 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Icon badge
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF3f51b5), Color(0xFF5c6bc0)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF3f51b5).withValues(alpha: 0.35),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.account_balance_wallet_rounded, color: Colors.white, size: 22),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Dompet E-Wallet',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: isDark ? AppTheme.mutedDarkLavender : AppTheme.mutedLightPlum,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    provider.formatCurrency(balance),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? AppTheme.warmCream : AppTheme.darkPlum,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0xFF3f51b5).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Row(
+                children: [
+                  Text('Kelola', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF3f51b5))),
+                  SizedBox(width: 3),
+                  Icon(Icons.arrow_forward_ios_rounded, size: 9, color: Color(0xFF3f51b5)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 
 // ─── Transaction Card ─────────────────────────────────────────────────────────
 class _TxCard extends StatelessWidget {

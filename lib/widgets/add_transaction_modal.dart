@@ -9,7 +9,8 @@ import 'manage_categories_modal.dart';
 
 class AddTransactionModal extends StatefulWidget {
   final FinanceTransaction? editTransaction;
-  const AddTransactionModal({super.key, this.editTransaction});
+  final String walletType;
+  const AddTransactionModal({super.key, this.editTransaction, this.walletType = 'main'});
 
   @override
   State<AddTransactionModal> createState() => _AddTransactionModalState();
@@ -37,6 +38,10 @@ class _AddTransactionModalState extends State<AddTransactionModal>
     _pillSlide = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _toggleAnim, curve: Curves.easeInOut),
     );
+
+    if (widget.walletType == 'topup') {
+      _type = 'expense';
+    }
 
     if (widget.editTransaction != null) {
       final tx = widget.editTransaction!;
@@ -131,6 +136,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
         date: dateStr,
         note: _noteCtrl.text.trim(),
         savingsGoalId: finalGoalId,
+        walletType: widget.walletType,
       );
     } else {
       provider.addTx(
@@ -140,6 +146,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
         date: dateStr,
         note: _noteCtrl.text.trim(),
         savingsGoalId: finalGoalId,
+        walletType: widget.walletType,
       );
     }
     Navigator.pop(context);
@@ -194,9 +201,14 @@ class _AddTransactionModalState extends State<AddTransactionModal>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final typeColor = _type == 'income' ? AppTheme.emeraldGreen : AppTheme.roseRed;
-    final filteredCats = provider.categories.where((c) => c.type == _type).toList();
+    final filteredCats = provider.categories
+        .where((c) => c.type == _type)
+        .where((c) => widget.walletType == 'topup' ? (c.name != 'Top Up' && c.name != 'Tabungan' && c.name != 'Tarik Tabungan') : true)
+        .toList();
     if (_selectedCategoryId == null && filteredCats.isNotEmpty) {
       _selectedCategoryId = filteredCats.first.id;
+    } else if (_selectedCategoryId != null && !filteredCats.any((c) => c.id == _selectedCategoryId)) {
+      _selectedCategoryId = filteredCats.isNotEmpty ? filteredCats.first.id : null;
     }
     final borderCol = isDark ? AppTheme.borderDark : AppTheme.borderLight;
     final modalBg = isDark ? AppTheme.lighterPlum : Colors.white;
@@ -266,16 +278,18 @@ class _AddTransactionModalState extends State<AddTransactionModal>
             const SizedBox(height: 20),
 
             // Animated type toggle
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: _AnimatedTypeToggle(
-                type: _type,
-                pillSlide: _pillSlide,
-                isDark: isDark,
-                onChanged: _setType,
+            if (widget.walletType != 'topup') ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _AnimatedTypeToggle(
+                  type: _type,
+                  pillSlide: _pillSlide,
+                  isDark: isDark,
+                  onChanged: _setType,
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
+            ],
 
             // Scrollable form body
             Expanded(

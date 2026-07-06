@@ -15,6 +15,10 @@ class FinanceProvider extends ChangeNotifier {
   Map<String, double> _monthlyTotals = {'income': 0.0, 'expense': 0.0};
   bool _isLoading = false;
 
+  double _topupBalance = 0.0;
+  List<FinanceTransaction> _topupTransactions = [];
+  List<Map<String, dynamic>> _monthlyNetHistory = [];
+
   // Getters
   List<FinanceTransaction> get transactions => _transactions;
   List<Category> get categories => _categories;
@@ -23,6 +27,10 @@ class FinanceProvider extends ChangeNotifier {
   String get currentMonth => _currentMonth;
   Map<String, double> get monthlyTotals => _monthlyTotals;
   bool get isLoading => _isLoading;
+
+  double get topupBalance => _topupBalance;
+  List<FinanceTransaction> get topupTransactions => _topupTransactions;
+  List<Map<String, dynamic>> get monthlyNetHistory => _monthlyNetHistory;
 
   bool get hasBudgetAlert {
     for (final b in _budgets) {
@@ -54,10 +62,13 @@ class FinanceProvider extends ChangeNotifier {
 
   Future<void> refreshAll() async {
     try {
-      _transactions = await DatabaseHelper.instance.getTransactions();
+      _transactions = await DatabaseHelper.instance.getTransactions(walletType: 'main');
       _categories = await DatabaseHelper.instance.getCategories();
       _savingsGoals = await DatabaseHelper.instance.getSavingsGoals();
       _budgets = await DatabaseHelper.instance.getBudgets(_currentMonth);
+      _topupBalance = await DatabaseHelper.instance.getTopupWalletBalance();
+      _topupTransactions = await DatabaseHelper.instance.getTopupTransactions();
+      _monthlyNetHistory = await DatabaseHelper.instance.getMonthlyNetBalanceHistory();
       await refreshMonthlyDetails();
     } catch (e) {
       debugPrint('Error refreshing provider data: $e');
@@ -69,6 +80,9 @@ class FinanceProvider extends ChangeNotifier {
       _monthlyTotals = await DatabaseHelper.instance.getMonthlyTotals(_currentMonth);
       _savingsGoals = await DatabaseHelper.instance.getSavingsGoals();
       _budgets = await DatabaseHelper.instance.getBudgets(_currentMonth);
+      _topupBalance = await DatabaseHelper.instance.getTopupWalletBalance();
+      _topupTransactions = await DatabaseHelper.instance.getTopupTransactions();
+      _monthlyNetHistory = await DatabaseHelper.instance.getMonthlyNetBalanceHistory();
       notifyListeners();
     } catch (e) {
       debugPrint('Error refreshing monthly details: $e');
@@ -89,6 +103,7 @@ class FinanceProvider extends ChangeNotifier {
     required String date,
     required String note,
     int? savingsGoalId,
+    String walletType = 'main',
   }) async {
     final tx = FinanceTransaction(
       categoryId: categoryId,
@@ -97,6 +112,7 @@ class FinanceProvider extends ChangeNotifier {
       date: date,
       note: note,
       savingsGoalId: savingsGoalId,
+      walletType: walletType,
     );
     await DatabaseHelper.instance.addTransaction(tx);
     await refreshAll();
@@ -115,6 +131,7 @@ class FinanceProvider extends ChangeNotifier {
     required String date,
     required String note,
     int? savingsGoalId,
+    String walletType = 'main',
   }) async {
     final tx = FinanceTransaction(
       id: id,
@@ -124,6 +141,7 @@ class FinanceProvider extends ChangeNotifier {
       date: date,
       note: note,
       savingsGoalId: savingsGoalId,
+      walletType: walletType,
     );
     await DatabaseHelper.instance.updateTransaction(tx);
     await refreshAll();

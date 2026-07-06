@@ -6,6 +6,7 @@ class FinanceTransaction {
   final String date; // YYYY-MM-DD
   final String note;
   final int? savingsGoalId; // Links to savings_goals(id)
+  final String walletType; // 'main' or 'topup'
   
   // Join properties
   final String? categoryName;
@@ -20,6 +21,7 @@ class FinanceTransaction {
     required this.date,
     required this.note,
     this.savingsGoalId,
+    this.walletType = 'main',
     this.categoryName,
     this.categoryIcon,
     this.categoryColor,
@@ -34,6 +36,7 @@ class FinanceTransaction {
       'date': date,
       'note': note,
       'savings_goal_id': savingsGoalId,
+      'wallet_type': walletType,
     };
   }
 
@@ -46,6 +49,7 @@ class FinanceTransaction {
       date: map['date'] as String,
       note: map['note'] as String? ?? '',
       savingsGoalId: map['savings_goal_id'] as int?,
+      walletType: map['wallet_type'] as String? ?? 'main',
       categoryName: map['category_name'] as String?,
       categoryIcon: map['category_icon'] as String?,
       categoryColor: map['category_color'] as String?,
