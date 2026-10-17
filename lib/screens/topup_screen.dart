@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../providers/finance_provider.dart';
 import '../models/transaction.dart';
 import '../theme/app_theme.dart';
+import '../theme/app_tokens.dart';
 import '../widgets/add_transaction_modal.dart';
 
 class TopupScreen extends StatelessWidget {
@@ -17,16 +19,14 @@ class TopupScreen extends StatelessWidget {
     );
   }
 
+  void _showTransferDialog(BuildContext context, bool toTopup) {
+    showDialog(
+      context: context,
+      builder: (_) => _WalletTransferDialog(toTopup: toTopup),
+    );
+  }
+
   void _showEditExpense(BuildContext context, FinanceTransaction tx) {
-    // Only allow editing/deleting top-up expenses (walletType = topup)
-    // Additions (walletType = main) should be managed from the main dashboard
-    if (tx.walletType != 'topup') {
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ubah atau hapus transaksi pengisian saldo (Top Up) melalui Dashboard utama.')),
-      );
-      return;
-    }
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -60,17 +60,17 @@ class TopupScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     final provider = Provider.of<FinanceProvider>(context);
     final txs = provider.topupTransactions;
     final balance = provider.topupBalance;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final bannerBg = isDark ? AppTheme.deepPlum : AppTheme.darkPlum;
-    final cardBg = isDark ? AppTheme.lighterPlum : Colors.white;
-    final borderCol = isDark ? AppTheme.borderDark : AppTheme.borderLight;
+    final bannerBg = tokens.headerBg;
+    final cardBg = tokens.card;
+    final borderCol = tokens.border;
 
     return Scaffold(
-      backgroundColor: isDark ? AppTheme.deepPlum : AppTheme.warmCream,
+      backgroundColor: tokens.pageBg,
       body: Column(
         children: [
           // ─── PLUM BANNER ────────────────────────────────────────────────────
@@ -97,19 +97,20 @@ class TopupScreen extends StatelessWidget {
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(10),
+                              color: tokens.headerSurface,
+                              borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+                              border: Border.all(color: tokens.headerBorder, width: 1),
                             ),
-                            child: const Icon(Icons.arrow_back_rounded, size: 18, color: AppTheme.warmCream),
+                            child: Icon(Icons.arrow_back_rounded, size: 18, color: tokens.headerFg),
                           ),
                         ),
                         const SizedBox(width: 14),
-                        const Text(
+                        Text(
                           'Dompet E-Wallet',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w800,
-                            color: AppTheme.warmCream,
+                            color: tokens.headerFg,
                           ),
                         ),
                       ],
@@ -121,10 +122,10 @@ class TopupScreen extends StatelessWidget {
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.1),
+                        color: tokens.headerSurface,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.15),
+                          color: tokens.headerBorder,
                           width: 1,
                         ),
                       ),
@@ -134,12 +135,12 @@ class TopupScreen extends StatelessWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
+                              Text(
                                 'Saldo E-Wallet Saat Ini',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
-                                  color: AppTheme.mutedDarkLavender,
+                                  color: tokens.headerMuted,
                                 ),
                               ),
                               Container(
@@ -159,35 +160,65 @@ class TopupScreen extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(height: 6),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              provider.formatCurrency(balance),
+                              style: TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.w800,
+                                color: tokens.headerFg,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Expanded(
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    provider.formatCurrency(balance),
-                                    style: const TextStyle(
-                                      fontSize: 32,
-                                      fontWeight: FontWeight.w800,
-                                      color: AppTheme.warmCream,
-                                    ),
+                                child: ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: tokens.headerFg,
+                                    foregroundColor: tokens.headerBg,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                                    elevation: 2,
+                                    textStyle: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700),
                                   ),
+                                  onPressed: () => _showTransferDialog(context, true),
+                                  icon: const Icon(Icons.add_rounded, size: 14),
+                                  label: const Text('Isi Saldo'),
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppTheme.warmCream,
-                                  foregroundColor: AppTheme.darkPlum,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                  elevation: 2,
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: tokens.headerFg,
+                                    side: BorderSide(color: tokens.headerBorder),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                                    textStyle: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700),
+                                  ),
+                                  onPressed: () => _showTransferDialog(context, false),
+                                  icon: const Icon(Icons.arrow_upward_rounded, size: 14),
+                                  label: const Text('Tarik'),
                                 ),
-                                onPressed: () => _showAddExpense(context),
-                                icon: const Icon(Icons.add_shopping_cart_rounded, size: 14),
-                                label: const Text('Keluar Uang', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: tokens.headerFg,
+                                    side: BorderSide(color: tokens.headerBorder),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                                    textStyle: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700),
+                                  ),
+                                  onPressed: () => _showAddExpense(context),
+                                  icon: const Icon(Icons.shopping_cart_rounded, size: 14),
+                                  label: const Text('Keluar'),
+                                ),
                               ),
                             ],
                           ),
@@ -213,22 +244,22 @@ class TopupScreen extends StatelessWidget {
                             width: 72,
                             height: 72,
                             decoration: BoxDecoration(
-                              color: AppTheme.surfaceHeroLight,
+                              color: tokens.softSurface,
                               shape: BoxShape.circle,
                               border: Border.all(color: borderCol),
                             ),
-                            child: const Icon(Icons.receipt_long_outlined, size: 32, color: AppTheme.mutedLightPlum),
+                            child: Icon(Icons.receipt_long_outlined, size: 32, color: tokens.textMuted),
                           ),
                           const SizedBox(height: 16),
                           Text(
                             'Belum ada transaksi e-wallet',
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: isDark ? AppTheme.warmCream : AppTheme.darkPlum),
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: tokens.textPrimary),
                           ),
                           const SizedBox(height: 8),
-                          const Text(
-                            'Gunakan kategori "Top Up" di Dashboard utama untuk mendanai e-wallet Anda.',
+                          Text(
+                            'Tekan "Isi Saldo" untuk menambah saldo dari dompet utama, atau gunakan kategori "Top Up" di Dashboard.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 12, color: AppTheme.mutedLightPlum, height: 1.6),
+                            style: TextStyle(fontSize: 12, color: tokens.textMuted, height: 1.6),
                           ),
                         ],
                       ),
@@ -241,7 +272,7 @@ class TopupScreen extends StatelessWidget {
                       final tx = txs[index];
                       final catColor = _color(tx.categoryColor ?? '#95a5a6');
                       final isAdd = tx.type == 'income'; // Force display as income if it is a topup addition
-                      final txColor = isAdd ? AppTheme.emeraldGreen : AppTheme.roseRed;
+                      final txColor = isAdd ? tokens.income : tokens.expense;
                       final sign = isAdd ? '+' : '-';
 
                       return Card(
@@ -281,11 +312,11 @@ class TopupScreen extends StatelessWidget {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        tx.categoryName ?? 'Kategori',
+                                        tx.displayName,
                                         style: TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w700,
-                                          color: isDark ? AppTheme.warmCream : AppTheme.darkPlum,
+                                          color: tokens.textPrimary,
                                         ),
                                       ),
                                       if (tx.note.isNotEmpty) ...[
@@ -294,13 +325,13 @@ class TopupScreen extends StatelessWidget {
                                           tx.note,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(fontSize: 11, color: AppTheme.mutedLightPlum),
+                                          style: TextStyle(fontSize: 11, color: tokens.textMuted),
                                         ),
                                       ],
                                       const SizedBox(height: 2),
                                       Text(
                                         tx.date,
-                                        style: const TextStyle(fontSize: 10, color: AppTheme.mutedLightPlum),
+                                        style: TextStyle(fontSize: 10, color: tokens.textMuted),
                                       ),
                                     ],
                                   ),
@@ -325,6 +356,249 @@ class TopupScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ─── Dialog: Transfer funds between main wallet and e-wallet ─────────────────
+class _WalletTransferDialog extends StatefulWidget {
+  final bool toTopup;
+  const _WalletTransferDialog({required this.toTopup});
+
+  @override
+  State<_WalletTransferDialog> createState() => _WalletTransferDialogState();
+}
+
+class _WalletTransferDialogState extends State<_WalletTransferDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _amountCtrl = TextEditingController();
+  final _noteCtrl = TextEditingController();
+  DateTime _date = DateTime.now();
+
+  bool get _toTopup => widget.toTopup;
+
+  @override
+  void dispose() {
+    _amountCtrl.dispose();
+    _noteCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onAmountChanged(String text) {
+    if (text.isEmpty) return;
+    final clean = text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (clean.isEmpty) {
+      _amountCtrl.text = '';
+      return;
+    }
+    final formatted = NumberFormat.decimalPattern('id').format(double.parse(clean));
+    _amountCtrl.value = TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+
+  Future<void> _selectDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _date,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2101),
+    );
+    if (picked != null && mounted) setState(() => _date = picked);
+  }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+
+    final cleanAmount = _amountCtrl.text.replaceAll('.', '');
+    final amount = double.tryParse(cleanAmount);
+    if (amount == null || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Masukkan nominal yang valid!')),
+      );
+      return;
+    }
+
+    final provider = Provider.of<FinanceProvider>(context, listen: false);
+    if (!_toTopup && amount > provider.topupBalance) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Saldo e-wallet tidak cukup! Maksimal: ${provider.formatCurrency(provider.topupBalance)}',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final note = _noteCtrl.text.trim().isEmpty
+        ? (_toTopup ? 'Isi saldo e-wallet' : 'Tarik saldo ke dompet utama')
+        : _noteCtrl.text.trim();
+    final dateStr = DateFormat('yyyy-MM-dd').format(_date);
+
+    provider.makeTransfer(
+      toTopup: _toTopup,
+      amount: amount,
+      date: dateStr,
+      note: note,
+    );
+
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          _toTopup
+              ? 'Berhasil mengisi saldo e-wallet ${provider.formatCurrency(amount)}!'
+              : 'Berhasil menarik ${provider.formatCurrency(amount)} ke dompet utama!',
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    const transferColor = Color(0xFF3f51b5);
+
+    return AlertDialog(
+      title: Text(_toTopup ? 'Isi Saldo E-Wallet' : 'Tarik ke Dompet Utama'),
+      content: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: transferColor.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: transferColor.withValues(alpha: 0.25)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.swap_horiz_rounded, size: 16, color: transferColor),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _toTopup
+                            ? 'Dana berpindah dari dompet utama ke E-Wallet, bukan pengeluaran.'
+                            : 'Dana kembali ke dompet utama, bukan pemasukan.',
+                        style: const TextStyle(fontSize: 11, color: transferColor, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Nominal (Rp)',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textMuted),
+              ),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: _amountCtrl,
+                keyboardType: TextInputType.number,
+                autofocus: true,
+                style: TextStyle(fontSize: 16, color: tokens.textPrimary, fontWeight: FontWeight.w700),
+                onChanged: _onAmountChanged,
+                decoration: InputDecoration(
+                  hintText: '0',
+                  fillColor: tokens.softSurface.withValues(alpha: 0.3),
+                  filled: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: tokens.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: transferColor, width: 1.5),
+                  ),
+                ),
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return 'Nominal tidak boleh kosong';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Tanggal',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textMuted),
+              ),
+              const SizedBox(height: 6),
+              GestureDetector(
+                onTap: _selectDate,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: tokens.softSurface.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: tokens.border),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.calendar_month_rounded, size: 16, color: tokens.textMuted),
+                      const SizedBox(width: 8),
+                      Text(
+                        DateFormat('dd MMM yyyy', 'id').format(_date),
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: tokens.textPrimary),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Catatan (Opsional)',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textMuted),
+              ),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: _noteCtrl,
+                style: TextStyle(fontSize: 14, color: tokens.textPrimary),
+                decoration: InputDecoration(
+                  hintText: _toTopup ? 'Misal: Top up untuk bayar online' : 'Misal: Sisa saldo ditarik',
+                  fillColor: tokens.softSurface.withValues(alpha: 0.3),
+                  filled: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: tokens.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: transferColor, width: 1.5),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Batal'),
+        ),
+        ElevatedButton(
+          onPressed: _submit,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: transferColor,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.buttonRadius)),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+          child: Text(
+            _toTopup ? 'Isi Saldo' : 'Tarik',
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ),
+      ],
     );
   }
 }

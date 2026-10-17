@@ -3,12 +3,15 @@ import 'package:provider/provider.dart';
 import '../providers/finance_provider.dart';
 import '../models/transaction.dart';
 import '../theme/app_theme.dart';
+import '../theme/app_tokens.dart';
 import '../widgets/add_transaction_modal.dart';
 import 'topup_screen.dart';
 import 'monthly_balance_screen.dart';
+import 'theme_settings_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final VoidCallback? onSeeAll;
+  const DashboardScreen({super.key, this.onSeeAll});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -98,13 +101,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     final provider = Provider.of<FinanceProvider>(context);
     final currentMonth = provider.currentMonth;
     final totals = provider.monthlyTotals;
     final income = totals['income'] ?? 0.0;
     final expense = totals['expense'] ?? 0.0;
     final balance = income - expense;
-    final balanceColor = balance >= 0 ? AppTheme.emeraldGreen : AppTheme.roseRed;
+    final balanceColor = balance >= 0 ? tokens.incomeOnHeader : tokens.expenseOnHeader;
 
     final monthlyTxs = provider.transactions
         .where((tx) => tx.date.startsWith(currentMonth))
@@ -118,7 +122,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         : 'Selamat Malam 🌙';
 
     return Scaffold(
-      backgroundColor: AppTheme.warmCream,
+      backgroundColor: tokens.pageBg,
       // No standard AppBar — replaced by PlumBanner
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -140,9 +144,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           // ══ SCROLLABLE CONTENT ════════════════════════════════════════════
           Expanded(
             child: provider.isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppTheme.darkPlum))
+                ? Center(child: CircularProgressIndicator(color: tokens.accent))
                 : RefreshIndicator(
-                    color: AppTheme.darkPlum,
+                    color: tokens.accent,
                     onRefresh: provider.refreshAll,
                     child: ListView(
                       controller: _scrollCtrl,
@@ -170,12 +174,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                             if (monthlyTxs.length > 5)
-                              Text(
-                                'Lihat Semua →',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.darkPlum,
+                              GestureDetector(
+                                onTap: widget.onSeeAll,
+                                child: Text(
+                                  'Lihat Semua →',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: tokens.accent,
+                                  ),
                                 ),
                               ),
                           ],
@@ -208,8 +215,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: _isFabExpanded
             ? FloatingActionButton.extended(
                 key: const ValueKey('fab-ext'),
-                backgroundColor: AppTheme.darkPlum,
-                foregroundColor: AppTheme.warmCream,
+                backgroundColor: tokens.accent,
+                foregroundColor: tokens.onAccent,
                 elevation: 4,
                 icon: const Icon(Icons.add_rounded, size: 20),
                 label: const Text('Tambah', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
@@ -217,8 +224,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               )
             : FloatingActionButton(
                 key: const ValueKey('fab-min'),
-                backgroundColor: AppTheme.darkPlum,
-                foregroundColor: AppTheme.warmCream,
+                backgroundColor: tokens.accent,
+                foregroundColor: tokens.onAccent,
                 elevation: 4,
                 shape: const CircleBorder(),
                 onPressed: _showAddTx,
@@ -252,10 +259,11 @@ class _DashboardBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Container(
-      decoration: const BoxDecoration(
-        color: AppTheme.darkPlum,
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        color: tokens.headerBg,
+        borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(30),
           bottomRight: Radius.circular(30),
         ),
@@ -271,7 +279,7 @@ class _DashboardBanner extends StatelessWidget {
                 width: 150, height: 150,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.04),
+                  color: tokens.headerFg.withValues(alpha: 0.04),
                 ),
               ),
             ),
@@ -281,7 +289,7 @@ class _DashboardBanner extends StatelessWidget {
                 width: 70, height: 70,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.04),
+                  color: tokens.headerFg.withValues(alpha: 0.04),
                 ),
               ),
             ),
@@ -300,45 +308,68 @@ class _DashboardBanner extends StatelessWidget {
                         children: [
                           Text(
                             greeting,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
-                              color: AppTheme.mutedDarkLavender,
+                              color: tokens.headerMuted,
                             ),
                           ),
-                          const Text(
+                          Text(
                             'TakaraNoto',
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w800,
-                              color: AppTheme.warmCream,
+                              color: tokens.headerFg,
                             ),
                           ),
                         ],
                       ),
-                      Container(
-                        width: 42, height: 42,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.3),
-                            width: 1.5,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          GestureDetector(
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const ThemeSettingsScreen(),
+                              ),
                             ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(21),
-                          child: Image.asset(
-                            'assets/images/logo.png',
-                            fit: BoxFit.cover,
+                            child: Container(
+                              width: 40, height: 40,
+                              decoration: BoxDecoration(
+                                color: tokens.headerSurface,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: tokens.headerBorder, width: 1),
+                              ),
+                              child: Icon(Icons.palette_rounded, color: tokens.headerFg, size: 20),
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 10),
+                          Container(
+                            width: 42, height: 42,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: tokens.headerBorder,
+                                width: 1.5,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.1),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(21),
+                              child: Image.asset(
+                                'assets/images/logo.png',
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -349,10 +380,10 @@ class _DashboardBanner extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
+                      color: tokens.headerSurface,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.15),
+                        color: tokens.headerBorder,
                         width: 1,
                       ),
                     ),
@@ -366,10 +397,10 @@ class _DashboardBanner extends StatelessWidget {
                             const SizedBox(width: 8),
                             Text(
                               monthName,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
-                                color: AppTheme.mutedDarkLavender,
+                                color: tokens.headerMuted,
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -383,16 +414,16 @@ class _DashboardBanner extends StatelessWidget {
                           onTap: onBalanceTap,
                           child: Row(
                             children: [
-                              const Text(
+                              Text(
                                 'Saldo Bersih',
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w500,
-                                  color: AppTheme.mutedDarkLavender,
+                                  color: tokens.headerMuted,
                                 ),
                               ),
                               const SizedBox(width: 4),
-                              const Icon(Icons.arrow_forward_ios_rounded, size: 9, color: AppTheme.mutedDarkLavender),
+                              Icon(Icons.arrow_forward_ios_rounded, size: 9, color: tokens.headerMuted),
                             ],
                           ),
                         ),
@@ -419,7 +450,7 @@ class _DashboardBanner extends StatelessWidget {
                                 label: 'Pemasukan',
                                 value: provider.formatCurrency(income),
                                 icon: Icons.arrow_downward_rounded,
-                                color: AppTheme.emeraldGreen,
+                                color: tokens.incomeOnHeader,
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -428,7 +459,7 @@ class _DashboardBanner extends StatelessWidget {
                                 label: 'Pengeluaran',
                                 value: provider.formatCurrency(expense),
                                 icon: Icons.arrow_upward_rounded,
-                                color: AppTheme.roseRed,
+                                color: tokens.expenseOnHeader,
                               ),
                             ),
                           ],
@@ -453,15 +484,17 @@ class _NavBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
+          color: tokens.headerSurface,
           borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: tokens.headerBorder, width: 1),
         ),
-        child: Icon(icon, color: Colors.white, size: 16),
+        child: Icon(icon, color: tokens.headerFg, size: 16),
       ),
     );
   }
@@ -478,10 +511,11 @@ class _MiniStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.07),
+        color: tokens.headerSurface,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -497,7 +531,7 @@ class _MiniStat extends StatelessWidget {
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
+            style: TextStyle(color: tokens.headerFg, fontSize: 13, fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -529,23 +563,24 @@ class _QuickChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: AppTheme.surfaceHeroLight,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppTheme.borderLight, width: 1),
+          color: tokens.softSurface,
+          borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+          border: Border.all(color: tokens.border, width: 1),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 18, color: AppTheme.mutedLightPlum),
+            Icon(icon, size: 18, color: tokens.textMuted),
             const SizedBox(width: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(fontSize: 10, color: AppTheme.mutedLightPlum, fontWeight: FontWeight.w500)),
-                Text(value, style: const TextStyle(fontSize: 14, color: AppTheme.darkPlum, fontWeight: FontWeight.w700)),
+                Text(label, style: TextStyle(fontSize: 10, color: tokens.textMuted, fontWeight: FontWeight.w500)),
+                Text(value, style: TextStyle(fontSize: 14, color: tokens.textPrimary, fontWeight: FontWeight.w700)),
               ],
             ),
           ],
@@ -564,9 +599,9 @@ class _EWalletCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? AppTheme.lighterPlum : Colors.white;
-    final borderCol = isDark ? AppTheme.borderDark : AppTheme.borderLight;
+    final tokens = context.tokens;
+    final cardBg = tokens.card;
+    final borderCol = tokens.border;
 
     return GestureDetector(
       onTap: onTap,
@@ -579,7 +614,7 @@ class _EWalletCard extends StatelessWidget {
           border: Border.all(color: borderCol),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.1 : 0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -618,7 +653,7 @@ class _EWalletCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
-                      color: isDark ? AppTheme.mutedDarkLavender : AppTheme.mutedLightPlum,
+                      color: tokens.textMuted,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -629,7 +664,7 @@ class _EWalletCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
-                      color: isDark ? AppTheme.warmCream : AppTheme.darkPlum,
+                      color: tokens.textPrimary,
                     ),
                   ),
                 ],
@@ -639,7 +674,7 @@ class _EWalletCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
                 color: const Color(0xFF3f51b5).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
               ),
               child: const Row(
                 children: [
@@ -673,8 +708,15 @@ class _TxCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final catColor = parseColor(tx.categoryColor ?? '#95a5a6');
-    final txColor = tx.type == 'income' ? AppTheme.emeraldGreen : AppTheme.roseRed;
+    final tokens = context.tokens;
+    const transferColor = Color(0xFF3f51b5);
+    final isTransfer = tx.isTransfer;
+    final catColor = isTransfer ? transferColor : parseColor(tx.categoryColor ?? '#95a5a6');
+    final txColor = isTransfer
+        ? transferColor
+        : tx.type == 'income'
+            ? tokens.income
+            : tokens.expense;
     final sign = tx.type == 'income' ? '+' : '-';
 
     return Card(
@@ -697,10 +739,14 @@ class _TxCard extends StatelessWidget {
                             shape: BoxShape.circle,
                             boxShadow: [BoxShadow(color: catColor.withValues(alpha: 0.35), blurRadius: 8, spreadRadius: 1)],
                           ),
-                          child: CircleAvatar(
+                            child: CircleAvatar(
                             radius: 22,
                             backgroundColor: catColor,
-                            child: Icon(getIcon(tx.categoryIcon ?? 'ellipsis'), color: Colors.white, size: 19),
+                            child: Icon(
+                              isTransfer ? Icons.swap_horiz_rounded : getIcon(tx.categoryIcon ?? 'ellipsis'),
+                              color: Colors.white,
+                              size: 19,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 14),
@@ -708,15 +754,15 @@ class _TxCard extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(tx.categoryName ?? 'Tanpa Kategori',
-                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.darkPlum)),
+                              Text(tx.displayName,
+                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: tokens.textPrimary)),
                               if (tx.note.isNotEmpty) ...[
                                 const SizedBox(height: 2),
                                 Text(tx.note, maxLines: 1, overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontSize: 12, color: AppTheme.mutedLightPlum)),
+                                    style: TextStyle(fontSize: 12, color: tokens.textMuted)),
                               ],
                               const SizedBox(height: 2),
-                              Text(tx.date, style: const TextStyle(fontSize: 11, color: AppTheme.mutedLightPlum)),
+                              Text(tx.date, style: TextStyle(fontSize: 11, color: tokens.textMuted)),
                             ],
                           ),
                         ),
@@ -744,6 +790,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(36),
@@ -752,26 +799,26 @@ class _EmptyState extends StatelessWidget {
             Container(
               width: 72, height: 72,
               decoration: BoxDecoration(
-                color: AppTheme.surfaceHeroLight,
+                color: tokens.softSurface,
                 shape: BoxShape.circle,
-                border: Border.all(color: AppTheme.borderLight),
+                border: Border.all(color: tokens.border),
               ),
-              child: const Icon(Icons.receipt_long_outlined, size: 32, color: AppTheme.mutedLightPlum),
+              child: Icon(Icons.receipt_long_outlined, size: 32, color: tokens.textMuted),
             ),
             const SizedBox(height: 16),
-            const Text('Belum ada transaksi',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppTheme.darkPlum)),
+            Text('Belum ada transaksi',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: tokens.textPrimary)),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               'Mulai catat pemasukan dan pengeluaran\nkeuangan Anda di sini.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: AppTheme.mutedLightPlum, height: 1.6),
+              style: TextStyle(fontSize: 12, color: tokens.textMuted, height: 1.6),
             ),
             const SizedBox(height: 20),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.darkPlum,
-                foregroundColor: AppTheme.warmCream,
+                backgroundColor: tokens.accent,
+                foregroundColor: tokens.onAccent,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               ),

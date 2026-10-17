@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 
 class DonutChartItem {
   final double value;
@@ -40,7 +41,7 @@ class DonutChart extends StatelessWidget {
               strokeWidth: strokeWidth,
               backgroundColor: Theme.of(context).brightness == Brightness.dark
                   ? const Color(0xFF381932)
-                  : const Color(0xFFFFF3E6),
+                  : context.tokens.softSurface,
             ),
           ),
           if (centerWidget != null)

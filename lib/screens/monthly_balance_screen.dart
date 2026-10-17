@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/finance_provider.dart';
 import '../theme/app_theme.dart';
+import '../theme/app_tokens.dart';
 
 class MonthlyBalanceScreen extends StatelessWidget {
   const MonthlyBalanceScreen({super.key});
@@ -24,17 +25,17 @@ class MonthlyBalanceScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final provider = Provider.of<FinanceProvider>(context);
     final history = provider.monthlyNetHistory;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final tokens = context.tokens;
 
     final double grandTotalBalance = history.fold(0.0, (sum, item) => sum + (item['balance'] as double));
-    final totalColor = grandTotalBalance >= 0 ? AppTheme.emeraldGreen : AppTheme.roseRed;
+    final totalColor = grandTotalBalance >= 0 ? tokens.incomeOnHeader : tokens.expenseOnHeader;
 
-    final bannerBg = isDark ? AppTheme.deepPlum : AppTheme.darkPlum;
-    final cardBg = isDark ? AppTheme.lighterPlum : Colors.white;
-    final borderCol = isDark ? AppTheme.borderDark : AppTheme.borderLight;
+    final bannerBg = tokens.headerBg;
+    final cardBg = tokens.card;
+    final borderCol = tokens.border;
 
     return Scaffold(
-      backgroundColor: isDark ? AppTheme.deepPlum : AppTheme.warmCream,
+      backgroundColor: tokens.pageBg,
       body: Column(
         children: [
           // ─── PLUM BANNER ────────────────────────────────────────────────────
@@ -61,19 +62,20 @@ class MonthlyBalanceScreen extends StatelessWidget {
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(10),
+                              color: tokens.headerSurface,
+                              borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+                              border: Border.all(color: tokens.headerBorder, width: 1),
                             ),
-                            child: const Icon(Icons.arrow_back_rounded, size: 18, color: AppTheme.warmCream),
+                            child: Icon(Icons.arrow_back_rounded, size: 18, color: tokens.headerFg),
                           ),
                         ),
                         const SizedBox(width: 14),
-                        const Text(
+                        Text(
                           'Riwayat Saldo',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w800,
-                            color: AppTheme.warmCream,
+                            color: tokens.headerFg,
                           ),
                         ),
                       ],
@@ -85,22 +87,22 @@ class MonthlyBalanceScreen extends StatelessWidget {
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.1),
+                        color: tokens.headerSurface,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.15),
+                          color: tokens.headerBorder,
                           width: 1,
                         ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'Total Akumulasi Saldo Bersih',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
-                              color: AppTheme.mutedDarkLavender,
+                              color: tokens.headerMuted,
                             ),
                           ),
                           const SizedBox(height: 6),
@@ -136,16 +138,16 @@ class MonthlyBalanceScreen extends StatelessWidget {
                           width: 72,
                           height: 72,
                           decoration: BoxDecoration(
-                            color: AppTheme.surfaceHeroLight,
+                            color: tokens.softSurface,
                             shape: BoxShape.circle,
                             border: Border.all(color: borderCol),
                           ),
-                          child: const Icon(Icons.history_toggle_off_rounded, size: 32, color: AppTheme.mutedLightPlum),
+                          child: Icon(Icons.history_toggle_off_rounded, size: 32, color: tokens.textMuted),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           'Belum ada riwayat bulanan',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: isDark ? AppTheme.warmCream : AppTheme.darkPlum),
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: tokens.textPrimary),
                         ),
                       ],
                     ),
@@ -159,7 +161,7 @@ class MonthlyBalanceScreen extends StatelessWidget {
                       final inc = item['income'] as double;
                       final exp = item['expense'] as double;
                       final bal = item['balance'] as double;
-                      final balColor = bal >= 0 ? AppTheme.emeraldGreen : AppTheme.roseRed;
+                      final balColor = bal >= 0 ? tokens.income : tokens.expense;
 
                       return Card(
                         color: cardBg,
@@ -179,7 +181,7 @@ class MonthlyBalanceScreen extends StatelessWidget {
                                     style: TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w700,
-                                      color: isDark ? AppTheme.warmCream : AppTheme.darkPlum,
+                                      color: tokens.textPrimary,
                                     ),
                                   ),
                                   Container(
@@ -215,19 +217,19 @@ class MonthlyBalanceScreen extends StatelessWidget {
                                           width: 24,
                                           height: 24,
                                           decoration: BoxDecoration(
-                                            color: AppTheme.emeraldGreen.withValues(alpha: 0.1),
+                                            color: tokens.income.withValues(alpha: 0.1),
                                             shape: BoxShape.circle,
                                           ),
-                                          child: const Icon(Icons.arrow_downward_rounded, color: AppTheme.emeraldGreen, size: 12),
+                                          child: Icon(Icons.arrow_downward_rounded, color: tokens.income, size: 12),
                                         ),
                                         const SizedBox(width: 8),
                                         Expanded(
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              const Text(
+                                              Text(
                                                 'Masuk',
-                                                style: TextStyle(fontSize: 10, color: AppTheme.mutedLightPlum, fontWeight: FontWeight.w500),
+                                                style: TextStyle(fontSize: 10, color: tokens.textMuted, fontWeight: FontWeight.w500),
                                               ),
                                               Text(
                                                 provider.formatCurrency(inc),
@@ -236,7 +238,7 @@ class MonthlyBalanceScreen extends StatelessWidget {
                                                 style: TextStyle(
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.w700,
-                                                  color: isDark ? AppTheme.warmCream : AppTheme.darkPlum,
+                                                  color: tokens.textPrimary,
                                                 ),
                                               ),
                                             ],
@@ -255,19 +257,19 @@ class MonthlyBalanceScreen extends StatelessWidget {
                                           width: 24,
                                           height: 24,
                                           decoration: BoxDecoration(
-                                            color: AppTheme.roseRed.withValues(alpha: 0.1),
+                                            color: tokens.expense.withValues(alpha: 0.1),
                                             shape: BoxShape.circle,
                                           ),
-                                          child: const Icon(Icons.arrow_upward_rounded, color: AppTheme.roseRed, size: 12),
+                                          child: Icon(Icons.arrow_upward_rounded, color: tokens.expense, size: 12),
                                         ),
                                         const SizedBox(width: 8),
                                         Expanded(
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              const Text(
+                                              Text(
                                                 'Keluar',
-                                                style: TextStyle(fontSize: 10, color: AppTheme.mutedLightPlum, fontWeight: FontWeight.w500),
+                                                style: TextStyle(fontSize: 10, color: tokens.textMuted, fontWeight: FontWeight.w500),
                                               ),
                                               Text(
                                                 provider.formatCurrency(exp),
@@ -276,7 +278,7 @@ class MonthlyBalanceScreen extends StatelessWidget {
                                                 style: TextStyle(
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.w700,
-                                                  color: isDark ? AppTheme.warmCream : AppTheme.darkPlum,
+                                                  color: tokens.textPrimary,
                                                 ),
                                               ),
                                             ],

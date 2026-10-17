@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../providers/finance_provider.dart';
 import '../models/savings_goal.dart';
 import '../theme/app_theme.dart';
+import '../theme/app_tokens.dart';
 
 class SavingsScreen extends StatelessWidget {
   const SavingsScreen({super.key});
@@ -71,7 +72,7 @@ class SavingsScreen extends StatelessWidget {
                 SnackBar(content: Text('Target "${goal.title}" berhasil dihapus.')),
               );
             },
-            child: const Text('Hapus', style: TextStyle(color: AppTheme.roseRed)),
+            child: Text('Hapus', style: TextStyle(color: context.tokens.expense)),
           ),
         ],
       ),
@@ -79,21 +80,22 @@ class SavingsScreen extends StatelessWidget {
   }
 
   Widget _buildProjectionText(BuildContext context, SavingsGoal goal) {
+    final tokens = context.tokens;
     final currentAmount = goal.currentAmount;
     final targetAmount = goal.targetAmount;
 
     if (currentAmount >= targetAmount) {
-      return const Row(
+      return Row(
         children: [
-          Icon(Icons.stars_rounded, size: 16, color: AppTheme.emeraldGreen),
-          SizedBox(width: 6),
+          Icon(Icons.stars_rounded, size: 16, color: tokens.income),
+          const SizedBox(width: 6),
           Expanded(
             child: Text(
               'Selamat! Target tabungan Anda sudah tercapai! 🎉',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
-                color: AppTheme.emeraldGreen,
+                color: tokens.income,
               ),
             ),
           ),
@@ -117,15 +119,15 @@ class SavingsScreen extends StatelessWidget {
     if (currentAmount <= 0 || dailySavingRate <= 0) {
       return Row(
         children: [
-          Icon(Icons.info_outline_rounded, size: 16, color: AppTheme.mutedLightPlum.withValues(alpha: 0.8)),
+          Icon(Icons.info_outline_rounded, size: 16, color: tokens.textMuted.withValues(alpha: 0.8)),
           const SizedBox(width: 6),
-          const Expanded(
+          Expanded(
             child: Text(
               'Belum ada tabungan. Mulai menabung secara konsisten untuk melihat perkiraan selesai!',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
-                color: AppTheme.mutedLightPlum,
+                color: tokens.textMuted,
               ),
             ),
           ),
@@ -141,26 +143,26 @@ class SavingsScreen extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Icon(Icons.calendar_today_rounded, size: 16, color: AppTheme.mutedLightPlum),
+        Icon(Icons.calendar_today_rounded, size: 16, color: tokens.textMuted),
         const SizedBox(width: 6),
         Expanded(
           child: RichText(
             text: TextSpan(
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
-                color: AppTheme.mutedLightPlum,
+                color: tokens.textMuted,
                 height: 1.3,
               ),
               children: [
                 const TextSpan(text: 'Jika konsisten, target akan tercapai dalam '),
                 TextSpan(
                   text: '$daysRemaining hari lagi',
-                  style: const TextStyle(fontWeight: FontWeight.w700, color: AppTheme.darkPlum),
+                  style: TextStyle(fontWeight: FontWeight.w700, color: tokens.textPrimary),
                 ),
                 const TextSpan(text: ' (pada '),
                 TextSpan(
                   text: formattedDate,
-                  style: const TextStyle(fontWeight: FontWeight.w700, color: AppTheme.darkPlum),
+                  style: TextStyle(fontWeight: FontWeight.w700, color: tokens.textPrimary),
                 ),
                 const TextSpan(text: ')'),
               ],
@@ -176,21 +178,22 @@ class SavingsScreen extends StatelessWidget {
     final provider = Provider.of<FinanceProvider>(context);
     final goals = provider.savingsGoals;
     final currentMonth = provider.currentMonth;
+    final tokens = context.tokens;
 
     final totalTarget = goals.fold(0.0, (sum, g) => sum + g.targetAmount);
     final totalSavings = goals.fold(0.0, (sum, g) => sum + g.currentAmount);
     final totalProgressPct = totalTarget > 0 ? (totalSavings / totalTarget).clamp(0.0, 1.0) : 0.0;
 
     return Scaffold(
-      backgroundColor: AppTheme.warmCream,
+      backgroundColor: tokens.pageBg,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // ══ PLUM BANNER ═══════════════════════════════════════════════════
           Container(
-            decoration: const BoxDecoration(
-              color: AppTheme.darkPlum,
-              borderRadius: BorderRadius.only(
+            decoration: BoxDecoration(
+              color: tokens.headerBg,
+              borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(30),
                 bottomRight: Radius.circular(30),
               ),
@@ -207,18 +210,18 @@ class SavingsScreen extends StatelessWidget {
                       children: [
                         Text(
                           _monthName(currentMonth),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
-                            color: AppTheme.mutedDarkLavender,
+                            color: tokens.headerMuted,
                           ),
                         ),
-                        const Text(
+                        Text(
                           'Tabungan',
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w800,
-                            color: AppTheme.warmCream,
+                            color: tokens.headerFg,
                           ),
                         ),
                       ],
@@ -226,19 +229,19 @@ class SavingsScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                        color: tokens.headerSurface,
+                        borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+                        border: Border.all(color: tokens.headerBorder),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.stars_rounded, size: 14, color: AppTheme.mutedDarkLavender),
+                          Icon(Icons.stars_rounded, size: 14, color: tokens.headerMuted),
                           const SizedBox(width: 6),
                           Text(
                             '${goals.length} Target',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: AppTheme.mutedDarkLavender,
+                              color: tokens.headerMuted,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -254,9 +257,9 @@ class SavingsScreen extends StatelessWidget {
           // ══ SCROLLABLE CONTENT ════════════════════════════════════════════
           Expanded(
             child: provider.isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppTheme.darkPlum))
+                ? Center(child: CircularProgressIndicator(color: tokens.accent))
                 : RefreshIndicator(
-                    color: AppTheme.darkPlum,
+                    color: tokens.accent,
                     onRefresh: provider.refreshAll,
                     child: ListView(
                       padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
@@ -296,9 +299,9 @@ class SavingsScreen extends StatelessWidget {
                                   return Container(
                                     margin: const EdgeInsets.only(bottom: 12),
                                     decoration: BoxDecoration(
-                                      color: Colors.white,
+                                      color: tokens.card,
                                       borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(color: AppTheme.borderLight, width: 1),
+                                      border: Border.all(color: tokens.border, width: 1),
                                     ),
                                     child: ClipRRect(
                                       borderRadius: BorderRadius.circular(20),
@@ -318,10 +321,10 @@ class SavingsScreen extends StatelessWidget {
                                                     Expanded(
                                                       child: Text(
                                                         goal.title,
-                                                        style: const TextStyle(
+                                                        style: TextStyle(
                                                           fontSize: 15,
                                                           fontWeight: FontWeight.w700,
-                                                          color: AppTheme.darkPlum,
+                                                          color: tokens.textPrimary,
                                                         ),
                                                       ),
                                                     ),
@@ -329,10 +332,10 @@ class SavingsScreen extends StatelessWidget {
                                                       onPressed: () => _showEditGoalDialog(context, goal),
                                                       padding: EdgeInsets.zero,
                                                       constraints: const BoxConstraints(),
-                                                      icon: const Icon(
+                                                      icon: Icon(
                                                         Icons.edit_outlined,
                                                         size: 18,
-                                                        color: AppTheme.mutedLightPlum,
+                                                        color: tokens.textMuted,
                                                       ),
                                                     ),
                                                     const SizedBox(width: 12),
@@ -340,10 +343,10 @@ class SavingsScreen extends StatelessWidget {
                                                       onPressed: () => _showDeleteConfirmDialog(context, goal),
                                                       padding: EdgeInsets.zero,
                                                       constraints: const BoxConstraints(),
-                                                      icon: const Icon(
+                                                      icon: Icon(
                                                         Icons.delete_outline_rounded,
                                                         size: 18,
-                                                        color: AppTheme.roseRed,
+                                                        color: tokens.expense,
                                                       ),
                                                     ),
                                                   ],
@@ -356,10 +359,10 @@ class SavingsScreen extends StatelessWidget {
                                                   children: [
                                                     Text(
                                                       '${provider.formatCurrency(goal.currentAmount)} dari ${provider.formatCurrency(goal.targetAmount)}',
-                                                      style: const TextStyle(
+                                                      style: TextStyle(
                                                         fontSize: 12,
                                                         fontWeight: FontWeight.w600,
-                                                        color: AppTheme.mutedLightPlum,
+                                                        color: tokens.textMuted,
                                                       ),
                                                     ),
                                                     Text(
@@ -367,7 +370,7 @@ class SavingsScreen extends StatelessWidget {
                                                       style: TextStyle(
                                                         fontSize: 12,
                                                         fontWeight: FontWeight.w800,
-                                                        color: pct >= 1.0 ? AppTheme.emeraldGreen : AppTheme.darkPlum,
+                                                        color: pct >= 1.0 ? tokens.income : tokens.textPrimary,
                                                       ),
                                                     ),
                                                   ],
@@ -380,13 +383,13 @@ class SavingsScreen extends StatelessWidget {
                                                   child: LinearProgressIndicator(
                                                     value: pct,
                                                     minHeight: 8,
-                                                    backgroundColor: AppTheme.surfaceHeroLight.withValues(alpha: 0.5),
+                                                    backgroundColor: tokens.softSurface.withValues(alpha: 0.5),
                                                     valueColor: AlwaysStoppedAnimation<Color>(
                                                       pct >= 1.0
-                                                          ? AppTheme.emeraldGreen
+                                                          ? tokens.income
                                                           : pct >= 0.5
-                                                              ? AppTheme.selectedPlum
-                                                              : AppTheme.amberAccent,
+                                                              ? tokens.softSurfaceStrong
+                                                              : tokens.warning,
                                                     ),
                                                   ),
                                                 ),
@@ -396,9 +399,9 @@ class SavingsScreen extends StatelessWidget {
                                                 Container(
                                                   padding: const EdgeInsets.all(12),
                                                   decoration: BoxDecoration(
-                                                    color: AppTheme.warmCream.withValues(alpha: 0.6),
+                                                    color: tokens.pageBg.withValues(alpha: 0.6),
                                                     borderRadius: BorderRadius.circular(12),
-                                                    border: Border.all(color: AppTheme.borderLight.withValues(alpha: 0.5), width: 0.5),
+                                                    border: Border.all(color: tokens.border.withValues(alpha: 0.5), width: 0.5),
                                                   ),
                                                   child: _buildProjectionText(context, goal),
                                                 ),
@@ -414,25 +417,25 @@ class SavingsScreen extends StatelessWidget {
                                                             ? () => _showWithdrawDialog(context, goal)
                                                             : null,
                                                         style: OutlinedButton.styleFrom(
-                                                          foregroundColor: AppTheme.roseRed,
+                                                          foregroundColor: tokens.expense,
                                                           side: BorderSide(
                                                             color: goal.currentAmount > 0
-                                                                ? AppTheme.roseRed.withValues(alpha: 0.6)
-                                                                : AppTheme.borderLight,
+                                                                ? tokens.expense.withValues(alpha: 0.6)
+                                                                : tokens.border,
                                                           ),
                                                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                                                           minimumSize: Size.zero,
                                                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                                           shape: RoundedRectangleBorder(
-                                                            borderRadius: BorderRadius.circular(10),
+                                                            borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
                                                           ),
                                                         ),
                                                         icon: Icon(
                                                           Icons.arrow_upward_rounded,
                                                           size: 14,
                                                           color: goal.currentAmount > 0
-                                                              ? AppTheme.roseRed
-                                                              : AppTheme.mutedLightPlum,
+                                                              ? tokens.expense
+                                                              : tokens.textMuted,
                                                         ),
                                                         label: Text(
                                                           'Tarik Dana',
@@ -440,8 +443,8 @@ class SavingsScreen extends StatelessWidget {
                                                             fontSize: 12,
                                                             fontWeight: FontWeight.w600,
                                                             color: goal.currentAmount > 0
-                                                                ? AppTheme.roseRed
-                                                                : AppTheme.mutedLightPlum,
+                                                                ? tokens.expense
+                                                                : tokens.textMuted,
                                                           ),
                                                         ),
                                                       ),
@@ -452,14 +455,14 @@ class SavingsScreen extends StatelessWidget {
                                                       child: ElevatedButton.icon(
                                                         onPressed: () => _showAddSavingDialog(context, goal),
                                                         style: ElevatedButton.styleFrom(
-                                                          backgroundColor: AppTheme.darkPlum,
-                                                          foregroundColor: Colors.white,
+                                                          backgroundColor: tokens.accent,
+                                                          foregroundColor: tokens.onAccent,
                                                           elevation: 0,
                                                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                                                           minimumSize: Size.zero,
                                                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                                           shape: RoundedRectangleBorder(
-                                                            borderRadius: BorderRadius.circular(10),
+                                                            borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
                                                           ),
                                                         ),
                                                         icon: const Icon(Icons.add_rounded, size: 14),
@@ -491,8 +494,8 @@ class SavingsScreen extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddGoalDialog(context),
-        backgroundColor: AppTheme.darkPlum,
-        foregroundColor: Colors.white,
+        backgroundColor: tokens.accent,
+        foregroundColor: tokens.onAccent,
         icon: const Icon(Icons.add_rounded),
         label: const Text('Target Baru', style: TextStyle(fontWeight: FontWeight.w700)),
         elevation: 3,
@@ -517,19 +520,20 @@ class _SavingsSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.darkPlum,
+        color: tokens.headerBg,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Total Tabungan Saya',
             style: TextStyle(
-              color: AppTheme.mutedDarkLavender,
+              color: tokens.headerMuted,
               fontSize: 11,
               fontWeight: FontWeight.w500,
             ),
@@ -537,10 +541,10 @@ class _SavingsSummaryCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             provider.formatCurrency(totalSavings),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w800,
-              color: Colors.white,
+              color: tokens.headerFg,
             ),
           ),
           const SizedBox(height: 14),
@@ -548,13 +552,13 @@ class _SavingsSummaryCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(6),
             child: Stack(
               children: [
-                Container(height: 8, color: Colors.white.withValues(alpha: 0.15)),
+                Container(height: 8, color: tokens.headerSurface),
                 FractionallySizedBox(
                   widthFactor: progressPct,
                   child: Container(
                     height: 8,
                     decoration: BoxDecoration(
-                      color: AppTheme.emeraldGreen,
+                      color: tokens.incomeOnHeader,
                       borderRadius: BorderRadius.circular(6),
                     ),
                   ),
@@ -567,15 +571,15 @@ class _SavingsSummaryCard extends StatelessWidget {
             children: [
               Text(
                 '${(progressPct * 100).toStringAsFixed(1)}% dari target total',
-                style: const TextStyle(color: AppTheme.mutedDarkLavender, fontSize: 11),
+                style: TextStyle(color: tokens.headerMuted, fontSize: 11),
               ),
               const Spacer(),
               Text(
                 'Target: ${provider.formatCurrency(totalTarget)}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: AppTheme.mutedDarkLavender,
+                  color: tokens.headerMuted,
                 ),
               ),
             ],
@@ -593,12 +597,13 @@ class _EmptySavingsState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: tokens.card,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.borderLight, width: 1),
+        border: Border.all(color: tokens.border, width: 1),
       ),
       child: Column(
         children: [
@@ -607,11 +612,11 @@ class _EmptySavingsState extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 36,
-                backgroundColor: AppTheme.surfaceHeroLight.withValues(alpha: 0.4),
-                child: const Icon(
+                backgroundColor: tokens.softSurface.withValues(alpha: 0.4),
+                child: Icon(
                   Icons.savings_outlined,
                   size: 40,
-                  color: AppTheme.mutedLightPlum,
+                  color: tokens.textMuted,
                 ),
               ),
               Positioned(
@@ -619,36 +624,36 @@ class _EmptySavingsState extends StatelessWidget {
                 right: 0,
                 child: CircleAvatar(
                   radius: 12,
-                  backgroundColor: AppTheme.darkPlum,
-                  child: const Icon(Icons.add_rounded, size: 14, color: Colors.white),
+                  backgroundColor: tokens.accent,
+                  child: Icon(Icons.add_rounded, size: 14, color: tokens.onAccent),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 20),
-          const Text(
+          Text(
             'Belum Ada Target Tabungan',
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
-              color: AppTheme.darkPlum,
+              color: tokens.textPrimary,
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'Mulai buat target impian Anda dan pantau kemajuannya di sini!',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12,
-              color: AppTheme.mutedLightPlum,
+              color: tokens.textMuted,
             ),
           ),
           const SizedBox(height: 20),
           ElevatedButton.icon(
             onPressed: onAdd,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.darkPlum,
-              foregroundColor: Colors.white,
+              backgroundColor: tokens.accent,
+              foregroundColor: tokens.onAccent,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -724,6 +729,7 @@ class _AddSavingsGoalDialogState extends State<_AddSavingsGoalDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return AlertDialog(
       title: const Text('Target Tabungan Baru'),
       content: Form(
@@ -733,27 +739,27 @@ class _AddSavingsGoalDialogState extends State<_AddSavingsGoalDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Nama Target',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.mutedLightPlum),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textMuted),
               ),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _titleCtrl,
                 autofocus: true,
-                style: const TextStyle(fontSize: 14, color: AppTheme.darkPlum),
+                style: TextStyle(fontSize: 14, color: tokens.textPrimary),
                 decoration: InputDecoration(
                   hintText: 'Misal: Beli Laptop Baru',
-                  fillColor: AppTheme.surfaceHeroLight.withValues(alpha: 0.3),
+                  fillColor: tokens.softSurface.withValues(alpha: 0.3),
                   filled: true,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppTheme.borderLight),
+                    borderSide: BorderSide(color: tokens.border),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppTheme.darkPlum, width: 1.5),
+                    borderSide: BorderSide(color: tokens.accent, width: 1.5),
                   ),
                 ),
                 validator: (val) {
@@ -764,28 +770,28 @@ class _AddSavingsGoalDialogState extends State<_AddSavingsGoalDialog> {
                 },
               ),
               const SizedBox(height: 18),
-              const Text(
+              Text(
                 'Nominal Target (Rp)',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.mutedLightPlum),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textMuted),
               ),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _amountCtrl,
                 keyboardType: TextInputType.number,
-                style: const TextStyle(fontSize: 14, color: AppTheme.darkPlum, fontWeight: FontWeight.w700),
+                style: TextStyle(fontSize: 14, color: tokens.textPrimary, fontWeight: FontWeight.w700),
                 onChanged: _onAmountChanged,
                 decoration: InputDecoration(
                   hintText: '0',
-                  fillColor: AppTheme.surfaceHeroLight.withValues(alpha: 0.3),
+                  fillColor: tokens.softSurface.withValues(alpha: 0.3),
                   filled: true,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppTheme.borderLight),
+                    borderSide: BorderSide(color: tokens.border),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppTheme.darkPlum, width: 1.5),
+                    borderSide: BorderSide(color: tokens.accent, width: 1.5),
                   ),
                 ),
                 validator: (val) {
@@ -807,9 +813,9 @@ class _AddSavingsGoalDialogState extends State<_AddSavingsGoalDialog> {
         ElevatedButton(
           onPressed: _submit,
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppTheme.darkPlum,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            backgroundColor: tokens.accent,
+            foregroundColor: tokens.onAccent,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.buttonRadius)),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
           child: const Text('Buat Target', style: TextStyle(fontWeight: FontWeight.w700)),
@@ -884,6 +890,7 @@ class _AddSavingFundsDialogState extends State<_AddSavingFundsDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return AlertDialog(
       title: Text('Isi Saldo: ${widget.goal.title}'),
       content: Form(
@@ -893,29 +900,29 @@ class _AddSavingFundsDialogState extends State<_AddSavingFundsDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Nominal Setoran (Rp)',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.mutedLightPlum),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textMuted),
               ),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _amountCtrl,
                 keyboardType: TextInputType.number,
                 autofocus: true,
-                style: const TextStyle(fontSize: 16, color: AppTheme.darkPlum, fontWeight: FontWeight.w700),
+                style: TextStyle(fontSize: 16, color: tokens.textPrimary, fontWeight: FontWeight.w700),
                 onChanged: _onAmountChanged,
                 decoration: InputDecoration(
                   hintText: '0',
-                  fillColor: AppTheme.surfaceHeroLight.withValues(alpha: 0.3),
+                  fillColor: tokens.softSurface.withValues(alpha: 0.3),
                   filled: true,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppTheme.borderLight),
+                    borderSide: BorderSide(color: tokens.border),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppTheme.darkPlum, width: 1.5),
+                    borderSide: BorderSide(color: tokens.accent, width: 1.5),
                   ),
                 ),
                 validator: (val) {
@@ -926,26 +933,26 @@ class _AddSavingFundsDialogState extends State<_AddSavingFundsDialog> {
                 },
               ),
               const SizedBox(height: 18),
-              const Text(
+              Text(
                 'Catatan (Opsional)',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.mutedLightPlum),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textMuted),
               ),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _noteCtrl,
-                style: const TextStyle(fontSize: 14, color: AppTheme.darkPlum),
+                style: TextStyle(fontSize: 14, color: tokens.textPrimary),
                 decoration: InputDecoration(
                   hintText: 'Misal: Sisa uang belanja mingguan',
-                  fillColor: AppTheme.surfaceHeroLight.withValues(alpha: 0.3),
+                  fillColor: tokens.softSurface.withValues(alpha: 0.3),
                   filled: true,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppTheme.borderLight),
+                    borderSide: BorderSide(color: tokens.border),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppTheme.darkPlum, width: 1.5),
+                    borderSide: BorderSide(color: tokens.accent, width: 1.5),
                   ),
                 ),
               ),
@@ -961,9 +968,9 @@ class _AddSavingFundsDialogState extends State<_AddSavingFundsDialog> {
         ElevatedButton(
           onPressed: _submit,
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppTheme.darkPlum,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            backgroundColor: tokens.accent,
+            foregroundColor: tokens.onAccent,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.buttonRadius)),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
           child: const Text('Simpan', style: TextStyle(fontWeight: FontWeight.w700)),
@@ -1047,6 +1054,7 @@ class _WithdrawFundsDialogState extends State<_WithdrawFundsDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return AlertDialog(
       title: Text('Tarik Dana: ${widget.goal.title}'),
       content: Form(
@@ -1060,26 +1068,26 @@ class _WithdrawFundsDialogState extends State<_WithdrawFundsDialog> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppTheme.roseRed.withValues(alpha: 0.06),
+                  color: tokens.expense.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppTheme.roseRed.withValues(alpha: 0.2)),
+                  border: Border.all(color: tokens.expense.withValues(alpha: 0.2)),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.account_balance_wallet_rounded, size: 16, color: AppTheme.roseRed),
+                    Icon(Icons.account_balance_wallet_rounded, size: 16, color: tokens.expense),
                     const SizedBox(width: 8),
                     Expanded(
                       child: RichText(
                         text: TextSpan(
-                          style: const TextStyle(fontSize: 12, color: AppTheme.mutedLightPlum),
+                          style: TextStyle(fontSize: 12, color: tokens.textMuted),
                           children: [
                             const TextSpan(text: 'Saldo tersedia: '),
                             TextSpan(
                               text: NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0)
                                   .format(widget.goal.currentAmount),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.w800,
-                                color: AppTheme.roseRed,
+                                color: tokens.expense,
                               ),
                             ),
                           ],
@@ -1090,29 +1098,29 @@ class _WithdrawFundsDialogState extends State<_WithdrawFundsDialog> {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Nominal Penarikan (Rp)',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.mutedLightPlum),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textMuted),
               ),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _amountCtrl,
                 keyboardType: TextInputType.number,
                 autofocus: true,
-                style: const TextStyle(fontSize: 16, color: AppTheme.roseRed, fontWeight: FontWeight.w700),
+                style: TextStyle(fontSize: 16, color: tokens.expense, fontWeight: FontWeight.w700),
                 onChanged: _onAmountChanged,
                 decoration: InputDecoration(
                   hintText: '0',
-                  fillColor: AppTheme.surfaceHeroLight.withValues(alpha: 0.3),
+                  fillColor: tokens.softSurface.withValues(alpha: 0.3),
                   filled: true,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppTheme.borderLight),
+                    borderSide: BorderSide(color: tokens.border),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppTheme.roseRed, width: 1.5),
+                    borderSide: BorderSide(color: tokens.expense, width: 1.5),
                   ),
                 ),
                 validator: (val) {
@@ -1123,26 +1131,26 @@ class _WithdrawFundsDialogState extends State<_WithdrawFundsDialog> {
                 },
               ),
               const SizedBox(height: 18),
-              const Text(
+              Text(
                 'Catatan (Opsional)',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.mutedLightPlum),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textMuted),
               ),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _noteCtrl,
-                style: const TextStyle(fontSize: 14, color: AppTheme.darkPlum),
+                style: TextStyle(fontSize: 14, color: tokens.textPrimary),
                 decoration: InputDecoration(
                   hintText: 'Misal: Dipakai untuk keperluan darurat',
-                  fillColor: AppTheme.surfaceHeroLight.withValues(alpha: 0.3),
+                  fillColor: tokens.softSurface.withValues(alpha: 0.3),
                   filled: true,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppTheme.borderLight),
+                    borderSide: BorderSide(color: tokens.border),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppTheme.roseRed, width: 1.5),
+                    borderSide: BorderSide(color: tokens.expense, width: 1.5),
                   ),
                 ),
               ),
@@ -1158,9 +1166,9 @@ class _WithdrawFundsDialogState extends State<_WithdrawFundsDialog> {
         ElevatedButton(
           onPressed: _submit,
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppTheme.roseRed,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            backgroundColor: tokens.expense,
+            foregroundColor: tokens.onAccent,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.buttonRadius)),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
           child: const Text('Tarik', style: TextStyle(fontWeight: FontWeight.w700)),
@@ -1243,6 +1251,7 @@ class _EditSavingsGoalDialogState extends State<_EditSavingsGoalDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return AlertDialog(
       title: const Text('Ubah Target Tabungan'),
       content: Form(
@@ -1252,27 +1261,27 @@ class _EditSavingsGoalDialogState extends State<_EditSavingsGoalDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Nama Target',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.mutedLightPlum),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textMuted),
               ),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _titleCtrl,
                 autofocus: true,
-                style: const TextStyle(fontSize: 14, color: AppTheme.darkPlum),
+                style: TextStyle(fontSize: 14, color: tokens.textPrimary),
                 decoration: InputDecoration(
                   hintText: 'Misal: Beli Laptop Baru',
-                  fillColor: AppTheme.surfaceHeroLight.withValues(alpha: 0.3),
+                  fillColor: tokens.softSurface.withValues(alpha: 0.3),
                   filled: true,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppTheme.borderLight),
+                    borderSide: BorderSide(color: tokens.border),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppTheme.darkPlum, width: 1.5),
+                    borderSide: BorderSide(color: tokens.accent, width: 1.5),
                   ),
                 ),
                 validator: (val) {
@@ -1283,28 +1292,28 @@ class _EditSavingsGoalDialogState extends State<_EditSavingsGoalDialog> {
                 },
               ),
               const SizedBox(height: 18),
-              const Text(
+              Text(
                 'Nominal Target (Rp)',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.mutedLightPlum),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textMuted),
               ),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _amountCtrl,
                 keyboardType: TextInputType.number,
-                style: const TextStyle(fontSize: 14, color: AppTheme.darkPlum, fontWeight: FontWeight.w700),
+                style: TextStyle(fontSize: 14, color: tokens.textPrimary, fontWeight: FontWeight.w700),
                 onChanged: _onAmountChanged,
                 decoration: InputDecoration(
                   hintText: '0',
-                  fillColor: AppTheme.surfaceHeroLight.withValues(alpha: 0.3),
+                  fillColor: tokens.softSurface.withValues(alpha: 0.3),
                   filled: true,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppTheme.borderLight),
+                    borderSide: BorderSide(color: tokens.border),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppTheme.darkPlum, width: 1.5),
+                    borderSide: BorderSide(color: tokens.accent, width: 1.5),
                   ),
                 ),
                 validator: (val) {
@@ -1326,9 +1335,9 @@ class _EditSavingsGoalDialogState extends State<_EditSavingsGoalDialog> {
         ElevatedButton(
           onPressed: _submit,
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppTheme.darkPlum,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            backgroundColor: tokens.accent,
+            foregroundColor: tokens.onAccent,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.buttonRadius)),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
           child: const Text('Simpan Perubahan', style: TextStyle(fontWeight: FontWeight.w700)),

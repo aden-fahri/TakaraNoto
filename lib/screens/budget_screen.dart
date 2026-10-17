@@ -4,6 +4,8 @@ import '../providers/finance_provider.dart';
 import '../models/category.dart';
 import '../models/budget.dart';
 import '../theme/app_theme.dart';
+import '../theme/app_tokens.dart';
+import '../utils/finance_calc.dart';
 import '../widgets/budget_modal.dart';
 import '../widgets/donut_chart.dart';
 
@@ -20,23 +22,15 @@ class BudgetScreen extends StatelessWidget {
     } catch (_) { return s; }
   }
 
-  int _daysInMonth(String monthYear) {
+  String _shiftMonth(String s, int delta) {
     try {
-      final parts = monthYear.split('-');
-      final year = int.parse(parts[0]);
-      final month = int.parse(parts[1]);
-      // Last day of current month is 0th day of next month
-      return DateTime(year, month + 1, 0).day;
-    } catch (_) {
-      return 30;
-    }
-  }
-
-  double _getMonthlyLimit(Budget b, int days) {
-    if (b.budgetType == 'daily_limit') {
-      return b.limitAmount * days;
-    }
-    return b.limitAmount;
+      final p = s.split('-');
+      var y = int.parse(p[0]);
+      var m = int.parse(p[1]) + delta;
+      if (m < 1) { m = 12; y--; }
+      if (m > 12) { m = 1; y++; }
+      return '$y-${m.toString().padLeft(2, '0')}';
+    } catch (_) { return s; }
   }
 
   IconData _icon(String name) {
@@ -70,30 +64,31 @@ class BudgetScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     final provider = Provider.of<FinanceProvider>(context);
     final currentMonth = provider.currentMonth;
     final budgets = provider.budgets;
     final expenseCats = provider.categories.where((c) => c.type == 'expense').toList();
 
-    final days = _daysInMonth(currentMonth);
-    final totalLimit = budgets.fold(0.0, (s, b) => s + _getMonthlyLimit(b, days));
+    final days = daysInMonth(currentMonth);
+    final totalLimit = budgets.fold(0.0, (s, b) => s + monthlyBudgetLimit(b, days));
     final totalSpent = budgets.fold(0.0, (s, b) => s + (b.totalSpent ?? 0.0));
     final totalRemaining = totalLimit - totalSpent;
     final usagePct = totalLimit > 0 ? (totalSpent / totalLimit).clamp(0.0, 1.0) : 0.0;
-    final progressColor = usagePct > 0.85 ? AppTheme.roseRed
-        : usagePct > 0.6 ? AppTheme.amberAccent
-        : AppTheme.emeraldGreen;
+    final progressColor = usagePct > 0.85 ? tokens.expenseOnHeader
+        : usagePct > 0.6 ? tokens.warning
+        : tokens.incomeOnHeader;
 
     return Scaffold(
-      backgroundColor: AppTheme.warmCream,
+      backgroundColor: tokens.pageBg,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // ══ PLUM BANNER ═══════════════════════════════════════════════════
           Container(
-            decoration: const BoxDecoration(
-              color: AppTheme.darkPlum,
-              borderRadius: BorderRadius.only(
+            decoration: BoxDecoration(
+              color: tokens.headerBg,
+              borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(30),
                 bottomRight: Radius.circular(30),
               ),
@@ -109,30 +104,46 @@ class BudgetScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          _monthName(currentMonth),
-                          style: const TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.w500,
-                            color: AppTheme.mutedDarkLavender,
-                          ),
-                        ),
-                        const Text(
                           'Anggaran',
-                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppTheme.warmCream),
+                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: tokens.headerFg),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            _NavBtn(
+                              icon: Icons.chevron_left_rounded,
+                              onTap: () => provider.changeMonth(_shiftMonth(currentMonth, -1)),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              child: Text(
+                                _monthName(currentMonth),
+                                style: TextStyle(
+                                  fontSize: 12, fontWeight: FontWeight.w600,
+                                  color: tokens.headerMuted,
+                                ),
+                              ),
+                            ),
+                            _NavBtn(
+                              icon: Icons.chevron_right_rounded,
+                              onTap: () => provider.changeMonth(_shiftMonth(currentMonth, 1)),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                        color: tokens.headerSurface,
+                        borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+                        border: Border.all(color: tokens.headerBorder),
                       ),
                       child: Row(
-                        children: const [
-                          Icon(Icons.pie_chart_rounded, size: 14, color: AppTheme.mutedDarkLavender),
+                        children: [
+                          Icon(Icons.pie_chart_rounded, size: 14, color: tokens.headerMuted),
                           SizedBox(width: 6),
-                          Text('Bulanan', style: TextStyle(fontSize: 12, color: AppTheme.mutedDarkLavender, fontWeight: FontWeight.w600)),
+                          Text('Total Bulan Ini', style: TextStyle(fontSize: 12, color: tokens.headerMuted, fontWeight: FontWeight.w600)),
                         ],
                       ),
                     ),
@@ -168,9 +179,9 @@ class BudgetScreen extends StatelessWidget {
                   ),
 
                 const SizedBox(height: 24),
-                const Text(
+                Text(
                   'Per Kategori',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.darkPlum),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: tokens.textPrimary),
                 ),
                 const SizedBox(height: 12),
 
@@ -185,14 +196,14 @@ class BudgetScreen extends StatelessWidget {
                       budgetType: 'daily_limit',
                     ),
                   );
-                  final limit = _getMonthlyLimit(budget, days);
+                  final limit = monthlyBudgetLimit(budget, days);
                   final spent = budget.totalSpent ?? 0.0;
                   final remaining = limit - spent;
                   final hasBudget = budget.id != null && budget.limitAmount > 0;
                   final pct = hasBudget ? (spent / limit).clamp(0.0, 1.0) : 0.0;
-                  final barColor = pct > 0.85 ? AppTheme.roseRed
-                      : pct > 0.6 ? AppTheme.amberAccent
-                      : AppTheme.emeraldGreen;
+                  final barColor = pct > 0.85 ? tokens.expense
+                      : pct > 0.6 ? tokens.warning
+                      : tokens.income;
                   final catColor = _color(cat.color);
 
                   return Padding(
@@ -238,6 +249,7 @@ class _OverallCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     final donutItems = budgets.where((b) => (b.totalSpent ?? 0) > 0).map((b) {
       final c = b.categoryColor != null
           ? Color(int.tryParse(b.categoryColor!.replaceFirst('#', '0xFF')) ?? 0xFF95A5A6)
@@ -246,13 +258,13 @@ class _OverallCard extends StatelessWidget {
     }).toList();
 
     if (donutItems.isEmpty) {
-      donutItems.add(DonutChartItem(value: 1, color: AppTheme.borderLight));
+      donutItems.add(DonutChartItem(value: 1, color: tokens.border));
     }
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.darkPlum,
+        color: tokens.headerBg,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -261,19 +273,19 @@ class _OverallCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Total Anggaran',
-                    style: TextStyle(color: AppTheme.mutedDarkLavender, fontSize: 11, fontWeight: FontWeight.w500)),
+                Text('Total Anggaran',
+                    style: TextStyle(color: tokens.headerMuted, fontSize: 11, fontWeight: FontWeight.w500)),
                 const SizedBox(height: 6),
                 Text(
                   provider.formatCurrency(totalLimit),
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: tokens.headerFg),
                 ),
                 const SizedBox(height: 14),
                 // Progress bar
                 ClipRRect(
                   borderRadius: BorderRadius.circular(6),
                   child: Stack(children: [
-                    Container(height: 8, color: Colors.white.withValues(alpha: 0.15)),
+                    Container(height: 8, color: tokens.headerSurface),
                     FractionallySizedBox(
                       widthFactor: usagePct,
                       child: Container(
@@ -287,13 +299,13 @@ class _OverallCard extends StatelessWidget {
                 Row(
                   children: [
                     Text('${(usagePct * 100).round()}% terpakai',
-                        style: const TextStyle(color: AppTheme.mutedDarkLavender, fontSize: 11)),
+                        style: TextStyle(color: tokens.headerMuted, fontSize: 11)),
                     const Spacer(),
                     Text(
                       'Sisa ${provider.formatCurrency(totalRemaining)}',
                       style: TextStyle(
                         fontSize: 11, fontWeight: FontWeight.w700,
-                        color: totalRemaining >= 0 ? AppTheme.emeraldGreen : AppTheme.roseRed,
+                        color: totalRemaining >= 0 ? tokens.incomeOnHeader : tokens.expenseOnHeader,
                       ),
                     ),
                   ],
@@ -306,7 +318,7 @@ class _OverallCard extends StatelessWidget {
             items: donutItems, size: 80, strokeWidth: 10,
             centerWidget: Text(
               '${(usagePct * 100).round()}%',
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Colors.white),
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: tokens.headerFg),
             ),
           ),
         ],
@@ -322,37 +334,38 @@ class _NoBudgetBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(18),
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: AppTheme.surfaceHeroLight,
+          color: tokens.softSurface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppTheme.borderLight),
+          border: Border.all(color: tokens.border),
         ),
         child: Row(
           children: [
             Container(
               width: 44, height: 44,
               decoration: BoxDecoration(
-                color: AppTheme.borderLight,
+                color: tokens.border,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.pie_chart_outline_rounded, color: AppTheme.mutedLightPlum),
+              child: Icon(Icons.pie_chart_outline_rounded, color: tokens.textMuted),
             ),
             const SizedBox(width: 14),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Belum ada anggaran',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.darkPlum)),
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: tokens.textPrimary)),
                   SizedBox(height: 3),
                   Text(
                     'Tekan tombol di bawah untuk mulai mengatur batas pengeluaran.',
-                    style: TextStyle(fontSize: 12, color: AppTheme.mutedLightPlum, height: 1.5),
+                    style: TextStyle(fontSize: 12, color: tokens.textMuted, height: 1.5),
                   ),
                 ],
               ),
@@ -386,6 +399,7 @@ class _BudgetTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Card(
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
@@ -414,12 +428,12 @@ class _BudgetTile extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(cat.name,
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.darkPlum)),
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: tokens.textPrimary)),
                           Text(
                             hasBudget
                                 ? 'Sisa: ${provider.formatCurrency(remaining)}'
                                 : 'Belum diatur',
-                            style: const TextStyle(fontSize: 11, color: AppTheme.mutedLightPlum),
+                            style: TextStyle(fontSize: 11, color: tokens.textMuted),
                           ),
                         ],
                       ),
@@ -429,10 +443,12 @@ class _BudgetTile extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(provider.formatCurrency(limit),
-                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.darkPlum)),
-                          const Text(
-                            'Batas bulanan',
-                            style: TextStyle(fontSize: 10, color: AppTheme.mutedLightPlum),
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: tokens.textPrimary)),
+                          Text(
+                            budget.budgetType == 'daily_limit'
+                                ? 'Harian ${provider.formatCurrency(budget.limitAmount)}'
+                                : 'Batas bulanan',
+                            style: TextStyle(fontSize: 10, color: tokens.textMuted),
                           ),
                         ],
                       ),
@@ -442,12 +458,12 @@ class _BudgetTile extends StatelessWidget {
                       onPressed: onEdit,
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        backgroundColor: AppTheme.surfaceHeroLight,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        backgroundColor: tokens.softSurface,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.buttonRadius)),
                       ),
                       child: Text(
                         hasBudget ? 'Ubah' : 'Atur',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.darkPlum),
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textPrimary),
                       ),
                     ),
                   ],
@@ -461,7 +477,7 @@ class _BudgetTile extends StatelessWidget {
                           borderRadius: BorderRadius.circular(4),
                           child: Stack(
                             children: [
-                              Container(height: 6, color: AppTheme.surfaceHeroLight),
+                              Container(height: 6, color: tokens.softSurface),
                               FractionallySizedBox(
                                 widthFactor: pct,
                                 child: Container(
@@ -485,6 +501,31 @@ class _BudgetTile extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ─── Month navigation button (banner) ────────────────────────────────────────
+class _NavBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _NavBtn({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: tokens.headerSurface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: tokens.headerBorder),
+        ),
+        child: Icon(icon, size: 16, color: tokens.headerFg),
       ),
     );
   }

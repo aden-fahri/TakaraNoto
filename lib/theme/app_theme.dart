@@ -2,87 +2,106 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class AppTheme {
-  // ─── Brand Colors ───────────────────────────────────────────────────────────
-  static const Color darkPlum          = Color(0xFF381932);
-  static const Color deepPlum          = Color(0xFF2A1227);
-  static const Color lighterPlum       = Color(0xFF4D2345);
-  static const Color selectedPlum      = Color(0xFF632D59);
-  static const Color warmCream         = Color(0xFFFFF3E6);
-  // Light mode surface tokens — more contrast than v1
-  static const Color surfaceHeroLight  = Color(0xFFF0DFC8); // darker cream for depth
-  static const Color cardLight         = Color(0xFFFFFFFF);
-  static const Color mutedLightPlum    = Color(0xFF7A5570); // darker for readability
-  static const Color mutedDarkLavender = Color(0xFFCFAEC9);
-  static const Color borderDark        = Color(0xFF5E3256);
-  static const Color borderLight       = Color(0xFFE5CEBC); // more defined than v1
+import 'app_tokens.dart';
 
-  // ─── Status Colors ──────────────────────────────────────────────────────────
-  static const Color emeraldGreen = Color(0xFF10B981);
-  static const Color roseRed      = Color(0xFFF43F5E);
-  static const Color amberAccent  = Color(0xFFFBBF24);
+/// Builds the app theme from a dynamic accent seed color.
+///
+/// All component styling derives from [AppTokens] so the whole app re-skins
+/// when the user changes the accent color (see `ThemeController`).
+class AppTheme {
+  // ─── Shape Tokens ───────────────────────────────────────────────────────────
+  /// Consistent corner radius for buttons, chips, and toggles.
+  /// Kept moderate (not a full pill/capsule) for a cleaner look.
+  static const double buttonRadius = 12;
 
   // ─── Theme Builder ──────────────────────────────────────────────────────────
-  static ThemeData getTheme(bool isDark) {
-    final base = isDark ? _darkBase() : _lightBase();
+  static ThemeData getTheme(Color seed, Color background) {
+    final base = ColorScheme.fromSeed(
+      seedColor: seed,
+      brightness: Brightness.light,
+    );
+    // Use the exact chosen color as the primary (not the M3 tonal variant),
+    // so the banner/buttons match what the user picked.
+    final onPrimary = ThemeData.estimateBrightnessForColor(seed) ==
+            Brightness.dark
+        ? Colors.white
+        : const Color(0xFF0F172A);
+    final scheme = base.copyWith(
+      primary: seed,
+      onPrimary: onPrimary,
+      surface: Colors.white,
+      onSurface: const Color(0xFF0F172A),
+      outline: const Color(0xFFE2E8F0),
+      outlineVariant: const Color(0xFFE2E8F0),
+    );
+    final tokens = AppTokens.fromScheme(scheme, pageBg: background);
 
-    final textTheme = GoogleFonts.poppinsTextTheme(base.textTheme).copyWith(
+    final textTheme = GoogleFonts.poppinsTextTheme().copyWith(
       displayLarge: GoogleFonts.poppins(
-        fontSize: 36, fontWeight: FontWeight.w800,
-        color: isDark ? warmCream : darkPlum,
+        fontSize: 36,
+        fontWeight: FontWeight.w800,
+        color: tokens.textPrimary,
       ),
       titleLarge: GoogleFonts.poppins(
-        fontSize: 20, fontWeight: FontWeight.w700,
-        color: isDark ? warmCream : darkPlum,
+        fontSize: 20,
+        fontWeight: FontWeight.w700,
+        color: tokens.textPrimary,
       ),
       titleMedium: GoogleFonts.poppins(
-        fontSize: 16, fontWeight: FontWeight.w600,
-        color: isDark ? warmCream : darkPlum,
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: tokens.textPrimary,
       ),
       bodyLarge: GoogleFonts.poppins(
-        fontSize: 14, fontWeight: FontWeight.w400,
-        color: isDark ? warmCream : darkPlum,
+        fontSize: 14,
+        fontWeight: FontWeight.w400,
+        color: tokens.textPrimary,
       ),
       bodyMedium: GoogleFonts.poppins(
-        fontSize: 13, fontWeight: FontWeight.w400,
-        color: isDark ? mutedDarkLavender : mutedLightPlum,
+        fontSize: 13,
+        fontWeight: FontWeight.w400,
+        color: tokens.textMuted,
       ),
       labelMedium: GoogleFonts.poppins(
-        fontSize: 12, fontWeight: FontWeight.w500,
-        color: isDark ? mutedDarkLavender : mutedLightPlum,
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+        color: tokens.textMuted,
       ),
       labelSmall: GoogleFonts.poppins(
-        fontSize: 11, fontWeight: FontWeight.w500,
-        color: isDark ? mutedDarkLavender : mutedLightPlum,
+        fontSize: 11,
+        fontWeight: FontWeight.w500,
+        color: tokens.textMuted,
       ),
     );
 
-    return base.copyWith(
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: scheme,
+      extensions: [tokens],
+      fontFamily: 'Poppins',
       textTheme: textTheme,
-      // AppBar is replaced by manual PlumBanner on each screen; keep minimal
+      scaffoldBackgroundColor: tokens.pageBg,
+      // AppBar is replaced by a manual banner on each screen; keep minimal
       appBarTheme: AppBarTheme(
-        backgroundColor: isDark ? darkPlum : darkPlum,
+        backgroundColor: tokens.headerBg,
         elevation: 0,
         scrolledUnderElevation: 0,
-        systemOverlayStyle: SystemUiOverlayStyle.light, // always light text on plum
-        iconTheme: const IconThemeData(color: warmCream),
+        systemOverlayStyle: SystemUiOverlayStyle.light,
+        iconTheme: IconThemeData(color: tokens.headerFg),
         titleTextStyle: GoogleFonts.poppins(
           fontSize: 20,
           fontWeight: FontWeight.w700,
-          color: warmCream,
+          color: tokens.headerFg,
         ),
       ),
-      // Card theme — border-based in light mode, no shadow
+      // Card theme — border-based, no shadow
       cardTheme: CardThemeData(
-        color: isDark ? lighterPlum : cardLight,
+        color: tokens.card,
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: const BorderRadius.all(Radius.circular(20)),
-          side: BorderSide(
-            color: isDark ? borderDark : borderLight,
-            width: 1,
-          ),
+          side: BorderSide(color: tokens.border, width: 1),
         ),
       ),
       // BottomNav handled by custom PillNavBar
@@ -95,72 +114,43 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         border: InputBorder.none,
         hintStyle: GoogleFonts.poppins(
-          color: isDark ? mutedDarkLavender : mutedLightPlum,
+          color: tokens.textMuted,
           fontSize: 14,
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           elevation: 0,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          padding:
-              const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          backgroundColor: tokens.accent,
+          foregroundColor: tokens.onAccent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(buttonRadius),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
           textStyle:
               GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: isDark ? lighterPlum : darkPlum,
+        backgroundColor: tokens.headerBg,
         contentTextStyle:
-            GoogleFonts.poppins(color: warmCream, fontSize: 13),
+            GoogleFonts.poppins(color: tokens.headerFg, fontSize: 13),
         behavior: SnackBarBehavior.floating,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      scaffoldBackgroundColor: isDark ? darkPlum : warmCream,
       dialogTheme: DialogThemeData(
-        backgroundColor: isDark ? lighterPlum : cardLight,
+        backgroundColor: tokens.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         titleTextStyle: GoogleFonts.poppins(
           fontSize: 16,
           fontWeight: FontWeight.w700,
-          color: isDark ? warmCream : darkPlum,
+          color: tokens.textPrimary,
         ),
         contentTextStyle: GoogleFonts.poppins(
           fontSize: 13,
-          color: isDark ? mutedDarkLavender : mutedLightPlum,
+          color: tokens.textMuted,
         ),
       ),
     );
   }
-
-  // ─── Private base themes ────────────────────────────────────────────────────
-  static ThemeData _darkBase() => ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: darkPlum,
-        cardColor: lighterPlum,
-        primaryColor: warmCream,
-        colorScheme: const ColorScheme.dark(
-          primary: warmCream,
-          secondary: amberAccent,
-          surface: lighterPlum,
-          error: roseRed,
-        ),
-      );
-
-  static ThemeData _lightBase() => ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.light,
-        scaffoldBackgroundColor: warmCream,
-        cardColor: cardLight,
-        primaryColor: darkPlum,
-        colorScheme: const ColorScheme.light(
-          primary: darkPlum,
-          secondary: amberAccent,
-          surface: cardLight,
-          error: roseRed,
-        ),
-      );
 }

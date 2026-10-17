@@ -5,6 +5,7 @@ import '../models/transaction.dart';
 import '../models/category.dart';
 import '../providers/finance_provider.dart';
 import '../theme/app_theme.dart';
+import '../theme/app_tokens.dart';
 import 'manage_categories_modal.dart';
 
 class AddTransactionModal extends StatefulWidget {
@@ -121,7 +122,24 @@ class _AddTransactionModalState extends State<AddTransactionModal>
       orElse: () => Category(name: '', icon: '', color: '', type: 'expense'),
     );
     final isTabungan = selectedCat.name == 'Tabungan' && selectedCat.type == 'expense';
-    
+
+    // Selecting "Top Up" (expense, main wallet) records a paired wallet
+    // transfer instead of a regular expense.
+    final isTopUpTransfer = widget.editTransaction == null &&
+        widget.walletType == 'main' &&
+        _type == 'expense' &&
+        selectedCat.name == 'Top Up';
+    if (isTopUpTransfer) {
+      provider.makeTransfer(
+        toTopup: true,
+        amount: amount,
+        date: dateStr,
+        note: _noteCtrl.text.trim(),
+      );
+      Navigator.pop(context);
+      return;
+    }
+
     int? finalGoalId;
     if (isTabungan && provider.savingsGoals.isNotEmpty) {
       finalGoalId = _selectedSavingsGoalId ?? provider.savingsGoals.first.id;
@@ -168,7 +186,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
               Navigator.pop(ctx);
               Navigator.pop(context);
             },
-            child: const Text('Hapus', style: TextStyle(color: AppTheme.roseRed)),
+            child: Text('Hapus', style: TextStyle(color: ctx.tokens.expense)),
           ),
         ],
       ),
@@ -195,14 +213,152 @@ class _AddTransactionModalState extends State<AddTransactionModal>
     catch (_) { return Colors.grey; }
   }
 
+  // ─── Read-only view for paired transfer transactions ───────────────────────
+  Widget _buildTransferDetail(BuildContext context, FinanceProvider provider) {
+    final tokens = context.tokens;
+    final tx = widget.editTransaction!;
+    const transferColor = Color(0xFF3f51b5);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: tokens.card,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: tokens.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: tokens.softSurface,
+                        borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+                      ),
+                      child: Icon(Icons.close_rounded, size: 18,
+                          color: tokens.textPrimary),
+                    ),
+                  ),
+                  Text('Detail Transfer', style: Theme.of(context).textTheme.titleMedium),
+                  GestureDetector(
+                    onTap: _delete,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: tokens.expense.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+                      ),
+                      child: Icon(Icons.delete_outline_rounded, size: 18, color: tokens.expense),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 28),
+            Container(
+              width: 64, height: 64,
+              decoration: BoxDecoration(
+                color: transferColor.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.swap_horiz_rounded, size: 30, color: transferColor),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              tx.displayName,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: tokens.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              provider.formatCurrency(tx.amount),
+              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: transferColor),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              tx.date,
+              style: TextStyle(fontSize: 12, color: tokens.textMuted),
+            ),
+            if (tx.note.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  tx.note,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, color: tokens.textMuted),
+                ),
+              ),
+            ],
+            const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: transferColor.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: transferColor.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline_rounded, size: 16, color: transferColor),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Transfer antar dompet tidak dihitung sebagai pemasukan atau pengeluaran. Menghapus transaksi ini akan menghapus kedua sisi pasangan transfer.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: transferColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     final provider = Provider.of<FinanceProvider>(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final typeColor = _type == 'income' ? AppTheme.emeraldGreen : AppTheme.roseRed;
+    if (widget.editTransaction?.isTransfer == true) {
+      return _buildTransferDetail(context, provider);
+    }
+
+    final typeColor = _type == 'income' ? tokens.income : tokens.expense;
     final filteredCats = provider.categories
         .where((c) => c.type == _type)
+        .where((c) => c.name != 'Transfer Masuk')
+        .where((c) => widget.editTransaction == null || c.name != 'Top Up')
         .where((c) => widget.walletType == 'topup' ? (c.name != 'Top Up' && c.name != 'Tabungan' && c.name != 'Tarik Tabungan') : true)
         .toList();
     if (_selectedCategoryId == null && filteredCats.isNotEmpty) {
@@ -210,8 +366,16 @@ class _AddTransactionModalState extends State<AddTransactionModal>
     } else if (_selectedCategoryId != null && !filteredCats.any((c) => c.id == _selectedCategoryId)) {
       _selectedCategoryId = filteredCats.isNotEmpty ? filteredCats.first.id : null;
     }
-    final borderCol = isDark ? AppTheme.borderDark : AppTheme.borderLight;
-    final modalBg = isDark ? AppTheme.lighterPlum : Colors.white;
+    final selectedCatInfo = provider.categories.firstWhere(
+      (c) => c.id == _selectedCategoryId,
+      orElse: () => Category(name: '', icon: '', color: '', type: 'expense'),
+    );
+    final isTopUpTransfer = widget.editTransaction == null &&
+        widget.walletType == 'main' &&
+        _type == 'expense' &&
+        selectedCatInfo.name == 'Top Up';
+    final borderCol = tokens.border;
+    final modalBg = tokens.card;
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
@@ -231,7 +395,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
             Container(
               width: 40, height: 4,
               decoration: BoxDecoration(
-                color: isDark ? AppTheme.borderDark : AppTheme.borderLight,
+                color: borderCol,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -248,11 +412,11 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: isDark ? AppTheme.selectedPlum : AppTheme.surfaceHeroLight,
-                        borderRadius: BorderRadius.circular(10),
+                        color: tokens.softSurface,
+                        borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
                       ),
                       child: Icon(Icons.close_rounded, size: 18,
-                          color: isDark ? AppTheme.warmCream : AppTheme.darkPlum),
+                          color: tokens.textPrimary),
                     ),
                   ),
                   Text(
@@ -265,10 +429,10 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: AppTheme.roseRed.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(10),
+                              color: tokens.expense.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
                             ),
-                            child: const Icon(Icons.delete_outline_rounded, size: 18, color: AppTheme.roseRed),
+                            child: Icon(Icons.delete_outline_rounded, size: 18, color: tokens.expense),
                           ),
                         )
                       : const SizedBox(width: 34),
@@ -284,7 +448,6 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                 child: _AnimatedTypeToggle(
                   type: _type,
                   pillSlide: _pillSlide,
-                  isDark: isDark,
                   onChanged: _setType,
                 ),
               ),
@@ -304,7 +467,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: isDark ? AppTheme.mutedDarkLavender : AppTheme.mutedLightPlum,
+                        color: tokens.textMuted,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -320,7 +483,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                             style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.w700,
-                              color: isDark ? AppTheme.mutedDarkLavender : AppTheme.mutedLightPlum,
+                              color: tokens.textMuted,
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -340,8 +503,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                                 hintStyle: TextStyle(
                                   fontSize: 40,
                                   fontWeight: FontWeight.w800,
-                                  color: (isDark ? AppTheme.mutedDarkLavender : AppTheme.mutedLightPlum)
-                                      .withValues(alpha: 0.4),
+                                  color: tokens.textMuted.withValues(alpha: 0.4),
                                 ),
                               ),
                               onChanged: _onAmountChanged,
@@ -361,7 +523,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: isDark ? AppTheme.mutedDarkLavender : AppTheme.mutedLightPlum,
+                            color: tokens.textMuted,
                           ),
                         ),
                         GestureDetector(
@@ -409,8 +571,8 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                             decoration: BoxDecoration(
                               color: isSelected
                                   ? color.withValues(alpha: 0.15)
-                                  : isDark ? AppTheme.deepPlum : AppTheme.surfaceHeroLight,
-                              borderRadius: BorderRadius.circular(14),
+                                  : tokens.softSurface,
+                              borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
                               border: Border.all(
                                 color: isSelected ? color : Colors.transparent,
                                 width: 2,
@@ -435,7 +597,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                                     color: isSelected
                                         ? color
-                                        : (isDark ? AppTheme.mutedDarkLavender : AppTheme.mutedLightPlum),
+                                        : tokens.textMuted,
                                   ),
                                 ),
                               ],
@@ -445,6 +607,34 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                       },
                     ),
                     const SizedBox(height: 20),
+
+                    if (isTopUpTransfer) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF3f51b5).withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF3f51b5).withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.swap_horiz_rounded, size: 16, color: Color(0xFF3f51b5)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Dicatat sebagai Transfer ke Dompet E-Wallet, tidak dihitung sebagai pengeluaran.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF3f51b5),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
 
                     // Savings Goal Selector (only if type is expense and category is 'Tabungan')
                     (() {
@@ -464,7 +654,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: isDark ? AppTheme.mutedDarkLavender : AppTheme.mutedLightPlum,
+                              color: tokens.textMuted,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -472,13 +662,13 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                               ? Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: AppTheme.roseRed.withValues(alpha: 0.1),
+                                    color: tokens.expense.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: AppTheme.roseRed.withValues(alpha: 0.3)),
+                                    border: Border.all(color: tokens.expense.withValues(alpha: 0.3)),
                                   ),
                                   child: Row(
                                     children: [
-                                      const Icon(Icons.warning_amber_rounded, size: 16, color: AppTheme.roseRed),
+                                      Icon(Icons.warning_amber_rounded, size: 16, color: tokens.expense),
                                       const SizedBox(width: 8),
                                       Expanded(
                                         child: Text(
@@ -486,7 +676,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                                           style: TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w500,
-                                            color: isDark ? AppTheme.warmCream : AppTheme.roseRed,
+                                            color: tokens.expense,
                                           ),
                                         ),
                                       ),
@@ -496,8 +686,8 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                               : Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 14),
                                   decoration: BoxDecoration(
-                                    color: isDark ? AppTheme.deepPlum : AppTheme.surfaceHeroLight,
-                                    borderRadius: BorderRadius.circular(14),
+                                    color: tokens.softSurface,
+                                    borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
                                     border: Border.all(color: borderCol, width: 0.5),
                                   ),
                                   child: DropdownButtonHideUnderline(
@@ -509,11 +699,11 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                                       isExpanded: true,
                                       dropdownColor: modalBg,
                                       icon: Icon(Icons.arrow_drop_down_rounded,
-                                          color: isDark ? AppTheme.warmCream : AppTheme.darkPlum),
+                                          color: tokens.textPrimary),
                                       style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
-                                        color: isDark ? AppTheme.warmCream : AppTheme.darkPlum,
+                                        color: tokens.textPrimary,
                                       ),
                                       onChanged: (int? value) {
                                         setState(() => _selectedSavingsGoalId = value);
@@ -538,7 +728,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: isDark ? AppTheme.mutedDarkLavender : AppTheme.mutedLightPlum,
+                        color: tokens.textMuted,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -547,21 +737,21 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         decoration: BoxDecoration(
-                          color: isDark ? AppTheme.deepPlum : AppTheme.surfaceHeroLight,
-                          borderRadius: BorderRadius.circular(14),
+                          color: tokens.softSurface,
+                          borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(Icons.calendar_month_rounded, size: 18,
-                                color: isDark ? AppTheme.mutedDarkLavender : AppTheme.mutedLightPlum),
+                                color: tokens.textMuted),
                             const SizedBox(width: 10),
                             Text(
                               DateFormat('dd MMM yyyy', 'id').format(_selectedDate),
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: isDark ? AppTheme.warmCream : AppTheme.darkPlum,
+                                color: tokens.textPrimary,
                               ),
                             ),
                           ],
@@ -576,7 +766,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: isDark ? AppTheme.mutedDarkLavender : AppTheme.mutedLightPlum,
+                        color: tokens.textMuted,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -585,14 +775,14 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                       maxLines: 2,
                       style: TextStyle(
                         fontSize: 14,
-                        color: isDark ? AppTheme.warmCream : AppTheme.darkPlum,
+                        color: tokens.textPrimary,
                       ),
                       decoration: InputDecoration(
                         hintText: 'Tambahkan catatan...',
-                        fillColor: isDark ? AppTheme.deepPlum : AppTheme.surfaceHeroLight,
+                        fillColor: tokens.softSurface,
                         filled: true,
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
                           borderSide: BorderSide.none,
                         ),
                       ),
@@ -615,7 +805,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                   style: ElevatedButton.styleFrom(
                     backgroundColor: typeColor,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.buttonRadius)),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                   onPressed: _save,
@@ -638,23 +828,22 @@ class _AddTransactionModalState extends State<AddTransactionModal>
 class _AnimatedTypeToggle extends StatelessWidget {
   final String type;
   final Animation<double> pillSlide;
-  final bool isDark;
   final ValueChanged<String> onChanged;
 
   const _AnimatedTypeToggle({
     required this.type,
     required this.pillSlide,
-    required this.isDark,
     required this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Container(
       height: 48,
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.deepPlum : AppTheme.surfaceHeroLight,
-        borderRadius: BorderRadius.circular(16),
+        color: tokens.softSurface,
+        borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
       ),
       child: Stack(
         children: [
@@ -668,11 +857,11 @@ class _AnimatedTypeToggle extends StatelessWidget {
                 child: Container(
                   margin: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: pillSlide.value < 0.5 ? AppTheme.roseRed : AppTheme.emeraldGreen,
-                    borderRadius: BorderRadius.circular(12),
+                    color: pillSlide.value < 0.5 ? tokens.expense : tokens.income,
+                    borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
-                        color: (pillSlide.value < 0.5 ? AppTheme.roseRed : AppTheme.emeraldGreen)
+                        color: (pillSlide.value < 0.5 ? tokens.expense : tokens.income)
                             .withValues(alpha: 0.35),
                         blurRadius: 8,
                         offset: const Offset(0, 2),

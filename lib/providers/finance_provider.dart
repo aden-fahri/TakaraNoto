@@ -18,6 +18,8 @@ class FinanceProvider extends ChangeNotifier {
   double _topupBalance = 0.0;
   List<FinanceTransaction> _topupTransactions = [];
   List<Map<String, dynamic>> _monthlyNetHistory = [];
+  List<Map<String, dynamic>> _categorySpending = [];
+  List<Map<String, dynamic>> _categoryIncome = [];
 
   // Getters
   List<FinanceTransaction> get transactions => _transactions;
@@ -31,6 +33,8 @@ class FinanceProvider extends ChangeNotifier {
   double get topupBalance => _topupBalance;
   List<FinanceTransaction> get topupTransactions => _topupTransactions;
   List<Map<String, dynamic>> get monthlyNetHistory => _monthlyNetHistory;
+  List<Map<String, dynamic>> get categorySpending => _categorySpending;
+  List<Map<String, dynamic>> get categoryIncome => _categoryIncome;
 
   bool get hasBudgetAlert {
     for (final b in _budgets) {
@@ -83,6 +87,8 @@ class FinanceProvider extends ChangeNotifier {
       _topupBalance = await DatabaseHelper.instance.getTopupWalletBalance();
       _topupTransactions = await DatabaseHelper.instance.getTopupTransactions();
       _monthlyNetHistory = await DatabaseHelper.instance.getMonthlyNetBalanceHistory();
+      _categorySpending = await DatabaseHelper.instance.getCategorySpending(_currentMonth);
+      _categoryIncome = await DatabaseHelper.instance.getCategoryIncome(_currentMonth);
       notifyListeners();
     } catch (e) {
       debugPrint('Error refreshing monthly details: $e');
@@ -120,6 +126,23 @@ class FinanceProvider extends ChangeNotifier {
 
   Future<void> deleteTx(int id) async {
     await DatabaseHelper.instance.deleteTransaction(id);
+    await refreshAll();
+  }
+
+  /// Moves money between the main wallet and the e-wallet as a paired
+  /// transfer. Transfers never count as income/expense in statistics.
+  Future<void> makeTransfer({
+    required bool toTopup,
+    required double amount,
+    required String date,
+    required String note,
+  }) async {
+    await DatabaseHelper.instance.addTransfer(
+      toTopup: toTopup,
+      amount: amount,
+      date: date,
+      note: note,
+    );
     await refreshAll();
   }
 
@@ -265,6 +288,27 @@ class FinanceProvider extends ChangeNotifier {
     await refreshAll();
   }
 
+  /// Budget for the same category in the previous month (used to prefill the
+  /// budget modal when the current month has no budget yet).
+  Future<Budget?> getPreviousMonthBudget(int categoryId) async {
+    final parts = _currentMonth.split('-');
+    if (parts.length != 2) return null;
+    var year = int.parse(parts[0]);
+    var month = int.parse(parts[1]) - 1;
+    if (month == 0) {
+      month = 12;
+      year--;
+    }
+    final prevMonth = '$year-${month.toString().padLeft(2, '0')}';
+    try {
+      final budgets = await DatabaseHelper.instance.getBudgets(prevMonth);
+      final matches = budgets.where((b) => b.categoryId == categoryId).toList();
+      return matches.isNotEmpty ? matches.first : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   // --- Categories Operations ---
 
   Future<void> addCat({
@@ -284,6 +328,8 @@ class FinanceProvider extends ChangeNotifier {
   }
 
   Future<void> deleteCat(int id) async {
+    final match = _categories.where((c) => c.id == id);
+    if (match.isNotEmpty && match.first.isSpecial) return;
     await DatabaseHelper.instance.deleteCategory(id);
     await refreshAll();
   }

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/finance_provider.dart';
 import '../models/transaction.dart';
 import '../theme/app_theme.dart';
+import '../theme/app_tokens.dart';
 import '../widgets/add_transaction_modal.dart';
 
 class HistoryScreen extends StatefulWidget {
@@ -16,6 +17,7 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   String _searchQuery = '';
   String _filterType = 'all';
+  int? _filterCatId;
   final TextEditingController _searchCtrl = TextEditingController();
 
   @override
@@ -51,8 +53,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
     } catch (_) { return s; }
   }
 
-  double _dailyNet(List<FinanceTransaction> txs) =>
-      txs.fold(0.0, (acc, tx) => tx.type == 'income' ? acc + tx.amount : acc - tx.amount);
+  double _dailyNet(List<FinanceTransaction> txs) => txs
+      .where((tx) => !tx.isTransfer)
+      .fold(0.0, (acc, tx) => tx.type == 'income' ? acc + tx.amount : acc - tx.amount);
 
   IconData _icon(String name) {
     switch (name) {
@@ -84,6 +87,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   void _deleteWithUndo(FinanceProvider provider, FinanceTransaction tx) {
+    if (tx.isTransfer) {
+      _confirmDeleteTransfer(provider, tx);
+      return;
+    }
     provider.deleteTx(tx.id!);
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -91,7 +98,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         content: Text('Transaksi "${tx.categoryName ?? 'ini'}" dihapus'),
         action: SnackBarAction(
           label: 'Batalkan',
-          textColor: AppTheme.amberAccent,
+          textColor: context.tokens.warning,
           onPressed: () {
             // Re-add with same data
             provider.addTx(
@@ -100,6 +107,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
               type: tx.type,
               date: tx.date,
               note: tx.note,
+              savingsGoalId: tx.savingsGoalId,
+              walletType: tx.walletType,
             );
           },
         ),
@@ -108,9 +117,37 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
+  void _confirmDeleteTransfer(FinanceProvider provider, FinanceTransaction tx) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus Transfer'),
+        content: const Text(
+            'Transfer ini tercatat di kedua dompet (dompet utama & e-wallet). Menghapus akan menghapus keduanya. Lanjutkan?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () {
+              provider.deleteTx(tx.id!);
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Transfer dihapus')),
+              );
+            },
+            child: Text('Hapus', style: TextStyle(color: context.tokens.expense)),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ─── Build ───────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     final provider = Provider.of<FinanceProvider>(context);
     final currentMonth = provider.currentMonth;
 
@@ -118,17 +155,23 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final filtered = provider.transactions.where((tx) {
       final inMonth = tx.date.startsWith(currentMonth);
       final q = _searchQuery.toLowerCase();
-      final matchSearch = tx.note.toLowerCase().contains(q) ||
-          (tx.categoryName ?? '').toLowerCase().contains(q);
+      final digits = q.replaceAll(RegExp(r'[^0-9]'), '');
+      final matchText = tx.note.toLowerCase().contains(q) ||
+          tx.displayName.toLowerCase().contains(q);
+      final matchAmount = digits.isNotEmpty &&
+          tx.amount.round().toString().contains(digits);
+      final matchSearch = q.isEmpty || matchText || matchAmount;
       final matchType = _filterType == 'all' || tx.type == _filterType;
-      return inMonth && matchSearch && matchType;
+      final matchCategory = _filterCatId == null || tx.categoryId == _filterCatId;
+      return inMonth && matchSearch && matchType && matchCategory;
     }).toList();
 
-    // Compute totals for this month/filter
+    // Compute totals for this month/filter (transfers are excluded)
     final double monthIncome = filtered
-        .where((tx) => !(tx.type == 'income' && tx.savingsGoalId != null))
+        .where((tx) => !tx.isTransfer && !(tx.type == 'income' && tx.savingsGoalId != null))
         .fold(0.0, (acc, tx) => tx.type == 'income' ? acc + tx.amount : acc);
     final double monthExpense = filtered.fold(0.0, (acc, tx) {
+      if (tx.isTransfer) return acc;
       if (tx.type == 'expense') {
         return acc + tx.amount;
       } else if (tx.type == 'income' && tx.savingsGoalId != null) {
@@ -145,7 +188,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final sortedDates = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
 
     return Scaffold(
-      backgroundColor: AppTheme.warmCream,
+      backgroundColor: tokens.pageBg,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -197,20 +240,48 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 _FilterChip(
                   label: 'Pemasukan', icon: Icons.arrow_downward_rounded,
                   isActive: _filterType == 'income',
-                  activeColor: AppTheme.emeraldGreen,
+                  activeColor: tokens.income,
                   onTap: () => setState(() => _filterType = 'income'),
                 ),
                 const SizedBox(width: 8),
                 _FilterChip(
                   label: 'Pengeluaran', icon: Icons.arrow_upward_rounded,
                   isActive: _filterType == 'expense',
-                  activeColor: AppTheme.roseRed,
+                  activeColor: tokens.expense,
                   onTap: () => setState(() => _filterType = 'expense'),
                 ),
               ],
             ),
           ),
-          Container(height: 0.5, color: AppTheme.borderLight, margin: const EdgeInsets.only(top: 8)),
+          // ══ CATEGORY FILTER CHIPS ═════════════════════════════════════════
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+            child: SizedBox(
+              height: 32,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  _CatChip(
+                    label: 'Semua Kategori',
+                    active: _filterCatId == null,
+                    color: tokens.accent,
+                    onTap: () => setState(() => _filterCatId = null),
+                  ),
+                  ...provider.categories.map((c) => Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: _CatChip(
+                          label: c.name,
+                          active: _filterCatId == c.id,
+                          color: _color(c.color),
+                          onTap: () => setState(() =>
+                              _filterCatId = _filterCatId == c.id ? null : c.id),
+                        ),
+                      )),
+                ],
+              ),
+            ),
+          ),
+          Container(height: 0.5, color: tokens.border, margin: const EdgeInsets.only(top: 8)),
 
           // ══ LIST ══════════════════════════════════════════════════════════
           Expanded(
@@ -223,7 +294,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       final date = sortedDates[i];
                       final dayTxs = grouped[date]!;
                       final net = _dailyNet(dayTxs);
-                      final netColor = net >= 0 ? AppTheme.emeraldGreen : AppTheme.roseRed;
+                      final netColor = net >= 0 ? tokens.income : tokens.expense;
 
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -237,13 +308,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: AppTheme.surfaceHeroLight,
+                                    color: tokens.softSurface,
                                     borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(color: AppTheme.borderLight),
+                                    border: Border.all(color: tokens.border),
                                   ),
                                   child: Text(
                                     _formatDate(date),
-                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.darkPlum),
+                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textPrimary),
                                   ),
                                 ),
                                 Container(
@@ -264,7 +335,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
                           // Transactions in this day
                           ...dayTxs.map((tx) {
-                            final catColor = _color(tx.categoryColor ?? '#999999');
+                            const transferColor = Color(0xFF3f51b5);
+                            final isTransfer = tx.isTransfer;
+                            final catColor = isTransfer
+                                ? transferColor
+                                : _color(tx.categoryColor ?? '#999999');
                             final isIncome = tx.type == 'income';
                             return Dismissible(
                               key: Key('tx_${tx.id}'),
@@ -273,10 +348,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 alignment: Alignment.centerRight,
                                 padding: const EdgeInsets.only(right: 20),
                                 decoration: BoxDecoration(
-                                  color: AppTheme.roseRed.withValues(alpha: 0.12),
+                                  color: tokens.expense.withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(16),
                                 ),
-                                child: const Icon(Icons.delete_rounded, color: AppTheme.roseRed),
+                                child: Icon(Icons.delete_rounded, color: tokens.expense),
                               ),
                               confirmDismiss: (_) async {
                                 _deleteWithUndo(provider, tx);
@@ -288,9 +363,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   margin: const EdgeInsets.only(bottom: 8),
                                   padding: const EdgeInsets.all(14),
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
+                                    color: tokens.card,
                                     borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: AppTheme.borderLight, width: 1),
+                                    border: Border.all(color: tokens.border, width: 1),
                                   ),
                                   child: Row(
                                     children: [
@@ -301,7 +376,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                           color: catColor.withValues(alpha: 0.12),
                                           borderRadius: BorderRadius.circular(12),
                                         ),
-                                        child: Icon(_icon(tx.categoryIcon ?? ''), color: catColor, size: 20),
+                                        child: Icon(
+                                          isTransfer ? Icons.swap_horiz_rounded : _icon(tx.categoryIcon ?? ''),
+                                          color: catColor,
+                                          size: 20,
+                                        ),
                                       ),
                                       const SizedBox(width: 12),
                                       // Info
@@ -310,11 +389,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              tx.categoryName ?? 'Kategori',
-                                              style: const TextStyle(
+                                              tx.displayName,
+                                              style: TextStyle(
                                                 fontSize: 13,
                                                 fontWeight: FontWeight.w700,
-                                                color: AppTheme.darkPlum,
+                                                color: tokens.textPrimary,
                                               ),
                                             ),
                                             if (tx.note.isNotEmpty)
@@ -322,9 +401,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                                 tx.note,
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                   fontSize: 11,
-                                                  color: AppTheme.mutedLightPlum,
+                                                  color: tokens.textMuted,
                                                 ),
                                               ),
                                           ],
@@ -336,7 +415,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                         style: TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w800,
-                                          color: isIncome ? AppTheme.emeraldGreen : AppTheme.roseRed,
+                                          color: isTransfer
+                                              ? transferColor
+                                              : isIncome
+                                                  ? tokens.income
+                                                  : tokens.expense,
                                         ),
                                       ),
                                     ],
@@ -356,6 +439,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Widget _buildEmpty() {
+    final tokens = context.tokens;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -363,17 +447,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
           Container(
             width: 72, height: 72,
             decoration: BoxDecoration(
-              color: AppTheme.surfaceHeroLight,
+              color: tokens.softSurface,
               shape: BoxShape.circle,
-              border: Border.all(color: AppTheme.borderLight),
+              border: Border.all(color: tokens.border),
             ),
-            child: const Icon(Icons.search_off_rounded, size: 32, color: AppTheme.mutedLightPlum),
+            child: Icon(Icons.search_off_rounded, size: 32, color: tokens.textMuted),
           ),
           const SizedBox(height: 16),
-          const Text('Tidak ada transaksi', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppTheme.darkPlum)),
+          Text('Tidak ada transaksi', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: tokens.textPrimary)),
           const SizedBox(height: 6),
-          const Text('Coba ubah filter atau kata kunci pencarian',
-              style: TextStyle(fontSize: 12, color: AppTheme.mutedLightPlum)),
+          Text('Coba ubah filter atau kata kunci pencarian',
+              style: TextStyle(fontSize: 12, color: tokens.textMuted)),
         ],
       ),
     );
@@ -408,10 +492,11 @@ class _HistoryBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Container(
-      decoration: const BoxDecoration(
-        color: AppTheme.darkPlum,
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        color: tokens.headerBg,
+        borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(30),
           bottomRight: Radius.circular(30),
         ),
@@ -428,16 +513,17 @@ class _HistoryBanner extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const Text(
+                  Text(
                     'Riwayat',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppTheme.warmCream),
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: tokens.headerFg),
                   ),
                   // Month navigator
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
+                      color: tokens.headerSurface,
                       borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: tokens.headerBorder, width: 1),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -447,10 +533,10 @@ class _HistoryBanner extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                           child: Text(
                             monthName,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: AppTheme.mutedDarkLavender,
+                              color: tokens.headerMuted,
                             ),
                           ),
                         ),
@@ -469,14 +555,14 @@ class _HistoryBanner extends StatelessWidget {
                     icon: Icons.arrow_downward_rounded,
                     label: 'Masuk',
                     value: provider.formatCurrency(income),
-                    color: AppTheme.emeraldGreen,
+                    color: tokens.incomeOnHeader,
                   ),
                   const SizedBox(width: 10),
                   _MiniStat(
                     icon: Icons.arrow_upward_rounded,
                     label: 'Keluar',
                     value: provider.formatCurrency(expense),
-                    color: AppTheme.roseRed,
+                    color: tokens.expenseOnHeader,
                   ),
                 ],
               ),
@@ -486,25 +572,25 @@ class _HistoryBanner extends StatelessWidget {
               Container(
                 height: 44,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1),
+                  color: tokens.headerSurface,
+                  borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+                  border: Border.all(color: tokens.headerBorder, width: 1),
                 ),
                 child: Row(
                   children: [
                     const SizedBox(width: 12),
-                    const Icon(Icons.search_rounded, color: AppTheme.mutedDarkLavender, size: 20),
+                    Icon(Icons.search_rounded, color: tokens.headerMuted, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                       child: TextField(
                         controller: searchCtrl,
-                        style: const TextStyle(fontSize: 14, color: AppTheme.warmCream),
+                        style: TextStyle(fontSize: 14, color: tokens.headerFg),
                         decoration: InputDecoration(
                           border: InputBorder.none,
                           hintText: 'Cari transaksi...',
                           hintStyle: TextStyle(
                             fontSize: 13,
-                            color: AppTheme.mutedDarkLavender.withValues(alpha: 0.7),
+                            color: tokens.headerMuted.withValues(alpha: 0.7),
                           ),
                           isDense: true,
                           contentPadding: EdgeInsets.zero,
@@ -515,9 +601,9 @@ class _HistoryBanner extends StatelessWidget {
                     if (searchQuery.isNotEmpty)
                       GestureDetector(
                         onTap: onClear,
-                        child: const Padding(
-                          padding: EdgeInsets.only(right: 10),
-                          child: Icon(Icons.close_rounded, size: 18, color: AppTheme.mutedDarkLavender),
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 10),
+                          child: Icon(Icons.close_rounded, size: 18, color: tokens.headerMuted),
                         ),
                       ),
                   ],
@@ -599,15 +685,62 @@ class _NavBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
+          color: tokens.headerSurface,
           borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: tokens.headerBorder, width: 1),
         ),
-        child: Icon(icon, color: Colors.white, size: 16),
+        child: Icon(icon, color: tokens.headerFg, size: 16),
+      ),
+    );
+  }
+}
+
+// ─── Category Filter Chip ─────────────────────────────────────────────────────
+class _CatChip extends StatelessWidget {
+  final String label;
+  final bool active;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _CatChip({
+    required this.label,
+    required this.active,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: active ? color.withValues(alpha: 0.12) : tokens.card,
+          borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+          border: Border.all(
+            color: active ? color : tokens.border,
+            width: active ? 1.3 : 1,
+          ),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: active ? color : tokens.textMuted,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -629,7 +762,8 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ac = activeColor ?? AppTheme.darkPlum;
+    final tokens = context.tokens;
+    final ac = activeColor ?? tokens.accent;
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -637,24 +771,24 @@ class _FilterChip extends StatelessWidget {
           duration: const Duration(milliseconds: 180),
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
           decoration: BoxDecoration(
-            color: isActive ? ac.withValues(alpha: 0.1) : AppTheme.cardLight,
+            color: isActive ? ac.withValues(alpha: 0.1) : tokens.card,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isActive ? ac : AppTheme.borderLight,
+              color: isActive ? ac : tokens.border,
               width: isActive ? 1.5 : 1,
             ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 13, color: isActive ? ac : AppTheme.mutedLightPlum),
+              Icon(icon, size: 13, color: isActive ? ac : tokens.textMuted),
               const SizedBox(width: 5),
               Text(
                 label,
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: isActive ? ac : AppTheme.mutedLightPlum,
+                  color: isActive ? ac : tokens.textMuted,
                 ),
               ),
             ],

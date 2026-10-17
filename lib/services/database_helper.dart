@@ -36,11 +36,16 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 5, // Upgrade to version 5
+      version: 6, // Upgrade to version 6
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
       onConfigure: _onConfigure,
     );
+  }
+
+  Future<bool> _columnExists(Database db, String table, String column) async {
+    final info = await db.rawQuery('PRAGMA table_info($table)');
+    return info.any((row) => row['name'] == column);
   }
 
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -65,7 +70,9 @@ class DatabaseHelper {
       ''');
     }
     if (oldVersion < 5) {
-      await db.execute("ALTER TABLE transactions ADD COLUMN wallet_type TEXT DEFAULT 'main'");
+      if (!await _columnExists(db, 'transactions', 'wallet_type')) {
+        await db.execute("ALTER TABLE transactions ADD COLUMN wallet_type TEXT DEFAULT 'main'");
+      }
       // Seed default category "Top Up"
       final existing = await db.query('categories', where: 'name = ?', whereArgs: ['Top Up']);
       if (existing.isEmpty) {
@@ -75,6 +82,65 @@ class DatabaseHelper {
           'color': '#3f51b5',
           'type': 'expense'
         });
+      }
+    }
+    if (oldVersion < 6) {
+      // Transfer support between the main wallet and the e-wallet
+      if (!await _columnExists(db, 'transactions', 'is_transfer')) {
+        await db.execute('ALTER TABLE transactions ADD COLUMN is_transfer INTEGER NOT NULL DEFAULT 0');
+      }
+      if (!await _columnExists(db, 'transactions', 'transfer_group')) {
+        await db.execute('ALTER TABLE transactions ADD COLUMN transfer_group INTEGER');
+      }
+
+      // Seed the receiving category used by transfer pairs
+      final tmExisting = await db.query('categories', where: 'name = ?', whereArgs: ['Transfer Masuk']);
+      if (tmExisting.isEmpty) {
+        await db.insert('categories', {
+          'name': 'Transfer Masuk',
+          'icon': 'download',
+          'color': '#5c6bc0',
+          'type': 'income'
+        });
+      }
+
+      // Migrate legacy top ups: main-wallet "Top Up" expenses become transfer pairs
+      // so previous e-wallet balances stay identical while no longer counting as
+      // regular expenses in statistics and budgets.
+      final topupCat = await db.query('categories',
+          where: 'name = ? AND type = ?', whereArgs: ['Top Up', 'expense'], limit: 1);
+      final tmCat = await db.query('categories',
+          where: 'name = ? AND type = ?', whereArgs: ['Transfer Masuk', 'income'], limit: 1);
+      if (topupCat.isNotEmpty && tmCat.isNotEmpty) {
+        final topupCatId = topupCat.first['id'] as int;
+        final tmCatId = tmCat.first['id'] as int;
+        final legacy = await db.query(
+          'transactions',
+          where: "wallet_type = 'main' AND category_id = ? AND type = 'expense' AND is_transfer = 0",
+          whereArgs: [topupCatId],
+        );
+        for (final row in legacy) {
+          final legacyId = row['id'] as int;
+          final amount = (row['amount'] as num).toDouble();
+          final rawNote = (row['note'] as String? ?? '').trim();
+          await db.update(
+            'transactions',
+            {'is_transfer': 1, 'transfer_group': legacyId},
+            where: 'id = ?',
+            whereArgs: [legacyId],
+          );
+          await db.insert('transactions', {
+            'category_id': tmCatId,
+            'amount': amount,
+            'type': 'income',
+            'date': row['date'],
+            'note': rawNote.isNotEmpty ? rawNote : 'Top Up Saldo',
+            'savings_goal_id': null,
+            'wallet_type': 'topup',
+            'is_transfer': 1,
+            'transfer_group': legacyId,
+          });
+        }
       }
     }
   }
@@ -129,6 +195,8 @@ class DatabaseHelper {
         note TEXT,
         savings_goal_id INTEGER,
         wallet_type TEXT DEFAULT 'main',
+        is_transfer INTEGER NOT NULL DEFAULT 0,
+        transfer_group INTEGER,
         FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE CASCADE,
         FOREIGN KEY (savings_goal_id) REFERENCES savings_goals (id) ON DELETE SET NULL
       )
@@ -151,6 +219,7 @@ class DatabaseHelper {
       {'name': 'Gaji', 'icon': 'banknote', 'color': '#2ecc71', 'type': 'income'},
       {'name': 'Investasi', 'icon': 'trending_up', 'color': '#1abc9c', 'type': 'income'},
       {'name': 'Saku & Hibah', 'icon': 'gift', 'color': '#fd79a8', 'type': 'income'},
+      {'name': 'Transfer Masuk', 'icon': 'download', 'color': '#5c6bc0', 'type': 'income'},
       {'name': 'Top Up', 'icon': 'payments', 'color': '#3f51b5', 'type': 'expense'},
       {'name': 'Lain-lain', 'icon': 'ellipsis', 'color': '#95a5a6', 'type': 'expense'}
     ];
@@ -174,13 +243,14 @@ class DatabaseHelper {
         {'id': 8, 'name': 'Gaji', 'icon': 'banknote', 'color': '#2ecc71', 'type': 'income'},
         {'id': 9, 'name': 'Investasi', 'icon': 'trending_up', 'color': '#1abc9c', 'type': 'income'},
         {'id': 10, 'name': 'Saku & Hibah', 'icon': 'gift', 'color': '#fd79a8', 'type': 'income'},
+        {'id': 14, 'name': 'Transfer Masuk', 'icon': 'download', 'color': '#5c6bc0', 'type': 'income'},
         {'id': 13, 'name': 'Top Up', 'icon': 'payments', 'color': '#3f51b5', 'type': 'expense'},
         {'id': 11, 'name': 'Lain-lain', 'icon': 'ellipsis', 'color': '#95a5a6', 'type': 'expense'}
       ];
       for (final cat in defaultCategories) {
         _webCategories.add(Category.fromMap(cat));
       }
-      _webIdCounter = 14;
+      _webIdCounter = 15;
     }
   }
 
@@ -292,6 +362,8 @@ class DatabaseHelper {
         note: transaction.note,
         savingsGoalId: transaction.savingsGoalId,
         walletType: transaction.walletType,
+        isTransfer: transaction.isTransfer,
+        transferGroup: transaction.transferGroup,
       );
       _webTransactions.add(tx);
       return newId;
@@ -301,13 +373,112 @@ class DatabaseHelper {
     return await db.insert('transactions', transaction.toMap());
   }
 
+  /// Creates a transfer pair between the main wallet and the e-wallet.
+  /// Both rows share a [transferGroup] and are flagged as transfers so they
+  /// are excluded from income/expense statistics and budgets.
+  Future<void> addTransfer({
+    required bool toTopup,
+    required double amount,
+    required String date,
+    required String note,
+  }) async {
+    const outCatName = 'Top Up';
+    const inCatName = 'Transfer Masuk';
+    final fromWallet = toTopup ? 'main' : 'topup';
+    final toWallet = toTopup ? 'topup' : 'main';
+
+    if (kIsWeb) {
+      _initWebCategories();
+      final outCat = _webCategories.firstWhere((c) => c.name == outCatName && c.type == 'expense',
+          orElse: () => Category(name: outCatName, icon: 'payments', color: '#3f51b5', type: 'expense'));
+      final inCat = _webCategories.firstWhere((c) => c.name == inCatName && c.type == 'income',
+          orElse: () => Category(name: inCatName, icon: 'download', color: '#5c6bc0', type: 'income'));
+      final group = _webIdCounter;
+      _webTransactions.add(FinanceTransaction(
+        id: _webIdCounter++,
+        categoryId: outCat.id ?? 0,
+        amount: amount,
+        type: 'expense',
+        date: date,
+        note: note,
+        walletType: fromWallet,
+        isTransfer: true,
+        transferGroup: group,
+      ));
+      _webTransactions.add(FinanceTransaction(
+        id: _webIdCounter++,
+        categoryId: inCat.id ?? 0,
+        amount: amount,
+        type: 'income',
+        date: date,
+        note: note,
+        walletType: toWallet,
+        isTransfer: true,
+        transferGroup: group,
+      ));
+      return;
+    }
+
+    final db = await instance.database;
+    final outCat = await db.query('categories',
+        where: 'name = ? AND type = ?', whereArgs: [outCatName, 'expense'], limit: 1);
+    final inCat = await db.query('categories',
+        where: 'name = ? AND type = ?', whereArgs: [inCatName, 'income'], limit: 1);
+    if (outCat.isEmpty || inCat.isEmpty) return;
+    final outCatId = outCat.first['id'] as int;
+    final inCatId = inCat.first['id'] as int;
+    final group = DateTime.now().microsecondsSinceEpoch;
+
+    await db.transaction((txn) async {
+      await txn.insert('transactions', {
+        'category_id': outCatId,
+        'amount': amount,
+        'type': 'expense',
+        'date': date,
+        'note': note,
+        'savings_goal_id': null,
+        'wallet_type': fromWallet,
+        'is_transfer': 1,
+        'transfer_group': group,
+      });
+      await txn.insert('transactions', {
+        'category_id': inCatId,
+        'amount': amount,
+        'type': 'income',
+        'date': date,
+        'note': note,
+        'savings_goal_id': null,
+        'wallet_type': toWallet,
+        'is_transfer': 1,
+        'transfer_group': group,
+      });
+    });
+  }
+
   Future<int> deleteTransaction(int id) async {
     if (kIsWeb) {
+      final idx = _webTransactions.indexWhere((t) => t.id == id);
+      if (idx != -1) {
+        final tx = _webTransactions[idx];
+        if (tx.isTransfer && tx.transferGroup != null) {
+          _webTransactions.removeWhere((t) => t.transferGroup == tx.transferGroup);
+          return 2;
+        }
+      }
       _webTransactions.removeWhere((t) => t.id == id);
       return 1;
     }
 
     final db = await instance.database;
+    final rows = await db.query('transactions', where: 'id = ?', whereArgs: [id], limit: 1);
+    if (rows.isNotEmpty) {
+      final row = rows.first;
+      final isTransfer = (row['is_transfer'] as int? ?? 0) == 1;
+      final group = row['transfer_group'] as int?;
+      if (isTransfer && group != null) {
+        return await db.delete('transactions', where: 'transfer_group = ?', whereArgs: [group]);
+      }
+    }
     return await db.delete('transactions', where: 'id = ?', whereArgs: [id]);
   }
 
@@ -391,6 +562,9 @@ class DatabaseHelper {
             date: old.date,
             note: old.note,
             savingsGoalId: null,
+            walletType: old.walletType,
+            isTransfer: old.isTransfer,
+            transferGroup: old.transferGroup,
           );
         }
       }
@@ -427,7 +601,7 @@ class DatabaseHelper {
       _initWebCategories();
       final Map<int, double> spending = {};
       for (final tx in _webTransactions) {
-        if (tx.date.startsWith(monthYear) && tx.walletType == 'main') {
+        if (tx.date.startsWith(monthYear) && tx.walletType == 'main' && !tx.isTransfer) {
           if (tx.type == 'expense') {
             spending[tx.categoryId] = (spending[tx.categoryId] ?? 0.0) + tx.amount;
           } else if (tx.type == 'income' && tx.savingsGoalId != null) {
@@ -457,7 +631,7 @@ class DatabaseHelper {
              SUM(CASE WHEN t.type = 'expense' THEN t.amount WHEN (t.type = 'income' AND t.savings_goal_id IS NOT NULL) THEN -t.amount ELSE 0 END) as amount
       FROM transactions t
       INNER JOIN categories c ON t.category_id = c.id
-      WHERE (t.type = 'expense' OR (t.type = 'income' AND t.savings_goal_id IS NOT NULL)) AND substr(t.date, 1, 7) = ? AND t.wallet_type = 'main'
+      WHERE (t.type = 'expense' OR (t.type = 'income' AND t.savings_goal_id IS NOT NULL)) AND substr(t.date, 1, 7) = ? AND t.wallet_type = 'main' AND t.is_transfer = 0
       GROUP BY t.category_id
       HAVING amount > 0
       ORDER BY amount DESC
@@ -469,7 +643,7 @@ class DatabaseHelper {
       double income = 0;
       double expense = 0;
       for (final tx in _webTransactions) {
-        if (tx.date.startsWith(monthYear) && tx.walletType == 'main') {
+        if (tx.date.startsWith(monthYear) && tx.walletType == 'main' && !tx.isTransfer) {
           if (tx.type == 'income') {
             if (tx.savingsGoalId != null) {
               expense -= tx.amount;
@@ -493,7 +667,7 @@ class DatabaseHelper {
         COALESCE(SUM(CASE WHEN (type = 'income' AND savings_goal_id IS NULL) THEN amount ELSE 0 END), 0) as income,
         COALESCE(SUM(CASE WHEN type = 'expense' THEN amount WHEN (type = 'income' AND savings_goal_id IS NOT NULL) THEN -amount ELSE 0 END), 0) as expense
       FROM transactions
-      WHERE substr(date, 1, 7) = ? AND wallet_type = 'main'
+      WHERE substr(date, 1, 7) = ? AND wallet_type = 'main' AND is_transfer = 0
     ''', [monthYear]);
 
     if (result.isNotEmpty) {
@@ -506,6 +680,48 @@ class DatabaseHelper {
     return {'income': 0.0, 'expense': 0.0};
   }
 
+  Future<List<Map<String, dynamic>>> getCategoryIncome(String monthYear) async {
+    if (kIsWeb) {
+      _initWebCategories();
+      final Map<int, double> incomeByCat = {};
+      for (final tx in _webTransactions) {
+        if (tx.date.startsWith(monthYear) &&
+            tx.walletType == 'main' &&
+            !tx.isTransfer &&
+            tx.type == 'income' &&
+            tx.savingsGoalId == null) {
+          incomeByCat[tx.categoryId] = (incomeByCat[tx.categoryId] ?? 0.0) + tx.amount;
+        }
+      }
+      final List<Map<String, dynamic>> result = [];
+      incomeByCat.forEach((catId, amount) {
+        if (amount > 0) {
+          final cat = _webCategories.firstWhere((c) => c.id == catId,
+              orElse: () => Category(name: 'Tanpa Kategori', icon: 'ellipsis', color: '#95a5a6', type: 'income'));
+          result.add({
+            'category_name': cat.name,
+            'color': cat.color,
+            'amount': amount,
+          });
+        }
+      });
+      result.sort((a, b) => (b['amount'] as double).compareTo(a['amount'] as double));
+      return result;
+    }
+
+    final db = await instance.database;
+    return await db.rawQuery('''
+      SELECT c.name as category_name, c.color, SUM(t.amount) as amount
+      FROM transactions t
+      INNER JOIN categories c ON t.category_id = c.id
+      WHERE t.type = 'income' AND t.savings_goal_id IS NULL AND t.is_transfer = 0
+        AND t.wallet_type = 'main' AND substr(t.date, 1, 7) = ?
+      GROUP BY t.category_id
+      HAVING amount > 0
+      ORDER BY amount DESC
+    ''', [monthYear]);
+  }
+
   // --- Budgets CRUD ---
 
   Future<List<Budget>> getBudgets(String monthYear) async {
@@ -513,7 +729,7 @@ class DatabaseHelper {
       _initWebCategories();
       return _webBudgets.where((b) => b.monthYear == monthYear).map((b) {
         final totalSpent = _webTransactions
-            .where((t) => t.categoryId == b.categoryId && (t.type == 'expense' || (t.type == 'income' && t.savingsGoalId != null)) && t.date.startsWith(monthYear) && t.walletType == 'main')
+            .where((t) => t.categoryId == b.categoryId && (t.type == 'expense' || (t.type == 'income' && t.savingsGoalId != null)) && t.date.startsWith(monthYear) && t.walletType == 'main' && !t.isTransfer)
             .fold(0.0, (sum, t) => sum + (t.type == 'expense' ? t.amount : -t.amount));
         
         final cat = _webCategories.firstWhere(
@@ -545,6 +761,7 @@ class DatabaseHelper {
         AND (t.type = 'expense' OR (t.type = 'income' AND t.savings_goal_id IS NOT NULL))
         AND substr(t.date, 1, 7) = b.month_year
         AND t.wallet_type = 'main'
+        AND t.is_transfer = 0
       WHERE b.month_year = ?
       GROUP BY b.id
     ''', [monthYear]);
@@ -609,75 +826,47 @@ class DatabaseHelper {
 
   Future<double> getTopupWalletBalance() async {
     if (kIsWeb) {
-      _initWebCategories();
-      final topupCats = _webCategories.where((c) => c.name == 'Top Up');
-      if (topupCats.isEmpty) return 0.0;
-      final topupCat = topupCats.first;
-      final additions = _webTransactions
-          .where((t) => t.walletType == 'main' && t.categoryId == topupCat.id)
-          .fold(0.0, (sum, t) => sum + t.amount);
-      final expenses = _webTransactions
-          .where((t) => t.walletType == 'topup' && t.type == 'expense')
-          .fold(0.0, (sum, t) => sum + t.amount);
-      return additions - expenses;
+      double balance = 0.0;
+      for (final tx in _webTransactions) {
+        if (tx.walletType != 'topup') continue;
+        balance += tx.type == 'income' ? tx.amount : -tx.amount;
+      }
+      return balance;
     }
 
     final db = await instance.database;
-    final catResult = await db.query('categories', where: 'name = ?', whereArgs: ['Top Up'], limit: 1);
-    if (catResult.isEmpty) return 0.0;
-    final topupCatId = catResult.first['id'] as int;
-
-    final addResult = await db.rawQuery('''
-      SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE wallet_type = 'main' AND category_id = ?
-    ''', [topupCatId]);
-    final additions = (addResult.first['total'] as num).toDouble();
-
-    final expResult = await db.rawQuery('''
-      SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE wallet_type = 'topup' AND type = 'expense'
+    final result = await db.rawQuery('''
+      SELECT COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE -amount END), 0) as total
+      FROM transactions
+      WHERE wallet_type = 'topup'
     ''');
-    final expenses = (expResult.first['total'] as num).toDouble();
-
-    return additions - expenses;
+    return (result.first['total'] as num).toDouble();
   }
 
   Future<List<FinanceTransaction>> getTopupTransactions() async {
     if (kIsWeb) {
       _initWebCategories();
-      final topupCats = _webCategories.where((c) => c.name == 'Top Up');
-      final Category? topupCat = topupCats.isNotEmpty ? topupCats.first : null;
       final List<FinanceTransaction> list = [];
       for (final tx in _webTransactions) {
-        if (tx.walletType == 'topup') {
-          final cat = _webCategories.firstWhere(
-            (c) => c.id == tx.categoryId,
-            orElse: () => Category(name: 'Tanpa Kategori', icon: 'ellipsis', color: '#95a5a6', type: 'expense'),
-          );
-          list.add(FinanceTransaction(
-            id: tx.id,
-            categoryId: tx.categoryId,
-            amount: tx.amount,
-            type: tx.type,
-            date: tx.date,
-            note: tx.note,
-            walletType: tx.walletType,
-            categoryName: cat.name,
-            categoryIcon: cat.icon,
-            categoryColor: cat.color,
-          ));
-        } else if (tx.walletType == 'main' && topupCat != null && tx.categoryId == topupCat.id) {
-          list.add(FinanceTransaction(
-            id: tx.id,
-            categoryId: tx.categoryId,
-            amount: tx.amount,
-            type: 'income',
-            date: tx.date,
-            note: tx.note.isNotEmpty ? tx.note : 'Top Up Saldo',
-            walletType: 'topup',
-            categoryName: 'Top Up',
-            categoryIcon: 'payments',
-            categoryColor: '#3f51b5',
-          ));
-        }
+        if (tx.walletType != 'topup') continue;
+        final cat = _webCategories.firstWhere(
+          (c) => c.id == tx.categoryId,
+          orElse: () => Category(name: 'Tanpa Kategori', icon: 'ellipsis', color: '#95a5a6', type: 'expense'),
+        );
+        list.add(FinanceTransaction(
+          id: tx.id,
+          categoryId: tx.categoryId,
+          amount: tx.amount,
+          type: tx.type,
+          date: tx.date,
+          note: tx.note,
+          walletType: tx.walletType,
+          isTransfer: tx.isTransfer,
+          transferGroup: tx.transferGroup,
+          categoryName: cat.name,
+          categoryIcon: cat.icon,
+          categoryColor: cat.color,
+        ));
       }
       list.sort((a, b) {
         final dateCompare = b.date.compareTo(a.date);
@@ -688,44 +877,22 @@ class DatabaseHelper {
     }
 
     final db = await instance.database;
-    final catResult = await db.query('categories', where: 'name = ?', whereArgs: ['Top Up'], limit: 1);
-    if (catResult.isEmpty) return [];
-    final topupCatId = catResult.first['id'] as int;
-
     final result = await db.rawQuery('''
       SELECT t.*, c.name as category_name, c.icon as category_icon, c.color as category_color 
       FROM transactions t
       LEFT JOIN categories c ON t.category_id = c.id
-      WHERE t.wallet_type = 'topup' OR (t.wallet_type = 'main' AND t.category_id = ?)
+      WHERE t.wallet_type = 'topup'
       ORDER BY t.date DESC, t.id DESC
-    ''', [topupCatId]);
+    ''');
 
-    return result.map((row) {
-      final wType = row['wallet_type'] as String? ?? 'main';
-      final catId = row['category_id'] as int;
-      if (wType == 'main' && catId == topupCatId) {
-        return FinanceTransaction(
-          id: row['id'] as int?,
-          categoryId: catId,
-          amount: (row['amount'] as num).toDouble(),
-          type: 'income',
-          date: row['date'] as String,
-          note: (row['note'] as String? ?? '').isNotEmpty ? (row['note'] as String) : 'Top Up Saldo',
-          walletType: 'topup',
-          categoryName: 'Top Up',
-          categoryIcon: 'payments',
-          categoryColor: '#3f51b5',
-        );
-      }
-      return FinanceTransaction.fromMap(row);
-    }).toList();
+    return result.map((row) => FinanceTransaction.fromMap(row)).toList();
   }
 
   Future<List<Map<String, dynamic>>> getMonthlyNetBalanceHistory() async {
     if (kIsWeb) {
       final Map<String, Map<String, double>> groups = {};
       for (final tx in _webTransactions) {
-        if (tx.walletType == 'main') {
+        if (tx.walletType == 'main' && !tx.isTransfer) {
           final m = tx.date.substring(0, 7);
           groups.putIfAbsent(m, () => {'income': 0.0, 'expense': 0.0});
           if (tx.type == 'income') {
@@ -761,7 +928,7 @@ class DatabaseHelper {
         COALESCE(SUM(CASE WHEN (type = 'income' AND savings_goal_id IS NULL) THEN amount ELSE 0 END), 0) as income,
         COALESCE(SUM(CASE WHEN type = 'expense' THEN amount WHEN (type = 'income' AND savings_goal_id IS NOT NULL) THEN -amount ELSE 0 END), 0) as expense
       FROM transactions
-      WHERE wallet_type = 'main'
+      WHERE wallet_type = 'main' AND is_transfer = 0
       GROUP BY month
       ORDER BY month DESC
     ''');

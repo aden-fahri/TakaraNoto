@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/category.dart';
 import '../providers/finance_provider.dart';
 import '../theme/app_theme.dart';
+import '../theme/app_tokens.dart';
 
 class BudgetModal extends StatefulWidget {
   final Category category;
@@ -21,6 +22,8 @@ class BudgetModal extends StatefulWidget {
 
 class _BudgetModalState extends State<BudgetModal> {
   final _limitCtrl = TextEditingController();
+  String _budgetType = 'goal';
+  bool _prefilledFromPrevious = false;
 
   @override
   void initState() {
@@ -30,10 +33,25 @@ class _BudgetModalState extends State<BudgetModal> {
         ? provider.budgets.firstWhere((b) => b.categoryId == widget.category.id)
         : null;
     if (existingBudget != null) {
+      _budgetType = existingBudget.budgetType;
       _limitCtrl.text = NumberFormat.decimalPattern('id').format(existingBudget.limitAmount);
     } else if (widget.currentLimit > 0) {
       _limitCtrl.text = NumberFormat.decimalPattern('id').format(widget.currentLimit);
+    } else {
+      _loadPreviousBudget(provider);
     }
+  }
+
+  Future<void> _loadPreviousBudget(FinanceProvider provider) async {
+    final prev = await provider.getPreviousMonthBudget(widget.category.id!);
+    if (prev == null || !mounted || prev.limitAmount <= 0) return;
+    setState(() {
+      _budgetType = prev.budgetType;
+      if (_limitCtrl.text.isEmpty) {
+        _limitCtrl.text = NumberFormat.decimalPattern('id').format(prev.limitAmount);
+        _prefilledFromPrevious = true;
+      }
+    });
   }
 
   @override
@@ -43,14 +61,28 @@ class _BudgetModalState extends State<BudgetModal> {
   }
 
   void _onLimitChanged(String text) {
-    if (text.isEmpty) return;
+    if (text.isEmpty) {
+      setState(() {});
+      return;
+    }
     final clean = text.replaceAll(RegExp(r'[^0-9]'), '');
-    if (clean.isEmpty) { _limitCtrl.text = ''; return; }
+    if (clean.isEmpty) { _limitCtrl.text = ''; setState(() {}); return; }
     final formatted = NumberFormat.decimalPattern('id').format(double.parse(clean));
     _limitCtrl.value = TextEditingValue(
       text: formatted,
       selection: TextSelection.collapsed(offset: formatted.length),
     );
+    setState(() {});
+  }
+
+  String? get _monthlyHint {
+    if (_budgetType != 'daily_limit') return null;
+    final clean = _limitCtrl.text.replaceAll('.', '');
+    final val = double.tryParse(clean);
+    if (val == null || val <= 0) return null;
+    final now = DateTime.now();
+    final days = DateTime(now.year, now.month + 1, 0).day;
+    return '≈ ${NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(val * days)}/bulan ($days hari)';
   }
 
   void _save() {
@@ -67,7 +99,7 @@ class _BudgetModalState extends State<BudgetModal> {
       categoryId: widget.category.id!,
       limitAmount: limit,
       monthYear: provider.currentMonth,
-      budgetType: 'goal',
+      budgetType: _budgetType,
     );
     Navigator.pop(context);
   }
@@ -91,7 +123,7 @@ class _BudgetModalState extends State<BudgetModal> {
               Navigator.pop(ctx);
               Navigator.pop(context);
             },
-            child: const Text('Hapus', style: TextStyle(color: AppTheme.roseRed)),
+            child: Text('Hapus', style: TextStyle(color: ctx.tokens.expense)),
           ),
         ],
       ),
@@ -120,12 +152,12 @@ class _BudgetModalState extends State<BudgetModal> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final tokens = context.tokens;
     final catColor = _parseColor(widget.category.color);
-    final borderCol = isDark ? AppTheme.borderDark : AppTheme.borderLight;
-    final modalBg = isDark ? AppTheme.lighterPlum : Colors.white;
-    final saveBg = isDark ? AppTheme.warmCream : AppTheme.darkPlum;
-    final saveFg = isDark ? AppTheme.darkPlum : AppTheme.warmCream;
+    final borderCol = tokens.border;
+    final modalBg = tokens.card;
+    final saveBg = tokens.accent;
+    final saveFg = tokens.onAccent;
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
@@ -161,11 +193,11 @@ class _BudgetModalState extends State<BudgetModal> {
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: isDark ? AppTheme.selectedPlum : AppTheme.surfaceHeroLight,
-                          borderRadius: BorderRadius.circular(10),
+                          color: tokens.softSurface,
+                          borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
                         ),
                         child: Icon(Icons.close_rounded, size: 18,
-                            color: isDark ? AppTheme.warmCream : AppTheme.darkPlum),
+                            color: tokens.textPrimary),
                       ),
                     ),
                     Text(
@@ -178,10 +210,10 @@ class _BudgetModalState extends State<BudgetModal> {
                             child: Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: AppTheme.roseRed.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(10),
+                                color: tokens.expense.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
                               ),
-                              child: const Icon(Icons.delete_outline_rounded, size: 18, color: AppTheme.roseRed),
+                              child: Icon(Icons.delete_outline_rounded, size: 18, color: tokens.expense),
                             ),
                           )
                         : const SizedBox(width: 34),
@@ -199,7 +231,7 @@ class _BudgetModalState extends State<BudgetModal> {
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: isDark ? AppTheme.deepPlum : AppTheme.surfaceHeroLight,
+                        color: tokens.softSurface,
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Row(
@@ -234,15 +266,15 @@ class _BudgetModalState extends State<BudgetModal> {
                                   style: TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w700,
-                                    color: isDark ? AppTheme.warmCream : AppTheme.darkPlum,
+                                    color: tokens.textPrimary,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  'Batas pengeluaran bulanan',
+                                  'Batas pengeluaran ${_budgetType == 'goal' ? 'bulanan' : 'harian'}',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: isDark ? AppTheme.mutedDarkLavender : AppTheme.mutedLightPlum,
+                                    color: tokens.textMuted,
                                   ),
                                 ),
                               ],
@@ -251,15 +283,53 @@ class _BudgetModalState extends State<BudgetModal> {
                         ],
                       ),
                     ),
+                    const SizedBox(height: 20),
+
+                    // Period toggle
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _PeriodBtn(
+                            label: 'Bulanan',
+                            icon: Icons.calendar_month_rounded,
+                            active: _budgetType == 'goal',
+                            saveBg: saveBg,
+                            saveFg: saveFg,
+                            onTap: () => setState(() => _budgetType = 'goal'),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _PeriodBtn(
+                            label: 'Harian',
+                            icon: Icons.today_rounded,
+                            active: _budgetType == 'daily_limit',
+                            saveBg: saveBg,
+                            saveFg: saveFg,
+                            onTap: () => setState(() => _budgetType = 'daily_limit'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_prefilledFromPrevious) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Disalin dari bulan lalu — sesuaikan bila perlu.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: tokens.textMuted,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 24),
 
                     // Amount label
                     Text(
-                      'Batas Anggaran Bulanan (Rp)',
+                      'Batas Anggaran ${_budgetType == 'goal' ? 'Bulanan' : 'Harian'} (Rp)',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: isDark ? AppTheme.mutedDarkLavender : AppTheme.mutedLightPlum,
+                        color: tokens.textMuted,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -269,7 +339,7 @@ class _BudgetModalState extends State<BudgetModal> {
                       decoration: BoxDecoration(
                         border: Border(
                           bottom: BorderSide(
-                            color: isDark ? AppTheme.warmCream : AppTheme.darkPlum,
+                            color: tokens.textPrimary,
                             width: 2,
                           ),
                         ),
@@ -282,7 +352,7 @@ class _BudgetModalState extends State<BudgetModal> {
                             style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.w700,
-                              color: isDark ? AppTheme.mutedDarkLavender : AppTheme.mutedLightPlum,
+                              color: tokens.textMuted,
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -294,7 +364,7 @@ class _BudgetModalState extends State<BudgetModal> {
                               style: TextStyle(
                                 fontSize: 36,
                                 fontWeight: FontWeight.w800,
-                                color: isDark ? AppTheme.warmCream : AppTheme.darkPlum,
+                                color: tokens.textPrimary,
                               ),
                               decoration: InputDecoration(
                                 border: InputBorder.none,
@@ -302,8 +372,7 @@ class _BudgetModalState extends State<BudgetModal> {
                                 hintStyle: TextStyle(
                                   fontSize: 36,
                                   fontWeight: FontWeight.w800,
-                                  color: (isDark ? AppTheme.mutedDarkLavender : AppTheme.mutedLightPlum)
-                                      .withValues(alpha: 0.4),
+                                  color: tokens.textMuted.withValues(alpha: 0.4),
                                 ),
                               ),
                               onChanged: _onLimitChanged,
@@ -312,6 +381,16 @@ class _BudgetModalState extends State<BudgetModal> {
                         ],
                       ),
                     ),
+                    if (_monthlyHint != null) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        _monthlyHint!,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: tokens.textMuted,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 28),
 
                     // Save button
@@ -321,7 +400,7 @@ class _BudgetModalState extends State<BudgetModal> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: saveBg,
                           foregroundColor: saveFg,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.buttonRadius)),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
                         onPressed: _save,
@@ -338,6 +417,56 @@ class _BudgetModalState extends State<BudgetModal> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Period toggle button ─────────────────────────────────────────────────────
+class _PeriodBtn extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool active;
+  final Color saveBg, saveFg;
+  final VoidCallback onTap;
+
+  const _PeriodBtn({
+    required this.label,
+    required this.icon,
+    required this.active,
+    required this.saveBg,
+    required this.saveFg,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final bg = active ? saveBg : tokens.softSurface;
+    final fg = active ? saveFg : tokens.textMuted;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+          border: Border.all(
+            color: active ? saveBg : tokens.border,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 16, color: fg),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: fg),
+            ),
+          ],
         ),
       ),
     );

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/finance_provider.dart';
-import '../theme/app_theme.dart';
+import '../theme/app_tokens.dart';
 
 class SplashScreen extends StatefulWidget {
   final Widget nextScreen;
@@ -32,7 +32,7 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    // Force light status bar with dark icons (since background is light cream)
+    // Force light status bar with dark icons (since background is light)
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -91,7 +91,7 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
-    // Exit animation (fading out content, background stays solid cream)
+    // Exit animation (fading out content, background stays solid)
     _exitCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 400),
@@ -106,13 +106,13 @@ class _SplashScreenState extends State<SplashScreen>
   Future<void> _runSequence() async {
     // Start blobs sliding in immediately
     _blobCtrl.forward();
-    
+
     await Future.delayed(const Duration(milliseconds: 300));
     _logoCtrl.forward();
-    
+
     await Future.delayed(const Duration(milliseconds: 600));
     _textCtrl.forward();
-    
+
     // Minimum splash duration (1.8 seconds)
     await Future.delayed(const Duration(milliseconds: 1800));
 
@@ -154,13 +154,19 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
+    final scheme = Theme.of(context).colorScheme;
+    final blobPrimary = t.headerBg;
+    final blobSecondary = scheme.secondary;
+    final detailColor = t.headerFg;
+
     return Scaffold(
-      backgroundColor: AppTheme.warmCream, // Light cream background
+      backgroundColor: t.pageBg,
       body: FadeTransition(
         opacity: _exitOpacity,
         child: Stack(
           children: [
-            // Top-Left Blob (Plum) — slides in from top-left
+            // Top-Left Blob (accent) — slides in from top-left
             AnimatedBuilder(
               animation: _blobCtrl,
               builder: (ctx, child) {
@@ -180,12 +186,15 @@ class _SplashScreenState extends State<SplashScreen>
                 width: double.infinity,
                 height: double.infinity,
                 child: CustomPaint(
-                  painter: _TopLeftBlobPainter(),
+                  painter: _TopLeftBlobPainter(
+                    color: blobPrimary,
+                    detailColor: detailColor,
+                  ),
                 ),
               ),
             ),
 
-            // Top-Right Blob (Terracotta) — slides in from top-right, slightly delayed
+            // Top-Right Blob (secondary) — slides in from top-right, slightly delayed
             AnimatedBuilder(
               animation: _blobCtrl,
               builder: (ctx, child) {
@@ -205,12 +214,15 @@ class _SplashScreenState extends State<SplashScreen>
                 width: double.infinity,
                 height: double.infinity,
                 child: CustomPaint(
-                  painter: _TopRightBlobPainter(),
+                  painter: _TopRightBlobPainter(
+                    color: blobSecondary,
+                    detailColor: detailColor,
+                  ),
                 ),
               ),
             ),
 
-            // Bottom-Left Blob (Terracotta) — slides in from bottom-left, more delayed
+            // Bottom-Left Blob (secondary) — slides in from bottom-left, more delayed
             AnimatedBuilder(
               animation: _blobCtrl,
               builder: (ctx, child) {
@@ -230,12 +242,15 @@ class _SplashScreenState extends State<SplashScreen>
                 width: double.infinity,
                 height: double.infinity,
                 child: CustomPaint(
-                  painter: _BottomLeftBlobPainter(),
+                  painter: _BottomLeftBlobPainter(
+                    color: blobSecondary,
+                    detailColor: detailColor,
+                  ),
                 ),
               ),
             ),
 
-            // Bottom-Right Blob (Plum) — slides in from bottom-right, most delayed
+            // Bottom-Right Blob (accent) — slides in from bottom-right, most delayed
             AnimatedBuilder(
               animation: _blobCtrl,
               builder: (ctx, child) {
@@ -255,7 +270,10 @@ class _SplashScreenState extends State<SplashScreen>
                 width: double.infinity,
                 height: double.infinity,
                 child: CustomPaint(
-                  painter: _BottomRightBlobPainter(),
+                  painter: _BottomRightBlobPainter(
+                    color: blobPrimary,
+                    detailColor: detailColor,
+                  ),
                 ),
               ),
             ),
@@ -280,7 +298,7 @@ class _SplashScreenState extends State<SplashScreen>
                 width: double.infinity,
                 height: double.infinity,
                 child: CustomPaint(
-                  painter: _RightCurvesPainter(),
+                  painter: _RightCurvesPainter(color: t.textMuted),
                 ),
               ),
             ),
@@ -316,8 +334,8 @@ class _SplashScreenState extends State<SplashScreen>
                         child: Column(
                           children: [
                             RichText(
-                              text: const TextSpan(
-                                style: TextStyle(
+                              text: TextSpan(
+                                style: const TextStyle(
                                   fontSize: 34,
                                   fontWeight: FontWeight.w900,
                                   fontFamily: 'Poppins',
@@ -326,11 +344,12 @@ class _SplashScreenState extends State<SplashScreen>
                                 children: [
                                   TextSpan(
                                     text: 'Takara',
-                                    style: TextStyle(color: AppTheme.darkPlum),
+                                    style: TextStyle(color: t.textPrimary),
                                   ),
-                                  TextSpan(
+                                  const TextSpan(
                                     text: 'Noto',
-                                    style: TextStyle(color: Color(0xFFD4A820)), // Gold coin color
+                                    style: TextStyle(
+                                        color: Color(0xFFD4A820)), // Gold coin color
                                   ),
                                 ],
                               ),
@@ -359,7 +378,7 @@ class _SplashScreenState extends State<SplashScreen>
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: AppTheme.mutedLightPlum.withValues(alpha: 0.4),
+                      color: t.textMuted.withValues(alpha: 0.4),
                       letterSpacing: 1,
                     ),
                   ),
@@ -414,10 +433,15 @@ class _LogoMark extends StatelessWidget {
 // ─── Custom Painters for Organic Blobs and Line Art ─────────────────────────
 
 class _TopLeftBlobPainter extends CustomPainter {
+  _TopLeftBlobPainter({required this.color, required this.detailColor});
+
+  final Color color;
+  final Color detailColor;
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppTheme.darkPlum
+      ..color = color
       ..style = PaintingStyle.fill;
 
     final path = Path()
@@ -437,7 +461,7 @@ class _TopLeftBlobPainter extends CustomPainter {
 
     // Draw dots pattern
     final dotPaint = Paint()
-      ..color = AppTheme.warmCream.withValues(alpha: 0.35)
+      ..color = detailColor.withValues(alpha: 0.35)
       ..style = PaintingStyle.fill;
 
     final dots = [
@@ -456,14 +480,20 @@ class _TopLeftBlobPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _TopLeftBlobPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.detailColor != detailColor;
 }
 
 class _TopRightBlobPainter extends CustomPainter {
+  _TopRightBlobPainter({required this.color, required this.detailColor});
+
+  final Color color;
+  final Color detailColor;
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFFD36F4C) // Terracotta Orange
+      ..color = color
       ..style = PaintingStyle.fill;
 
     final path = Path()
@@ -483,7 +513,7 @@ class _TopRightBlobPainter extends CustomPainter {
 
     // Draw leaf shape outline
     final leafPaint = Paint()
-      ..color = AppTheme.warmCream.withValues(alpha: 0.55)
+      ..color = detailColor.withValues(alpha: 0.55)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
 
@@ -507,14 +537,20 @@ class _TopRightBlobPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _TopRightBlobPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.detailColor != detailColor;
 }
 
 class _BottomLeftBlobPainter extends CustomPainter {
+  _BottomLeftBlobPainter({required this.color, required this.detailColor});
+
+  final Color color;
+  final Color detailColor;
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFFD36F4C) // Terracotta Orange
+      ..color = color
       ..style = PaintingStyle.fill;
 
     final path = Path()
@@ -534,7 +570,7 @@ class _BottomLeftBlobPainter extends CustomPainter {
 
     // Draw leaf shape outline
     final leafPaint = Paint()
-      ..color = AppTheme.warmCream.withValues(alpha: 0.55)
+      ..color = detailColor.withValues(alpha: 0.55)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
 
@@ -558,14 +594,20 @@ class _BottomLeftBlobPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _BottomLeftBlobPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.detailColor != detailColor;
 }
 
 class _BottomRightBlobPainter extends CustomPainter {
+  _BottomRightBlobPainter({required this.color, required this.detailColor});
+
+  final Color color;
+  final Color detailColor;
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppTheme.darkPlum
+      ..color = color
       ..style = PaintingStyle.fill;
 
     final path = Path()
@@ -585,7 +627,7 @@ class _BottomRightBlobPainter extends CustomPainter {
 
     // Draw dots pattern
     final dotPaint = Paint()
-      ..color = AppTheme.warmCream.withValues(alpha: 0.35)
+      ..color = detailColor.withValues(alpha: 0.35)
       ..style = PaintingStyle.fill;
 
     final dots = [
@@ -604,14 +646,19 @@ class _BottomRightBlobPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _BottomRightBlobPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.detailColor != detailColor;
 }
 
 class _RightCurvesPainter extends CustomPainter {
+  _RightCurvesPainter({required this.color});
+
+  final Color color;
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppTheme.mutedLightPlum.withValues(alpha: 0.20)
+      ..color = color.withValues(alpha: 0.20)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
 
@@ -622,5 +669,6 @@ class _RightCurvesPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _RightCurvesPainter oldDelegate) =>
+      oldDelegate.color != color;
 }

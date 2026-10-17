@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'providers/finance_provider.dart';
 import 'theme/app_theme.dart';
+import 'theme/app_tokens.dart';
+import 'theme/theme_controller.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/budget_screen.dart';
@@ -14,7 +16,7 @@ import 'screens/splash_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('id', null);
-  // Force light status bar over plum banner
+  // Force light status bar over the accent banner
   SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
   runApp(const MyApp());
 }
@@ -24,15 +26,26 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<FinanceProvider>(
-      create: (_) => FinanceProvider(),
-      child: MaterialApp(
-        title: 'TakaraNoto',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.getTheme(false),
-        darkTheme: AppTheme.getTheme(true),
-        themeMode: ThemeMode.light, // ← Force light mode
-        home: const SplashScreen(nextScreen: MainNavigationScreen()),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<FinanceProvider>(
+          create: (_) => FinanceProvider(),
+        ),
+        ChangeNotifierProvider<ThemeController>(
+          create: (_) => ThemeController()..load(),
+        ),
+      ],
+      child: Consumer<ThemeController>(
+        builder: (context, themeController, _) => MaterialApp(
+          title: 'TakaraNoto',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.getTheme(
+            themeController.seed,
+            themeController.background,
+          ),
+          themeMode: ThemeMode.light, // ← Force light mode
+          home: const SplashScreen(nextScreen: MainNavigationScreen()),
+        ),
       ),
     );
   }
@@ -49,14 +62,6 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
-    DashboardScreen(),
-    HistoryScreen(),
-    BudgetScreen(),
-    SavingsScreen(),
-    StatsScreen(),
-  ];
-
   final List<_NavItem> _navItems = const [
     _NavItem(icon: Icons.home_rounded, label: 'Home'),
     _NavItem(icon: Icons.list_alt_rounded, label: 'Riwayat'),
@@ -71,12 +76,27 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     setState(() => _currentIndex = index);
   }
 
+  void _goToTab(int index) {
+    if (index == _currentIndex) return;
+    setState(() => _currentIndex = index);
+  }
+
+  List<Widget> _buildScreens() => [
+    DashboardScreen(
+      onSeeAll: () => _goToTab(1),
+    ),
+    const HistoryScreen(),
+    const BudgetScreen(),
+    const SavingsScreen(),
+    StatsScreen(onGoToBudget: () => _goToTab(2)),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
-        children: _screens,
+        children: _buildScreens(),
       ),
       bottomNavigationBar: Consumer<FinanceProvider>(
         builder: (context, provider, _) => _PillNavBar(
@@ -113,11 +133,11 @@ class _PillNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Always light mode styling
-    const bgColor = Colors.white;
-    const activeColor = AppTheme.darkPlum;
-    const inactiveColor = AppTheme.mutedLightPlum;
-    const pillColor = AppTheme.surfaceHeroLight;
+    final t = context.tokens;
+    final bgColor = t.card;
+    final activeColor = t.accent;
+    final inactiveColor = t.textMuted;
+    final pillColor = t.softSurface;
 
     return Container(
       color: bgColor,
@@ -126,7 +146,7 @@ class _PillNavBar extends StatelessWidget {
         children: [
           Container(
             height: 0.5,
-            color: AppTheme.borderLight,
+            color: t.border,
           ),
           SafeArea(
             top: false,
@@ -150,7 +170,8 @@ class _PillNavBar extends StatelessWidget {
                           margin: const EdgeInsets.symmetric(horizontal: 4),
                           decoration: BoxDecoration(
                             color: isActive ? pillColor : Colors.transparent,
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius:
+                                BorderRadius.circular(AppTheme.buttonRadius),
                           ),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -164,7 +185,9 @@ class _PillNavBar extends StatelessWidget {
                                       items[i].icon,
                                       key: ValueKey(isActive),
                                       size: isActive ? 26 : 24,
-                                      color: isActive ? activeColor : inactiveColor,
+                                      color: isActive
+                                          ? activeColor
+                                          : inactiveColor,
                                     ),
                                   ),
                                   // Budget alert badge
@@ -175,8 +198,8 @@ class _PillNavBar extends StatelessWidget {
                                       child: Container(
                                         width: 8,
                                         height: 8,
-                                        decoration: const BoxDecoration(
-                                          color: AppTheme.roseRed,
+                                        decoration: BoxDecoration(
+                                          color: t.expense,
                                           shape: BoxShape.circle,
                                         ),
                                       ),
@@ -188,7 +211,7 @@ class _PillNavBar extends StatelessWidget {
                                 Container(
                                   width: 4,
                                   height: 4,
-                                  decoration: const BoxDecoration(
+                                  decoration: BoxDecoration(
                                     color: activeColor,
                                     shape: BoxShape.circle,
                                   ),

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/category.dart';
 import '../providers/finance_provider.dart';
 import '../theme/app_theme.dart';
+import '../theme/app_tokens.dart';
 
 class ManageCategoriesModal extends StatefulWidget {
   final String initialType; // 'expense' or 'income'
@@ -118,7 +119,7 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
                 SnackBar(content: Text('Kategori "${cat.name}" telah dihapus.')),
               );
             },
-            child: const Text('Hapus', style: TextStyle(color: AppTheme.roseRed)),
+            child: Text('Hapus', style: TextStyle(color: ctx.tokens.expense)),
           ),
         ],
       ),
@@ -128,9 +129,9 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<FinanceProvider>(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final modalBg = isDark ? AppTheme.lighterPlum : Colors.white;
-    final borderCol = isDark ? AppTheme.borderDark : AppTheme.borderLight;
+    final tokens = context.tokens;
+    final modalBg = tokens.card;
+    final borderCol = tokens.border;
 
     final filteredCats = provider.categories.where((c) => c.type == _type).toList();
 
@@ -178,13 +179,13 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: isDark ? AppTheme.selectedPlum : AppTheme.surfaceHeroLight,
-                          borderRadius: BorderRadius.circular(10),
+                          color: tokens.softSurface,
+                          borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
                         ),
                         child: Icon(
                           _isCreating ? Icons.arrow_back_ios_new_rounded : Icons.close_rounded,
                           size: 18,
-                          color: isDark ? AppTheme.warmCream : AppTheme.darkPlum,
+                          color: tokens.textPrimary,
                         ),
                       ),
                     ),
@@ -208,7 +209,7 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
                         child: _TabBtn(
                           label: 'Pengeluaran',
                           isActive: _type == 'expense',
-                          activeColor: AppTheme.roseRed,
+                          activeColor: tokens.expense,
                           onTap: () => setState(() => _type = 'expense'),
                         ),
                       ),
@@ -217,7 +218,7 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
                         child: _TabBtn(
                           label: 'Pemasukan',
                           isActive: _type == 'income',
-                          activeColor: AppTheme.emeraldGreen,
+                          activeColor: tokens.income,
                           onTap: () => setState(() => _type = 'income'),
                         ),
                       ),
@@ -230,8 +231,8 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: _isCreating
-                      ? _buildCreateForm(isDark)
-                      : _buildCategoriesList(filteredCats, isDark),
+                      ? _buildCreateForm()
+                      : _buildCategoriesList(filteredCats),
                 ),
               ),
 
@@ -246,9 +247,9 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.darkPlum,
-                        foregroundColor: AppTheme.warmCream,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        backgroundColor: tokens.accent,
+                        foregroundColor: tokens.onAccent,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.buttonRadius)),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
                       onPressed: () => setState(() => _isCreating = true),
@@ -265,17 +266,18 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
     );
   }
 
-  Widget _buildCategoriesList(List<Category> cats, bool isDark) {
+  Widget _buildCategoriesList(List<Category> cats) {
+    final tokens = context.tokens;
     if (cats.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 40),
         child: Column(
           children: [
-            const Icon(Icons.category_outlined, size: 48, color: AppTheme.mutedLightPlum),
+            Icon(Icons.category_outlined, size: 48, color: tokens.textMuted),
             const SizedBox(height: 12),
             Text(
               'Belum ada kategori ${_type == 'expense' ? 'pengeluaran' : 'pemasukan'}.',
-              style: const TextStyle(fontSize: 13, color: AppTheme.mutedLightPlum),
+              style: TextStyle(fontSize: 13, color: tokens.textMuted),
             ),
           ],
         ),
@@ -290,15 +292,15 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
       itemBuilder: (_, i) {
         final cat = cats[i];
         final catColor = _parseColor(cat.color);
-        final isDefault = cat.id != null && cat.id! <= 10; // Keep track of default ones
+        final isDefault = cat.isSpecial; // Internal categories cannot be deleted
 
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: isDark ? AppTheme.deepPlum : Colors.white,
+            color: tokens.card,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isDark ? AppTheme.borderDark : AppTheme.borderLight,
+              color: tokens.border,
             ),
           ),
           child: Row(
@@ -325,18 +327,19 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
                       style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                     ),
                     if (isDefault)
-                      const Text(
+                      Text(
                         'Bawaan Sistem',
-                        style: TextStyle(fontSize: 10, color: AppTheme.mutedLightPlum),
+                        style: TextStyle(fontSize: 10, color: tokens.textMuted),
                       ),
                   ],
                 ),
               ),
-              // Let user delete any category (warn about CASCADE)
-              IconButton(
-                icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.roseRed),
-                onPressed: () => _deleteCategory(cat),
-              ),
+              // Internal categories are locked; user categories can be deleted
+              if (!isDefault)
+                IconButton(
+                  icon: Icon(Icons.delete_outline_rounded, color: tokens.expense),
+                  onPressed: () => _deleteCategory(cat),
+                ),
             ],
           ),
         );
@@ -344,16 +347,17 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
     );
   }
 
-  Widget _buildCreateForm(bool isDark) {
-    final accentColor = _type == 'expense' ? AppTheme.roseRed : AppTheme.emeraldGreen;
+  Widget _buildCreateForm() {
+    final tokens = context.tokens;
+    final accentColor = _type == 'expense' ? tokens.expense : tokens.income;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Name Field
-        const Text(
+        Text(
           'Nama Kategori',
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.mutedLightPlum),
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textMuted),
         ),
         const SizedBox(height: 8),
         TextField(
@@ -362,10 +366,10 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
           style: const TextStyle(fontSize: 14),
           decoration: InputDecoration(
             hintText: 'Misal: Kosan, Liburan, Freelance...',
-            fillColor: isDark ? AppTheme.deepPlum : AppTheme.surfaceHeroLight,
+            fillColor: tokens.softSurface,
             filled: true,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
               borderSide: BorderSide.none,
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -374,9 +378,9 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
         const SizedBox(height: 20),
 
         // Color Picker
-        const Text(
+        Text(
           'Pilih Warna',
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.mutedLightPlum),
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textMuted),
         ),
         const SizedBox(height: 10),
         SizedBox(
@@ -400,7 +404,7 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
                     shape: BoxShape.circle,
                     border: isSelected
                         ? Border.all(
-                            color: isDark ? AppTheme.warmCream : AppTheme.darkPlum,
+                            color: tokens.textPrimary,
                             width: 3,
                           )
                         : null,
@@ -419,9 +423,9 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
         const SizedBox(height: 24),
 
         // Icon Picker
-        const Text(
+        Text(
           'Pilih Ikon',
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.mutedLightPlum),
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textMuted),
         ),
         const SizedBox(height: 10),
         GridView.builder(
@@ -445,7 +449,7 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
                 decoration: BoxDecoration(
                   color: isSelected
                       ? accentColor.withValues(alpha: 0.15)
-                      : (isDark ? AppTheme.deepPlum : AppTheme.surfaceHeroLight),
+                      : tokens.softSurface,
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: isSelected ? accentColor : Colors.transparent,
@@ -454,7 +458,7 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
                 ),
                 child: Icon(
                   iconData,
-                  color: isSelected ? accentColor : AppTheme.mutedLightPlum,
+                  color: isSelected ? accentColor : tokens.textMuted,
                   size: 22,
                 ),
               ),
@@ -470,7 +474,7 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
             style: ElevatedButton.styleFrom(
               backgroundColor: accentColor,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.buttonRadius)),
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
             onPressed: _saveCategory,
@@ -499,7 +503,7 @@ class _TabBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final tokens = context.tokens;
     final activeBg = activeColor.withValues(alpha: 0.12);
 
     return GestureDetector(
@@ -508,8 +512,8 @@ class _TabBtn extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: isActive ? activeBg : (isDark ? AppTheme.deepPlum : AppTheme.surfaceHeroLight),
-          borderRadius: BorderRadius.circular(14),
+          color: isActive ? activeBg : tokens.softSurface,
+          borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
           border: Border.all(
             color: isActive ? activeColor : Colors.transparent,
             width: 1.5,
@@ -521,7 +525,7 @@ class _TabBtn extends StatelessWidget {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
-              color: isActive ? activeColor : AppTheme.mutedLightPlum,
+              color: isActive ? activeColor : tokens.textMuted,
             ),
           ),
         ),
