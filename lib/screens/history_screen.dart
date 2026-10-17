@@ -6,6 +6,7 @@ import '../models/transaction.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/add_transaction_modal.dart';
+import '../widgets/decorative_header_circles.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -503,11 +504,14 @@ class _HistoryBanner extends StatelessWidget {
       ),
       child: SafeArea(
         bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        child: Stack(
+          children: [
+            const DecorativeHeaderCircles(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
               // Title row + month navigator
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -612,8 +616,10 @@ class _HistoryBanner extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
+      ],
+    ),
+  ),
+);
   }
 }
 

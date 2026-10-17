@@ -42,6 +42,7 @@ class GroupSummary {
   const GroupSummary({
     required this.balance,
     required this.overdueTotal,
+    this.overdueMemberCount = 0,
     this.currentPeriodLabel,
     this.currentPeriodPaidCount = 0,
     this.currentPeriodTotalCount = 0,
@@ -49,6 +50,7 @@ class GroupSummary {
 
   final int balance;
   final int overdueTotal;
+  final int overdueMemberCount;
   final String? currentPeriodLabel;
   final int currentPeriodPaidCount;
   final int currentPeriodTotalCount;
@@ -56,4 +58,47 @@ class GroupSummary {
   int get activityPct => currentPeriodTotalCount == 0
       ? 0
       : ((currentPeriodPaidCount / currentPeriodTotalCount) * 100).round();
+}
+
+/// Information about a member who has overdue dues.
+class MemberOverdueSummary {
+  const MemberOverdueSummary({
+    required this.memberId,
+    required this.memberName,
+    required this.unpaidPeriodsCount,
+    required this.totalOverdueAmount,
+    required this.oldestDueDate,
+  });
+
+  final String memberId;
+  final String memberName;
+  final int unpaidPeriodsCount;
+  final int totalOverdueAmount;
+  final DateTime oldestDueDate;
+}
+
+/// An allocation joined with the label of the period it pays into.
+class AllocationDetail {
+  const AllocationDetail({
+    required this.id,
+    required this.transactionId,
+    required this.chargeId,
+    required this.amountAllocated,
+    required this.periodLabel,
+  });
+
+  final String id;
+  final String transactionId;
+  final String chargeId;
+  final int amountAllocated;
+  final String periodLabel;
+
+  factory AllocationDetail.fromMap(Map<String, Object?> map) =>
+      AllocationDetail(
+        id: map['id'] as String,
+        transactionId: map['transaction_id'] as String,
+        chargeId: map['charge_id'] as String,
+        amountAllocated: (map['amount_allocated'] as num).toInt(),
+        periodLabel: map['period_label'] as String? ?? '',
+      );
 }

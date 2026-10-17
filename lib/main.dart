@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:sqflite/sqflite.dart' show databaseFactory;
+import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
+import 'providers/app_mode_controller.dart';
 import 'providers/finance_provider.dart';
 import 'theme/app_theme.dart';
-import 'theme/app_tokens.dart';
 import 'theme/theme_controller.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/history_screen.dart';
@@ -12,9 +15,20 @@ import 'screens/budget_screen.dart';
 import 'screens/savings_screen.dart';
 import 'screens/stats_screen.dart';
 import 'screens/splash_screen.dart';
+import 'screens/zainnoto/zainnoto_shell_screen.dart';
+import 'widgets/pill_nav_bar.dart';
+import 'zainnoto/providers/zainnoto_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Ganti layar putih polos saat widget gagal di-build dengan kartu error
+  // yang terlihat, supaya kegagalan tidak lagi menyamar menjadi blank screen.
+  ErrorWidget.builder = (details) => _BuildErrorView(details: details);
+  if (kIsWeb) {
+    // Browsers have no native sqflite: use the sqlite3 wasm + IndexedDB
+    // factory so both databases work and persist in web builds too.
+    databaseFactory = databaseFactoryFfiWeb;
+  }
   await initializeDateFormatting('id', null);
   // Force light status bar over the accent banner
   SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
@@ -34,6 +48,12 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider<ThemeController>(
           create: (_) => ThemeController()..load(),
         ),
+        ChangeNotifierProvider<AppModeController>(
+          create: (_) => AppModeController(),
+        ),
+        ChangeNotifierProvider<ZainNotoProvider>(
+          create: (_) => ZainNotoProvider(),
+        ),
       ],
       child: Consumer<ThemeController>(
         builder: (context, themeController, _) => MaterialApp(
@@ -44,13 +64,81 @@ class MyApp extends StatelessWidget {
             themeController.background,
           ),
           themeMode: ThemeMode.light, // ← Force light mode
-          home: const SplashScreen(nextScreen: MainNavigationScreen()),
+          home: const SplashScreen(nextScreen: AppModeGate()),
         ),
       ),
     );
   }
 }
 
+// ─── Visible build error card ─────────────────────────────────────────────────
+/// Ditampilkan menggantikan widget yang gagal di-build, di debug maupun
+/// release, agar kegagalan selalu terlihat alih-alih menjadi blank screen.
+class _BuildErrorView extends StatelessWidget {
+  const _BuildErrorView({required this.details});
+
+  final FlutterErrorDetails details;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFFFFF1F2),
+      child: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.error_outline_rounded,
+                  size: 40,
+                  color: Color(0xFFF43F5E),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Terjadi kesalahan pada bagian ini',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${details.exception}',
+                  textAlign: TextAlign.center,
+                  maxLines: 6,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Mode gate ────────────────────────────────────────────────────────────────
+/// Chooses the shell based on the current [AppMode]: the app starts in
+/// Pribadi (TakaraNoto) and switches to ZainNoto via the dashboard toggle.
+class AppModeGate extends StatelessWidget {
+  const AppModeGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final mode = context.watch<AppModeController>().mode;
+    return mode == AppMode.group
+        ? const ZainNotoShellScreen()
+        : const MainNavigationScreen();
+  }
+}
 // ─── Main Navigation Shell ────────────────────────────────────────────────────
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -62,12 +150,12 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
 
-  final List<_NavItem> _navItems = const [
-    _NavItem(icon: Icons.home_rounded, label: 'Home'),
-    _NavItem(icon: Icons.list_alt_rounded, label: 'Riwayat'),
-    _NavItem(icon: Icons.pie_chart_rounded, label: 'Anggaran'),
-    _NavItem(icon: Icons.savings_rounded, label: 'Tabungan'),
-    _NavItem(icon: Icons.analytics_rounded, label: 'Laporan'),
+  static const List<NavItem> _navItems = [
+    NavItem(icon: Icons.home_rounded, label: 'Home'),
+    NavItem(icon: Icons.list_alt_rounded, label: 'Riwayat'),
+    NavItem(icon: Icons.pie_chart_rounded, label: 'Anggaran'),
+    NavItem(icon: Icons.savings_rounded, label: 'Tabungan'),
+    NavItem(icon: Icons.analytics_rounded, label: 'Laporan'),
   ];
 
   void _onTabTapped(int index) {
@@ -99,135 +187,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         children: _buildScreens(),
       ),
       bottomNavigationBar: Consumer<FinanceProvider>(
-        builder: (context, provider, _) => _PillNavBar(
+        builder: (context, provider, _) => PillNavBar(
           currentIndex: _currentIndex,
           items: _navItems,
-          hasBudgetAlert: provider.hasBudgetAlert,
+          showBadge: provider.hasBudgetAlert,
+          badgeIndex: 2,
           onTap: _onTabTapped,
         ),
-      ),
-    );
-  }
-}
-
-// ─── Nav Item data class ─────────────────────────────────────────────────────
-class _NavItem {
-  final IconData icon;
-  final String label;
-  const _NavItem({required this.icon, required this.label});
-}
-
-// ─── Custom Pill Navigation Bar ───────────────────────────────────────────────
-class _PillNavBar extends StatelessWidget {
-  final int currentIndex;
-  final List<_NavItem> items;
-  final bool hasBudgetAlert;
-  final ValueChanged<int> onTap;
-
-  const _PillNavBar({
-    required this.currentIndex,
-    required this.items,
-    required this.hasBudgetAlert,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final t = context.tokens;
-    final bgColor = t.card;
-    final activeColor = t.accent;
-    final inactiveColor = t.textMuted;
-    final pillColor = t.softSurface;
-
-    return Container(
-      color: bgColor,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            height: 0.5,
-            color: t.border,
-          ),
-          SafeArea(
-            top: false,
-            child: SizedBox(
-              height: 64,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: Row(
-                  children: List.generate(items.length, (i) {
-                    final isActive = i == currentIndex;
-                    final isBudgetTab = i == 2;
-                    final showBadge = isBudgetTab && hasBudgetAlert;
-
-                    return Expanded(
-                      child: GestureDetector(
-                        onTap: () => onTap(i),
-                        behavior: HitTestBehavior.opaque,
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 220),
-                          curve: Curves.easeInOut,
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          decoration: BoxDecoration(
-                            color: isActive ? pillColor : Colors.transparent,
-                            borderRadius:
-                                BorderRadius.circular(AppTheme.buttonRadius),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Stack(
-                                clipBehavior: Clip.none,
-                                children: [
-                                  AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 180),
-                                    child: Icon(
-                                      items[i].icon,
-                                      key: ValueKey(isActive),
-                                      size: isActive ? 26 : 24,
-                                      color: isActive
-                                          ? activeColor
-                                          : inactiveColor,
-                                    ),
-                                  ),
-                                  // Budget alert badge
-                                  if (showBadge)
-                                    Positioned(
-                                      right: -4,
-                                      top: -3,
-                                      child: Container(
-                                        width: 8,
-                                        height: 8,
-                                        decoration: BoxDecoration(
-                                          color: t.expense,
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              if (isActive) ...[
-                                const SizedBox(height: 4),
-                                Container(
-                                  width: 4,
-                                  height: 4,
-                                  decoration: BoxDecoration(
-                                    color: activeColor,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  }),
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

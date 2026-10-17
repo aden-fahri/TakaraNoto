@@ -5,6 +5,8 @@ import '../models/transaction.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/add_transaction_modal.dart';
+import '../widgets/mode_switch_button.dart';
+import '../widgets/notched_card.dart';
 import 'topup_screen.dart';
 import 'monthly_balance_screen.dart';
 import 'theme_settings_screen.dart';
@@ -215,6 +217,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: _isFabExpanded
             ? FloatingActionButton.extended(
                 key: const ValueKey('fab-ext'),
+                heroTag: null,
                 backgroundColor: tokens.accent,
                 foregroundColor: tokens.onAccent,
                 elevation: 4,
@@ -224,6 +227,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               )
             : FloatingActionButton(
                 key: const ValueKey('fab-min'),
+                heroTag: null,
                 backgroundColor: tokens.accent,
                 foregroundColor: tokens.onAccent,
                 elevation: 4,
@@ -272,24 +276,24 @@ class _DashboardBanner extends StatelessWidget {
         bottom: false,
         child: Stack(
           children: [
-            // Decorative circles
+            // Decorative circles (enlarged & more pronounced)
             Positioned(
-              right: -24, top: -36,
+              right: -45, top: -45,
               child: Container(
-                width: 150, height: 150,
+                width: 210, height: 210,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: tokens.headerFg.withValues(alpha: 0.04),
+                  color: tokens.headerFg.withValues(alpha: 0.08),
                 ),
               ),
             ),
             Positioned(
-              right: 50, top: 30,
+              right: 65, top: 35,
               child: Container(
-                width: 70, height: 70,
+                width: 90, height: 90,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: tokens.headerFg.withValues(alpha: 0.04),
+                  color: tokens.headerFg.withValues(alpha: 0.06),
                 ),
               ),
             ),
@@ -303,30 +307,39 @@ class _DashboardBanner extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            greeting,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: tokens.headerMuted,
+                      Flexible(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              greeting,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: tokens.headerMuted,
+                              ),
                             ),
-                          ),
-                          Text(
-                            'TakaraNoto',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: tokens.headerFg,
+                            Text(
+                              'TakaraNoto',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: tokens.headerFg,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          const ModeSwitchButton(),
+                          const SizedBox(width: 8),
                           GestureDetector(
                             onTap: () => Navigator.push(
                               context,
@@ -344,25 +357,29 @@ class _DashboardBanner extends StatelessWidget {
                               child: Icon(Icons.palette_rounded, color: tokens.headerFg, size: 20),
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 8),
+                          // Logo with prominent glowing circular frame
                           Container(
-                            width: 42, height: 42,
+                            width: 44,
+                            height: 44,
+                            padding: const EdgeInsets.all(2.5),
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
+                              color: tokens.headerFg.withValues(alpha: 0.15),
                               border: Border.all(
-                                color: tokens.headerBorder,
-                                width: 1.5,
+                                color: tokens.headerFg.withValues(alpha: 0.45),
+                                width: 2,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.1),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
+                                  color: Colors.black.withValues(alpha: 0.18),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
                                 ),
                               ],
                             ),
                             child: ClipRRect(
-                              borderRadius: BorderRadius.circular(21),
+                              borderRadius: BorderRadius.circular(24),
                               child: Image.asset(
                                 'assets/images/logo.png',
                                 fit: BoxFit.cover,
@@ -373,96 +390,201 @@ class _DashboardBanner extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
 
-                  // Hero Balance Card
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: tokens.headerSurface,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: tokens.headerBorder,
-                        width: 1,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  // Hero Wallet Card (notch step di sudut kanan atas)
+                  NotchedCard(
+                    color: tokens.headerSurface,
+                    borderColor: tokens.headerBorder.withValues(alpha: 0.6),
+                    borderWidth: 1.2,
+                    shadowColor: Colors.black.withValues(alpha: 0.08),
+                    shadowBlur: 14,
+                    shadowOffset: const Offset(0, 4),
+                    child: Stack(
                       children: [
-                        // Month navigator inside card
-                        Row(
-                          children: [
-                            _NavBtn(onTap: onPrev, icon: Icons.chevron_left),
-                            const SizedBox(width: 8),
-                            Text(
-                              monthName,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: tokens.headerMuted,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            _NavBtn(onTap: onNext, icon: Icons.chevron_right),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-
-                        // Balance label + value (tappable to open monthly history)
-                        GestureDetector(
-                          onTap: onBalanceTap,
-                          child: Row(
+                        // Isi Utama Card
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 38, 20, 18),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'Saldo Bersih',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: tokens.headerMuted,
+                              // Top Row: Label Dompet & Navigasi Bulan
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.wallet_rounded,
+                                        size: 16,
+                                        color: tokens.headerFg.withValues(alpha: 0.8),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'DOMPET UTAMA',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 1.1,
+                                          color: tokens.headerFg.withValues(alpha: 0.85),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  // Navigasi Bulan
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: tokens.headerFg.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: tokens.headerBorder.withValues(alpha: 0.4)),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        GestureDetector(
+                                          onTap: onPrev,
+                                          child: Icon(Icons.chevron_left_rounded, size: 16, color: tokens.headerFg),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          monthName,
+                                          style: TextStyle(
+                                            fontSize: 10.5,
+                                            fontWeight: FontWeight.w700,
+                                            color: tokens.headerFg,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        GestureDetector(
+                                          onTap: onNext,
+                                          child: Icon(Icons.chevron_right_rounded, size: 16, color: tokens.headerFg),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 14),
+
+                              // Saldo Bulan Ini (Ukuran Besar & Menonjol)
+                              GestureDetector(
+                                onTap: onBalanceTap,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          'Saldo Bulan Ini',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                            color: tokens.headerMuted,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Icon(
+                                          Icons.arrow_forward_ios_rounded,
+                                          size: 9,
+                                          color: tokens.headerMuted,
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(
+                                        provider.formatCurrency(balance),
+                                        style: TextStyle(
+                                          fontSize: 32,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: -0.5,
+                                          color: tokens.headerFg,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(width: 4),
-                              Icon(Icons.arrow_forward_ios_rounded, size: 9, color: tokens.headerMuted),
+                              const SizedBox(height: 12),
+
+                              // Uang Riil (Akumulasi Bulan Lalu + Bulan Ini)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: tokens.headerFg.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: tokens.headerBorder.withValues(alpha: 0.5),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.account_balance_wallet_rounded,
+                                      size: 13,
+                                      color: tokens.headerFg,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Uang Riil (Bulan Lalu + Ini): ',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: tokens.headerMuted,
+                                      ),
+                                    ),
+                                    Text(
+                                      provider.formatCurrency(provider.cumulativeBalance),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w800,
+                                        color: tokens.headerFg,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+
+                              // Pemasukan & Pengeluaran Row
+                              Row(
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(Icons.south_west_rounded, size: 13, color: tokens.incomeOnHeader),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        provider.formatCurrency(income),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: tokens.incomeOnHeader,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.north_east_rounded, size: 13, color: tokens.expenseOnHeader),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        provider.formatCurrency(expense),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: tokens.expenseOnHeader,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            provider.formatCurrency(balance),
-                            style: TextStyle(
-                              fontSize: 34,
-                              fontWeight: FontWeight.w800,
-                              color: balanceColor,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Income / Expense row
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _MiniStat(
-                                label: 'Pemasukan',
-                                value: provider.formatCurrency(income),
-                                icon: Icons.arrow_downward_rounded,
-                                color: tokens.incomeOnHeader,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _MiniStat(
-                                label: 'Pengeluaran',
-                                value: provider.formatCurrency(expense),
-                                icon: Icons.arrow_upward_rounded,
-                                color: tokens.expenseOnHeader,
-                              ),
-                            ),
-                          ],
                         ),
                       ],
                     ),
@@ -472,68 +594,6 @@ class _DashboardBanner extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _NavBtn extends StatelessWidget {
-  final VoidCallback onTap;
-  final IconData icon;
-  const _NavBtn({required this.onTap, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: tokens.headerSurface,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: tokens.headerBorder, width: 1),
-        ),
-        child: Icon(icon, color: tokens.headerFg, size: 16),
-      ),
-    );
-  }
-}
-
-class _MiniStat extends StatelessWidget {
-  final String label, value;
-  final IconData icon;
-  final Color color;
-  const _MiniStat({
-    required this.label, required this.value,
-    required this.icon, required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: tokens.headerSurface,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            Icon(icon, color: color, size: 12),
-            const SizedBox(width: 5),
-            Text(label, style: TextStyle(color: color.withValues(alpha: 0.9), fontSize: 10, fontWeight: FontWeight.w600)),
-          ]),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: tokens.headerFg, fontSize: 13, fontWeight: FontWeight.w700),
-          ),
-        ],
       ),
     );
   }

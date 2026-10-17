@@ -20,6 +20,7 @@ class FinanceProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _monthlyNetHistory = [];
   List<Map<String, dynamic>> _categorySpending = [];
   List<Map<String, dynamic>> _categoryIncome = [];
+  double _cumulativeBalance = 0.0;
 
   // Getters
   List<FinanceTransaction> get transactions => _transactions;
@@ -29,6 +30,7 @@ class FinanceProvider extends ChangeNotifier {
   String get currentMonth => _currentMonth;
   Map<String, double> get monthlyTotals => _monthlyTotals;
   bool get isLoading => _isLoading;
+  double get cumulativeBalance => _cumulativeBalance;
 
   double get topupBalance => _topupBalance;
   List<FinanceTransaction> get topupTransactions => _topupTransactions;
@@ -89,6 +91,7 @@ class FinanceProvider extends ChangeNotifier {
       _monthlyNetHistory = await DatabaseHelper.instance.getMonthlyNetBalanceHistory();
       _categorySpending = await DatabaseHelper.instance.getCategorySpending(_currentMonth);
       _categoryIncome = await DatabaseHelper.instance.getCategoryIncome(_currentMonth);
+      _cumulativeBalance = await DatabaseHelper.instance.getCumulativeBalanceUpTo(_currentMonth);
       notifyListeners();
     } catch (e) {
       debugPrint('Error refreshing monthly details: $e');

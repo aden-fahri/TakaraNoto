@@ -8,6 +8,7 @@ import '../providers/finance_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import '../utils/finance_calc.dart';
+import '../widgets/decorative_header_circles.dart';
 import '../widgets/donut_chart.dart';
 
 class StatsScreen extends StatefulWidget {
@@ -113,63 +114,68 @@ class _StatsScreenState extends State<StatsScreen> {
             ),
             child: SafeArea(
               bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Column(
+              child: Stack(
+                children: [
+                  const DecorativeHeaderCircles(),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Statistik',
-                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: tokens.headerFg),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _NavBtn(
-                              onTap: () => _shiftMonth(context, current, -1),
-                              icon: Icons.chevron_left,
-                            ),
-                            const SizedBox(width: 8),
                             Text(
-                              _monthName(current),
-                              style: TextStyle(
-                                fontSize: 13, fontWeight: FontWeight.w600,
-                                color: tokens.headerMuted,
-                              ),
+                              'Statistik',
+                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: tokens.headerFg),
                             ),
-                            const SizedBox(width: 8),
-                            _NavBtn(
-                              onTap: () => _shiftMonth(context, current, 1),
-                              icon: Icons.chevron_right,
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                _NavBtn(
+                                  onTap: () => _shiftMonth(context, current, -1),
+                                  icon: Icons.chevron_left,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  _monthName(current),
+                                  style: TextStyle(
+                                    fontSize: 13, fontWeight: FontWeight.w600,
+                                    color: tokens.headerMuted,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                _NavBtn(
+                                  onTap: () => _shiftMonth(context, current, 1),
+                                  icon: Icons.chevron_right,
+                                ),
+                              ],
                             ),
                           ],
+                        ),
+                        GestureDetector(
+                          onTap: () => _exportCSV(context, provider),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: tokens.headerSurface,
+                              borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+                              border: Border.all(color: tokens.headerBorder),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.share_outlined, size: 14, color: tokens.headerMuted),
+                                SizedBox(width: 6),
+                                Text('Ekspor', style: TextStyle(fontSize: 12, color: tokens.headerMuted, fontWeight: FontWeight.w600)),
+                              ],
+                            ),
+                          ),
                         ),
                       ],
                     ),
-                    GestureDetector(
-                      onTap: () => _exportCSV(context, provider),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: tokens.headerSurface,
-                          borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
-                          border: Border.all(color: tokens.headerBorder),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.share_outlined, size: 14, color: tokens.headerMuted),
-                            SizedBox(width: 6),
-                            Text('Ekspor', style: TextStyle(fontSize: 12, color: tokens.headerMuted, fontWeight: FontWeight.w600)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),

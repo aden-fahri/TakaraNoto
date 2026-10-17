@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../theme/app_tokens.dart';
 import '../theme/theme_controller.dart';
+import 'backup_restore_screen.dart';
 
 /// Settings screen to pick the app colors: accent + background.
 /// Each has preset swatches and a custom HSV/hex picker.
@@ -131,6 +132,27 @@ class ThemeSettingsScreen extends StatelessWidget {
                   onTap: () =>
                       _openCustomPicker(context, forBackground: true),
                 ),
+                const SizedBox(height: 32),
+                Text(
+                  'Data',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: t.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                _SettingsTile(
+                  icon: Icons.settings_backup_restore_rounded,
+                  title: 'Backup & Restore',
+                  subtitle: 'Ekspor atau pulihkan seluruh data aplikasi',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const BackupRestoreScreen(),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -179,7 +201,7 @@ class _Header extends StatelessWidget {
               ),
               const SizedBox(width: 14),
               Text(
-                'Pengaturan Tema',
+                'Pengaturan',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
@@ -452,6 +474,74 @@ class _CustomColorTile extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     '#$_hex',
+                    style: TextStyle(fontSize: 11.5, color: t.textMuted),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: t.textMuted),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Settings entry tile ──────────────────────────────────────────────────────
+class _SettingsTile extends StatelessWidget {
+  const _SettingsTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: t.card,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: t.border),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: t.softSurface,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: t.accent, size: 20),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: t.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
                     style: TextStyle(fontSize: 11.5, color: t.textMuted),
                   ),
                 ],

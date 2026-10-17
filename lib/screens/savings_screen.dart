@@ -6,6 +6,7 @@ import '../providers/finance_provider.dart';
 import '../models/savings_goal.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
+import '../widgets/decorative_header_circles.dart';
 
 class SavingsScreen extends StatelessWidget {
   const SavingsScreen({super.key});
@@ -200,56 +201,61 @@ class SavingsScreen extends StatelessWidget {
             ),
             child: SafeArea(
               bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              child: Stack(
+                children: [
+                  const DecorativeHeaderCircles(),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          _monthName(currentMonth),
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: tokens.headerMuted,
-                          ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _monthName(currentMonth),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: tokens.headerMuted,
+                              ),
+                            ),
+                            Text(
+                              'Tabungan',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: tokens.headerFg,
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          'Tabungan',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color: tokens.headerFg,
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: tokens.headerSurface,
+                            borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+                            border: Border.all(color: tokens.headerBorder),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.stars_rounded, size: 14, color: tokens.headerMuted),
+                              const SizedBox(width: 6),
+                              Text(
+                                '${goals.length} Target',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: tokens.headerMuted,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: tokens.headerSurface,
-                        borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
-                        border: Border.all(color: tokens.headerBorder),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.stars_rounded, size: 14, color: tokens.headerMuted),
-                          const SizedBox(width: 6),
-                          Text(
-                            '${goals.length} Target',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: tokens.headerMuted,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -493,6 +499,7 @@ class SavingsScreen extends StatelessWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: null,
         onPressed: () => _showAddGoalDialog(context),
         backgroundColor: tokens.accent,
         foregroundColor: tokens.onAccent,

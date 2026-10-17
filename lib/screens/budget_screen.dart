@@ -7,6 +7,7 @@ import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import '../utils/finance_calc.dart';
 import '../widgets/budget_modal.dart';
+import '../widgets/decorative_header_circles.dart';
 import '../widgets/donut_chart.dart';
 
 class BudgetScreen extends StatelessWidget {
@@ -95,60 +96,65 @@ class BudgetScreen extends StatelessWidget {
             ),
             child: SafeArea(
               bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              child: Stack(
+                children: [
+                  const DecorativeHeaderCircles(),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Anggaran',
-                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: tokens.headerFg),
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _NavBtn(
-                              icon: Icons.chevron_left_rounded,
-                              onTap: () => provider.changeMonth(_shiftMonth(currentMonth, -1)),
+                            Text(
+                              'Anggaran',
+                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: tokens.headerFg),
                             ),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 10),
-                              child: Text(
-                                _monthName(currentMonth),
-                                style: TextStyle(
-                                  fontSize: 12, fontWeight: FontWeight.w600,
-                                  color: tokens.headerMuted,
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                _NavBtn(
+                                  icon: Icons.chevron_left_rounded,
+                                  onTap: () => provider.changeMonth(_shiftMonth(currentMonth, -1)),
                                 ),
-                              ),
-                            ),
-                            _NavBtn(
-                              icon: Icons.chevron_right_rounded,
-                              onTap: () => provider.changeMonth(_shiftMonth(currentMonth, 1)),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                                  child: Text(
+                                    _monthName(currentMonth),
+                                    style: TextStyle(
+                                      fontSize: 12, fontWeight: FontWeight.w600,
+                                      color: tokens.headerMuted,
+                                    ),
+                                  ),
+                                ),
+                                _NavBtn(
+                                  icon: Icons.chevron_right_rounded,
+                                  onTap: () => provider.changeMonth(_shiftMonth(currentMonth, 1)),
+                                ),
+                              ],
                             ),
                           ],
                         ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: tokens.headerSurface,
+                            borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+                            border: Border.all(color: tokens.headerBorder),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.pie_chart_rounded, size: 14, color: tokens.headerMuted),
+                              SizedBox(width: 6),
+                              Text('Total Bulan Ini', style: TextStyle(fontSize: 12, color: tokens.headerMuted, fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: tokens.headerSurface,
-                        borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
-                        border: Border.all(color: tokens.headerBorder),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.pie_chart_rounded, size: 14, color: tokens.headerMuted),
-                          SizedBox(width: 6),
-                          Text('Total Bulan Ini', style: TextStyle(fontSize: 12, color: tokens.headerMuted, fontWeight: FontWeight.w600)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),

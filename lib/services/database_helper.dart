@@ -12,27 +12,24 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
 
-  // Web in-memory fallback database
-  static final List<Category> _webCategories = [];
-  static final List<FinanceTransaction> _webTransactions = [];
-  static final List<SavingsGoal> _webSavingsGoals = [];
-  static final List<Budget> _webBudgets = [];
-  static int _webIdCounter = 1;
-
   DatabaseHelper._init();
 
   Future<Database> get database async {
-    if (kIsWeb) {
-      throw UnsupportedError('Database is not supported on Web');
-    }
     if (_database != null) return _database!;
     _database = await _initDB('finflow.db');
     return _database!;
   }
 
   Future<Database> _initDB(String filePath) async {
-    final dbPath = await getApplicationDocumentsDirectory();
-    final path = join(dbPath.path, filePath);
+    // Web builds use the sqlite3 wasm/IndexedDB factory set in main(), which
+    // stores databases by virtual name instead of a file system path.
+    final String path;
+    if (kIsWeb) {
+      path = filePath;
+    } else {
+      final dbPath = await getApplicationDocumentsDirectory();
+      path = join(dbPath.path, filePath);
+    }
 
     return await openDatabase(
       path,
@@ -229,41 +226,9 @@ class DatabaseHelper {
     }
   }
 
-  void _initWebCategories() {
-    if (_webCategories.isEmpty) {
-      final List<Map<String, dynamic>> defaultCategories = [
-        {'id': 1, 'name': 'Makanan & Minuman', 'icon': 'fast_food', 'color': '#ff7f50', 'type': 'expense'},
-        {'id': 2, 'name': 'Transportasi', 'icon': 'car', 'color': '#3498db', 'type': 'expense'},
-        {'id': 3, 'name': 'Belanja', 'icon': 'cart', 'color': '#9b59b6', 'type': 'expense'},
-        {'id': 4, 'name': 'Hiburan', 'icon': 'gamepad_2', 'color': '#e74c3c', 'type': 'expense'},
-        {'id': 5, 'name': 'Kesehatan', 'icon': 'heart_pulse', 'color': '#2ecc71', 'type': 'expense'},
-        {'id': 6, 'name': 'Tagihan & Utilitas', 'icon': 'receipt', 'color': '#f1c40f', 'type': 'expense'},
-        {'id': 7, 'name': 'Tabungan', 'icon': 'trending_up', 'color': '#1abc9c', 'type': 'expense'},
-        {'id': 12, 'name': 'Tarik Tabungan', 'icon': 'download', 'color': '#f39c12', 'type': 'income'},
-        {'id': 8, 'name': 'Gaji', 'icon': 'banknote', 'color': '#2ecc71', 'type': 'income'},
-        {'id': 9, 'name': 'Investasi', 'icon': 'trending_up', 'color': '#1abc9c', 'type': 'income'},
-        {'id': 10, 'name': 'Saku & Hibah', 'icon': 'gift', 'color': '#fd79a8', 'type': 'income'},
-        {'id': 14, 'name': 'Transfer Masuk', 'icon': 'download', 'color': '#5c6bc0', 'type': 'income'},
-        {'id': 13, 'name': 'Top Up', 'icon': 'payments', 'color': '#3f51b5', 'type': 'expense'},
-        {'id': 11, 'name': 'Lain-lain', 'icon': 'ellipsis', 'color': '#95a5a6', 'type': 'expense'}
-      ];
-      for (final cat in defaultCategories) {
-        _webCategories.add(Category.fromMap(cat));
-      }
-      _webIdCounter = 15;
-    }
-  }
-
   // --- Categories CRUD ---
   
   Future<List<Category>> getCategories() async {
-    if (kIsWeb) {
-      _initWebCategories();
-      final sorted = List<Category>.from(_webCategories);
-      sorted.sort((a, b) => a.name.compareTo(b.name));
-      return sorted;
-    }
-
     final db = await instance.database;
     final result = await db.query('categories', orderBy: 'name ASC');
     if (result.isEmpty) {
@@ -275,31 +240,11 @@ class DatabaseHelper {
   }
 
   Future<int> addCategory(Category category) async {
-    if (kIsWeb) {
-      _initWebCategories();
-      final newId = _webIdCounter++;
-      final newCat = Category(
-        id: newId,
-        name: category.name,
-        icon: category.icon,
-        color: category.color,
-        type: category.type,
-      );
-      _webCategories.add(newCat);
-      return newId;
-    }
-
     final db = await instance.database;
     return await db.insert('categories', category.toMap());
   }
 
   Future<int> deleteCategory(int id) async {
-    if (kIsWeb) {
-      _webCategories.removeWhere((c) => c.id == id);
-      _webTransactions.removeWhere((t) => t.categoryId == id);
-      return 1;
-    }
-
     final db = await instance.database;
     return await db.delete('categories', where: 'id = ?', whereArgs: [id]);
   }
@@ -307,38 +252,6 @@ class DatabaseHelper {
   // --- Transactions CRUD ---
 
   Future<List<FinanceTransaction>> getTransactions({String walletType = 'main'}) async {
-    if (kIsWeb) {
-      _initWebCategories();
-      final joined = _webTransactions
-          .where((tx) => tx.walletType == walletType)
-          .map((tx) {
-            final cat = _webCategories.firstWhere(
-              (c) => c.id == tx.categoryId,
-              orElse: () => Category(name: 'Tanpa Kategori', icon: 'ellipsis', color: '#95a5a6', type: 'expense'),
-            );
-            return FinanceTransaction(
-              id: tx.id,
-              categoryId: tx.categoryId,
-              amount: tx.amount,
-              type: tx.type,
-              date: tx.date,
-              note: tx.note,
-              savingsGoalId: tx.savingsGoalId,
-              walletType: tx.walletType,
-              categoryName: cat.name,
-              categoryIcon: cat.icon,
-              categoryColor: cat.color,
-            );
-          }).toList();
-      
-      joined.sort((a, b) {
-        final dateCompare = b.date.compareTo(a.date);
-        if (dateCompare != 0) return dateCompare;
-        return (b.id ?? 0).compareTo(a.id ?? 0);
-      });
-      return joined;
-    }
-
     final db = await instance.database;
     final result = await db.rawQuery('''
       SELECT t.*, c.name as category_name, c.icon as category_icon, c.color as category_color 
@@ -351,24 +264,6 @@ class DatabaseHelper {
   }
 
   Future<int> addTransaction(FinanceTransaction transaction) async {
-    if (kIsWeb) {
-      final newId = _webIdCounter++;
-      final tx = FinanceTransaction(
-        id: newId,
-        categoryId: transaction.categoryId,
-        amount: transaction.amount,
-        type: transaction.type,
-        date: transaction.date,
-        note: transaction.note,
-        savingsGoalId: transaction.savingsGoalId,
-        walletType: transaction.walletType,
-        isTransfer: transaction.isTransfer,
-        transferGroup: transaction.transferGroup,
-      );
-      _webTransactions.add(tx);
-      return newId;
-    }
-
     final db = await instance.database;
     return await db.insert('transactions', transaction.toMap());
   }
@@ -386,38 +281,6 @@ class DatabaseHelper {
     const inCatName = 'Transfer Masuk';
     final fromWallet = toTopup ? 'main' : 'topup';
     final toWallet = toTopup ? 'topup' : 'main';
-
-    if (kIsWeb) {
-      _initWebCategories();
-      final outCat = _webCategories.firstWhere((c) => c.name == outCatName && c.type == 'expense',
-          orElse: () => Category(name: outCatName, icon: 'payments', color: '#3f51b5', type: 'expense'));
-      final inCat = _webCategories.firstWhere((c) => c.name == inCatName && c.type == 'income',
-          orElse: () => Category(name: inCatName, icon: 'download', color: '#5c6bc0', type: 'income'));
-      final group = _webIdCounter;
-      _webTransactions.add(FinanceTransaction(
-        id: _webIdCounter++,
-        categoryId: outCat.id ?? 0,
-        amount: amount,
-        type: 'expense',
-        date: date,
-        note: note,
-        walletType: fromWallet,
-        isTransfer: true,
-        transferGroup: group,
-      ));
-      _webTransactions.add(FinanceTransaction(
-        id: _webIdCounter++,
-        categoryId: inCat.id ?? 0,
-        amount: amount,
-        type: 'income',
-        date: date,
-        note: note,
-        walletType: toWallet,
-        isTransfer: true,
-        transferGroup: group,
-      ));
-      return;
-    }
 
     final db = await instance.database;
     final outCat = await db.query('categories',
@@ -456,19 +319,6 @@ class DatabaseHelper {
   }
 
   Future<int> deleteTransaction(int id) async {
-    if (kIsWeb) {
-      final idx = _webTransactions.indexWhere((t) => t.id == id);
-      if (idx != -1) {
-        final tx = _webTransactions[idx];
-        if (tx.isTransfer && tx.transferGroup != null) {
-          _webTransactions.removeWhere((t) => t.transferGroup == tx.transferGroup);
-          return 2;
-        }
-      }
-      _webTransactions.removeWhere((t) => t.id == id);
-      return 1;
-    }
-
     final db = await instance.database;
     final rows = await db.query('transactions', where: 'id = ?', whereArgs: [id], limit: 1);
     if (rows.isNotEmpty) {
@@ -483,15 +333,6 @@ class DatabaseHelper {
   }
 
   Future<int> updateTransaction(FinanceTransaction transaction) async {
-    if (kIsWeb) {
-      final idx = _webTransactions.indexWhere((t) => t.id == transaction.id);
-      if (idx != -1) {
-        _webTransactions[idx] = transaction;
-        return 1;
-      }
-      return 0;
-    }
-
     final db = await instance.database;
     return await db.update(
       'transactions',
@@ -504,21 +345,6 @@ class DatabaseHelper {
   // --- Savings Goals CRUD ---
 
   Future<List<SavingsGoal>> getSavingsGoals() async {
-    if (kIsWeb) {
-      return _webSavingsGoals.map((g) {
-        final currentAmount = _webTransactions
-            .where((t) => t.savingsGoalId == g.id)
-            .fold(0.0, (sum, t) => sum + (t.type == 'expense' ? t.amount : (t.type == 'income' ? -t.amount : 0.0)));
-        return SavingsGoal(
-          id: g.id,
-          title: g.title,
-          targetAmount: g.targetAmount,
-          createdAt: g.createdAt,
-          currentAmount: currentAmount,
-        );
-      }).toList();
-    }
-
     final db = await instance.database;
     final result = await db.rawQuery('''
       SELECT g.*, COALESCE(SUM(CASE WHEN t.type = 'expense' THEN t.amount WHEN t.type = 'income' THEN -t.amount ELSE 0 END), 0) as current_amount
@@ -531,60 +357,16 @@ class DatabaseHelper {
   }
 
   Future<int> addSavingsGoal(SavingsGoal goal) async {
-    if (kIsWeb) {
-      final newId = _webIdCounter++;
-      final g = SavingsGoal(
-        id: newId,
-        title: goal.title,
-        targetAmount: goal.targetAmount,
-        createdAt: goal.createdAt,
-      );
-      _webSavingsGoals.add(g);
-      return newId;
-    }
-
     final db = await instance.database;
     return await db.insert('savings_goals', goal.toMap());
   }
 
   Future<int> deleteSavingsGoal(int id) async {
-    if (kIsWeb) {
-      _webSavingsGoals.removeWhere((g) => g.id == id);
-      // CASCADE nullify in-memory transactions savings_goal_id
-      for (int i = 0; i < _webTransactions.length; i++) {
-        if (_webTransactions[i].savingsGoalId == id) {
-          final old = _webTransactions[i];
-          _webTransactions[i] = FinanceTransaction(
-            id: old.id,
-            categoryId: old.categoryId,
-            amount: old.amount,
-            type: old.type,
-            date: old.date,
-            note: old.note,
-            savingsGoalId: null,
-            walletType: old.walletType,
-            isTransfer: old.isTransfer,
-            transferGroup: old.transferGroup,
-          );
-        }
-      }
-      return 1;
-    }
-
     final db = await instance.database;
     return await db.delete('savings_goals', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<int> updateSavingsGoal(SavingsGoal goal) async {
-    if (kIsWeb) {
-      final idx = _webSavingsGoals.indexWhere((g) => g.id == goal.id);
-      if (idx != -1) {
-        _webSavingsGoals[idx] = goal;
-        return 1;
-      }
-      return 0;
-    }
-
     final db = await instance.database;
     return await db.update(
       'savings_goals',
@@ -597,34 +379,6 @@ class DatabaseHelper {
   // --- Aggregate Queries ---
 
   Future<List<Map<String, dynamic>>> getCategorySpending(String monthYear) async {
-    if (kIsWeb) {
-      _initWebCategories();
-      final Map<int, double> spending = {};
-      for (final tx in _webTransactions) {
-        if (tx.date.startsWith(monthYear) && tx.walletType == 'main' && !tx.isTransfer) {
-          if (tx.type == 'expense') {
-            spending[tx.categoryId] = (spending[tx.categoryId] ?? 0.0) + tx.amount;
-          } else if (tx.type == 'income' && tx.savingsGoalId != null) {
-            spending[tx.categoryId] = (spending[tx.categoryId] ?? 0.0) - tx.amount;
-          }
-        }
-      }
-      final List<Map<String, dynamic>> result = [];
-      spending.forEach((catId, amount) {
-        if (amount > 0) {
-          final cat = _webCategories.firstWhere((c) => c.id == catId,
-              orElse: () => Category(name: 'Tanpa Kategori', icon: 'ellipsis', color: '#95a5a6', type: 'expense'));
-          result.add({
-            'category_name': cat.name,
-            'color': cat.color,
-            'amount': amount,
-          });
-        }
-      });
-      result.sort((a, b) => (b['amount'] as double).compareTo(a['amount'] as double));
-      return result;
-    }
-
     final db = await instance.database;
     return await db.rawQuery('''
       SELECT c.name as category_name, c.color, 
@@ -639,28 +393,6 @@ class DatabaseHelper {
   }
 
   Future<Map<String, double>> getMonthlyTotals(String monthYear) async {
-    if (kIsWeb) {
-      double income = 0;
-      double expense = 0;
-      for (final tx in _webTransactions) {
-        if (tx.date.startsWith(monthYear) && tx.walletType == 'main' && !tx.isTransfer) {
-          if (tx.type == 'income') {
-            if (tx.savingsGoalId != null) {
-              expense -= tx.amount;
-            } else {
-              income += tx.amount;
-            }
-          } else {
-            expense += tx.amount;
-          }
-        }
-      }
-      return {
-        'income': income,
-        'expense': expense,
-      };
-    }
-
     final db = await instance.database;
     final result = await db.rawQuery('''
       SELECT 
@@ -681,34 +413,6 @@ class DatabaseHelper {
   }
 
   Future<List<Map<String, dynamic>>> getCategoryIncome(String monthYear) async {
-    if (kIsWeb) {
-      _initWebCategories();
-      final Map<int, double> incomeByCat = {};
-      for (final tx in _webTransactions) {
-        if (tx.date.startsWith(monthYear) &&
-            tx.walletType == 'main' &&
-            !tx.isTransfer &&
-            tx.type == 'income' &&
-            tx.savingsGoalId == null) {
-          incomeByCat[tx.categoryId] = (incomeByCat[tx.categoryId] ?? 0.0) + tx.amount;
-        }
-      }
-      final List<Map<String, dynamic>> result = [];
-      incomeByCat.forEach((catId, amount) {
-        if (amount > 0) {
-          final cat = _webCategories.firstWhere((c) => c.id == catId,
-              orElse: () => Category(name: 'Tanpa Kategori', icon: 'ellipsis', color: '#95a5a6', type: 'income'));
-          result.add({
-            'category_name': cat.name,
-            'color': cat.color,
-            'amount': amount,
-          });
-        }
-      });
-      result.sort((a, b) => (b['amount'] as double).compareTo(a['amount'] as double));
-      return result;
-    }
-
     final db = await instance.database;
     return await db.rawQuery('''
       SELECT c.name as category_name, c.color, SUM(t.amount) as amount
@@ -725,32 +429,6 @@ class DatabaseHelper {
   // --- Budgets CRUD ---
 
   Future<List<Budget>> getBudgets(String monthYear) async {
-    if (kIsWeb) {
-      _initWebCategories();
-      return _webBudgets.where((b) => b.monthYear == monthYear).map((b) {
-        final totalSpent = _webTransactions
-            .where((t) => t.categoryId == b.categoryId && (t.type == 'expense' || (t.type == 'income' && t.savingsGoalId != null)) && t.date.startsWith(monthYear) && t.walletType == 'main' && !t.isTransfer)
-            .fold(0.0, (sum, t) => sum + (t.type == 'expense' ? t.amount : -t.amount));
-        
-        final cat = _webCategories.firstWhere(
-          (c) => c.id == b.categoryId,
-          orElse: () => Category(name: 'Tanpa Kategori', icon: 'ellipsis', color: '#95a5a6', type: 'expense'),
-        );
-
-        return Budget(
-          id: b.id,
-          categoryId: b.categoryId,
-          limitAmount: b.limitAmount,
-          monthYear: b.monthYear,
-          budgetType: b.budgetType,
-          categoryName: cat.name,
-          categoryColor: cat.color,
-          categoryIcon: cat.icon,
-          totalSpent: totalSpent,
-        );
-      }).toList();
-    }
-
     final db = await instance.database;
     final result = await db.rawQuery('''
       SELECT b.*, c.name as category_name, c.color as category_color, c.icon as category_icon,
@@ -769,31 +447,6 @@ class DatabaseHelper {
   }
 
   Future<int> addOrUpdateBudget(Budget budget) async {
-    if (kIsWeb) {
-      final idx = _webBudgets.indexWhere((b) => b.categoryId == budget.categoryId && b.monthYear == budget.monthYear);
-      if (idx != -1) {
-        final existing = _webBudgets[idx];
-        _webBudgets[idx] = Budget(
-          id: existing.id,
-          categoryId: budget.categoryId,
-          limitAmount: budget.limitAmount,
-          monthYear: budget.monthYear,
-          budgetType: budget.budgetType,
-        );
-        return existing.id!;
-      } else {
-        final newId = _webIdCounter++;
-        _webBudgets.add(Budget(
-          id: newId,
-          categoryId: budget.categoryId,
-          limitAmount: budget.limitAmount,
-          monthYear: budget.monthYear,
-          budgetType: budget.budgetType,
-        ));
-        return newId;
-      }
-    }
-
     final db = await instance.database;
     final existing = await db.query(
       'budgets',
@@ -815,25 +468,11 @@ class DatabaseHelper {
   }
 
   Future<int> deleteBudget(int id) async {
-    if (kIsWeb) {
-      _webBudgets.removeWhere((b) => b.id == id);
-      return 1;
-    }
-
     final db = await instance.database;
     return await db.delete('budgets', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<double> getTopupWalletBalance() async {
-    if (kIsWeb) {
-      double balance = 0.0;
-      for (final tx in _webTransactions) {
-        if (tx.walletType != 'topup') continue;
-        balance += tx.type == 'income' ? tx.amount : -tx.amount;
-      }
-      return balance;
-    }
-
     final db = await instance.database;
     final result = await db.rawQuery('''
       SELECT COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE -amount END), 0) as total
@@ -844,38 +483,6 @@ class DatabaseHelper {
   }
 
   Future<List<FinanceTransaction>> getTopupTransactions() async {
-    if (kIsWeb) {
-      _initWebCategories();
-      final List<FinanceTransaction> list = [];
-      for (final tx in _webTransactions) {
-        if (tx.walletType != 'topup') continue;
-        final cat = _webCategories.firstWhere(
-          (c) => c.id == tx.categoryId,
-          orElse: () => Category(name: 'Tanpa Kategori', icon: 'ellipsis', color: '#95a5a6', type: 'expense'),
-        );
-        list.add(FinanceTransaction(
-          id: tx.id,
-          categoryId: tx.categoryId,
-          amount: tx.amount,
-          type: tx.type,
-          date: tx.date,
-          note: tx.note,
-          walletType: tx.walletType,
-          isTransfer: tx.isTransfer,
-          transferGroup: tx.transferGroup,
-          categoryName: cat.name,
-          categoryIcon: cat.icon,
-          categoryColor: cat.color,
-        ));
-      }
-      list.sort((a, b) {
-        final dateCompare = b.date.compareTo(a.date);
-        if (dateCompare != 0) return dateCompare;
-        return (b.id ?? 0).compareTo(a.id ?? 0);
-      });
-      return list;
-    }
-
     final db = await instance.database;
     final result = await db.rawQuery('''
       SELECT t.*, c.name as category_name, c.icon as category_icon, c.color as category_color 
@@ -889,38 +496,6 @@ class DatabaseHelper {
   }
 
   Future<List<Map<String, dynamic>>> getMonthlyNetBalanceHistory() async {
-    if (kIsWeb) {
-      final Map<String, Map<String, double>> groups = {};
-      for (final tx in _webTransactions) {
-        if (tx.walletType == 'main' && !tx.isTransfer) {
-          final m = tx.date.substring(0, 7);
-          groups.putIfAbsent(m, () => {'income': 0.0, 'expense': 0.0});
-          if (tx.type == 'income') {
-            if (tx.savingsGoalId != null) {
-              groups[m]!['expense'] = groups[m]!['expense']! - tx.amount;
-            } else {
-              groups[m]!['income'] = groups[m]!['income']! + tx.amount;
-            }
-          } else {
-            groups[m]!['expense'] = groups[m]!['expense']! + tx.amount;
-          }
-        }
-      }
-      final List<Map<String, dynamic>> list = [];
-      groups.forEach((m, data) {
-        final inc = data['income']!;
-        final exp = data['expense']!;
-        list.add({
-          'month': m,
-          'income': inc,
-          'expense': exp,
-          'balance': inc - exp,
-        });
-      });
-      list.sort((a, b) => b['month'].compareTo(a['month']));
-      return list;
-    }
-
     final db = await instance.database;
     final result = await db.rawQuery('''
       SELECT 
@@ -943,5 +518,25 @@ class DatabaseHelper {
         'balance': inc - exp,
       };
     }).toList();
+  }
+
+  /// Calculates the cumulative net balance from beginning of time up to end of [monthYear]
+  Future<double> getCumulativeBalanceUpTo(String monthYear) async {
+    final db = await instance.database;
+    final result = await db.rawQuery('''
+      SELECT 
+        COALESCE(SUM(CASE WHEN (type = 'income' AND savings_goal_id IS NULL) THEN amount ELSE 0 END), 0) as income,
+        COALESCE(SUM(CASE WHEN type = 'expense' THEN amount WHEN (type = 'income' AND savings_goal_id IS NOT NULL) THEN -amount ELSE 0 END), 0) as expense
+      FROM transactions
+      WHERE substr(date, 1, 7) <= ? AND wallet_type = 'main' AND is_transfer = 0
+    ''', [monthYear]);
+
+    if (result.isNotEmpty) {
+      final row = result.first;
+      final inc = (row['income'] as num).toDouble();
+      final exp = (row['expense'] as num).toDouble();
+      return inc - exp;
+    }
+    return 0.0;
   }
 }

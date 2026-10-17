@@ -1,0 +1,262 @@
+# TakaraNoto — Dokumentasi Keseluruhan (Fitur, Logic, Tampilan & Stack)
+
+Dokumen ini merangkum **seluruh aplikasi TakaraNoto** secara keseluruhan: konsep, stack teknologi, bahasa yang dipakai, arsitektur, logic keuangan pribadi (mode TakaraNoto), logic kas kelompok (mode ZainNoto), tampilan UI, tema, backup, platform, dan test.
+
+- **Nama aplikasi**: TakaraNoto • **Package**: `finflow_flutter` • **Versi**: `1.0.0+1`
+- **Dart SDK**: `^3.11.0` (Flutter stable)
+- Dokumen pendamping: [`ZAINNOTO.md`](ZAINNOTO.md) — pembahasan mendalam khusus mode kas kelompok.
+
+---
+
+## 1. Ringkasan Aplikasi
+
+TakaraNoto adalah aplikasi pencatatan keuangan berbasis **Flutter** dengan **dua mode** dalam satu aplikasi:
+
+| Mode | Nama shell | Isi | Database |
+|---|---|---|---|
+| **Pribadi** | TakaraNoto | Keuangan pribadi: transaksi, anggaran, tabungan, E-Wallet, statistik, riwayat | `finflow.db` |
+| **Kelompok** | ZainNoto | Kas kelompok: iuran anggota, tunggakan, periode, pembayaran FIFO, kredit, rekap WhatsApp | `zainnoto.db` |
+
+- Perpindahan mode lewat tombol `ModeSwitchButton` (menampilkan mode tujuan: `ZainNoto →` / `TakaraNoto →`), diproses `AppModeGate`. Mode **tidak dipersist** — aplikasi selalu terbuka di mode Pribadi.
+- Kedua mode memakai provider, database, dan seluruh alur datanya masing-masing — terpisah total. Jembatan antar-mode hanya lewat **Backup & Restore**.
+
+---
+
+## 2. Stack Teknologi
+
+| Lapisan | Teknologi |
+|---|---|
+| Bahasa & framework | **Dart 3 / Flutter** (Material 3), widget murni tanpa codegen |
+| State management | **`provider` ^6.1.5** (`ChangeNotifierProvider` + `context.watch/read`) |
+| Database | **SQLite** via **`sqflite` ^2.4.2** — dua file DB terpisah (`finflow.db` v6, `zainnoto.db` v1) |
+| Web | **`sqflite_common_ffi_web` ^1.1.1** (sqlite3 wasm + **IndexedDB**) — set di `main.dart`; aset `web/sqlite3.wasm` + `web/sqflite_sw.js` ikut di-commit |
+| Penyimpanan preferensi | **`shared_preferences` ^2.5.0** (warna tema) |
+| Lokalisasi & format | **`intl` ^0.20.2** (`initializeDateFormatting('id')`, `NumberFormat` locale `id_ID`) |
+| Tipografi | **`google_fonts` ^6.2.1** — font **Poppins** diambil runtime (butuh internet saat pertama kali) |
+| Berbagi & file | **`share_plus` ^13.1.0** (backup & CSV), **`file_picker` ^13.1.0** (pilih file restore) |
+| Utilitas | **`uuid` ^4.5.3** (ID ZainNoto), **`path`**, **`path_provider`** |
+| Dev/test | `flutter_test`, **`sqflite_common_ffi` ^2.3.4** (DB in-memory untuk test), **`flutter_lints` ^6.0.0** |
+
+---
+
+## 3. Bahasa yang Digunakan
+
+- **Bahasa pemrograman**: Dart (100% Flutter; tanpa Kotlin/Swift/JS kustom selain scaffold platform).
+- **Bahasa antarmuka**: **Bahasa Indonesia** di seluruh teks UI ("Saldo Bulan Ini", "Tunggakan", "Bebas Iuran", dst.).
+- **Format**: mata uang `Rp 1.234.567` (tanpa desimal, locale `id_ID`); tanggal disimpan `YYYY-MM-DD` sebagai TEXT dan ditampilkan dengan nama bulan Indonesia; timestamp ISO-8601 UTC.
+- **Penamaan**: kode & komentar sebagian besar berbahasa Inggris, produk & UI berbahasa Indonesia.
+
+---
+
+## 4. Arsitektur Aplikasi
+
+### Bootstrap (`lib/main.dart`)
+
+1. `WidgetsFlutterBinding.ensureInitialized()`.
+2. **`ErrorWidget.builder` diganti** `_BuildErrorView` — kartu error merah berbahasa Indonesia yang terlihat (juga di release), mencegah kegagalan menyamar sebagai layar putih.
+3. Jika web → `databaseFactory = databaseFactoryFfiWeb` (sqlite3 wasm + IndexedDB) sehingga **kedua DB persisten di browser**.
+4. `initializeDateFormatting('id', null)`; status bar light.
+5. `runApp` → `MyApp`: `MultiProvider` berisi:
+   - `FinanceProvider` — state keuangan pribadi
+   - `ThemeController()..load()` — tema tersimpan
+   - `AppModeController` — mode aktif (in-memory)
+   - `ZainNotoProvider` — state kas kelompok
+6. `MaterialApp` (title `TakaraNoto`, `ThemeMode.light` dipaksa) → `SplashScreen(nextScreen: AppModeGate())`.
+
+### Alur navigasi
+
+```
+SplashScreen (animasi ±1,8 dtk + tunggu load provider)
+   └─► AppModeGate
+         ├─ Pribadi ► MainNavigationScreen  (5 tab: Home, Riwayat, Anggaran, Tabungan, Laporan)
+         └─ Kelompok ► ZainNotoShellScreen  (4 tab: Beranda, Iuran, Transaksi, Statistik)
+```
+
+Navigasi antar tab memakai `IndexedStack` + `PillNavBar` kustom (badge merah di tab Anggaran bila ada anggaran terpakai > 85%).
+
+### Struktur direktori
+
+```
+lib/
+├── main.dart                  # bootstrap, provider, mode gate, shell 5 tab
+├── models/                    # FinanceTransaction, Category, Budget, SavingsGoal
+├── providers/                 # FinanceProvider, AppModeController
+├── services/                  # database_helper (finflow.db), backup_service
+├── theme/                     # app_tokens, app_theme, theme_controller
+├── utils/                     # finance_calc (agregat murni), rupiah_formatter
+├── screens/                   # 10 layar mode pribadi + zainnoto/ (shell + 4 tab)
+├── widgets/                   # modal & widget kustom bersama
+└── zainnoto/                  # logika & data mode kelompok (lihat ZAINNOTO.md)
+```
+
+---
+
+## 5. Mode Pribadi — Data & Logic
+
+### 5.1 Skema `finflow.db` (versi 6)
+
+| Tabel | Isi |
+|---|---|
+| `categories` | `name` UNIQUE, `icon`, `color`, `type CHECK income/expense`; **14 kategori awal** (Makanan, Transportasi, Gaji, Tabungan, Tarik Tabungan, Top Up, Transfer Masuk, …) — di-seed ulang bila kosong |
+| `transactions` | `category_id` FK CASCADE, `amount REAL`, `type`, `date`, `note`, `savings_goal_id` FK SET NULL, `wallet_type` (`main`/`topup`), `is_transfer`, `transfer_group` |
+| `budgets` | `category_id` FK CASCADE, `limit_amount`, `month_year`, `budget_type` (`goal`/`daily_limit`) |
+| `savings_goals` | `title`, `target_amount`, `created_at` |
+
+- **Tidak ada tabel dompet** — dompet **virtual** lewat kolom `wallet_type`; saldo selalu dihitung (derived).
+- Migrasi v3–v6: recreate tabel, tambah `wallet_type`, lalu v6 menambah `is_transfer`/`transfer_group` dan **mengubah baris "Top Up" lama menjadi pasangan transfer**.
+- **Tanpa soft delete** di mode ini; hapus bersifat permanen (kategori → cascade transaksi+anggaran).
+
+### 5.2 Konvensi tanda & aturan hitung (inti logic)
+
+- **Statistik & anggaran hanya menghitung `wallet_type = 'main'` dan `is_transfer = 0`.**
+- **Transfer** dicatat sebagai **sepasang transaksi** (satu expense + satu income dengan `transfer_group` sama) dan **tidak pernah** menambah pemasukan/pengeluaran di laporan mana pun:
+  - Isi Saldo: Dompet Utama (expense, kategori `Top Up`) ↔ E-Wallet (income, `Transfer Masuk`).
+  - Tarik: kebalikannya.
+  - Menghapus salah satu sisi ⇒ **kedua sisi terhapus** (via `transfer_group`).
+- **Tabungan**: setor = **expense** tertaut `savings_goal_id` (dihitung pengeluaran); tarik = **income** tertaut goal yang **mengurangi** pengeluaran di statistik (tidak menambah pemasukan). Saldo goal = Σ setor − Σ tarik.
+- **Saldo E-Wallet** = Σ income − Σ expense semua baris `wallet_type='topup'` (all-time).
+- **Saldo utama**: "Saldo Bulan Ini" = income − expense bulan berjalan; "Uang Riil" = akumulasi all-time (`cumulativeBalance`).
+- **Agregat murni** ada di `lib/utils/finance_calc.dart`: `daysInMonth`, `monthlyBudgetLimit` (`daily_limit × jumlah hari`, `goal` apa adanya), `sumIncome`, `sumExpense` (termasuk pengecualian transfer & penarikan tabungan), `netBalance`, `budgetUsagePct`.
+
+### 5.3 Anggaran
+
+- Dua tipe: **Bulanan (`goal`)** dan **Harian (`daily_limit`)** — batas harian dikalikan jumlah hari bulan berjalan.
+- Modal anggaran **menyalin batas dari bulan sebelumnya** bila belum diatur.
+- Ambang warna progres: `> 0,85` merah (expense), `> 0,6` kuning (warning), sisanya hijau.
+- Badge nav muncul bila ada anggaran terpakai > 85% (`FinanceProvider.hasBudgetAlert`).
+
+### 5.4 API `FinanceProvider` (ringkas)
+
+| Kelompok | Method |
+|---|---|
+| Load/refresh | `refreshAll`, `refreshMonthlyDetails`, `changeMonth(monthYear)` |
+| Transaksi | `addTx`, `updateTx`, `deleteTx` (transfer ⇒ hapus berpasangan), `makeTransfer(toTopup, …)` |
+| Tabungan | `addSavingsGoal`, `updateSavingsGoal`, `deleteSavingsGoal`, `addSavingTransaction` (setor), `withdrawSavingTransaction` (tarik) |
+| Anggaran | `addOrUpdateBg`, `deleteBg`, `getPreviousMonthBudget` |
+| Kategori | `addCat`, `deleteCat` (diblokir untuk kategori sistem: Tabungan / Tarik Tabungan / Top Up / Transfer Masuk) |
+| Util | `formatCurrency` (locale `id_ID`) |
+
+Setiap mutasi diikuti reload penuh (`refreshAll`/`refreshMonthlyDetails`) — sederhana, konsisten, tanpa cache parsial. Error ditelan ke `debugPrint` (lihat catatan §12).
+
+---
+
+## 6. Mode Pribadi — Tampilan (UI)
+
+### Shell 5 tab (`MainNavigationScreen`)
+
+Home · Riwayat · Anggaran · Tabungan · Laporan — `IndexedStack` + `PillNavBar` (pill geser, dot merah badge).
+
+### Layar
+
+| Layar | Isi utama |
+|---|---|
+| **Home** (`dashboard_screen.dart`) | Banner berwarna tema (sapaan per jam, `ModeSwitchButton`, tombol palet → Pengaturan Tema, logo), **kartu dompet `NotchedCard`** (Saldo Bulan Ini, tap → Riwayat Saldo; chip "Uang Riil"; ringkas masuk/keluar), kartu E-Wallet, 5 transaksi terbaru, FAB animasi melebar ("Tambah" ⇄ ikon +) |
+| **Riwayat** | Navigasi bulan, pencarian (catatan/kategori/**nominal**), filter tipe & kategori (chip horizontal), dikelompokkan per tanggal + net harian, **swipe-to-delete dengan undo**; transfer pakai dialog konfirmasi |
+| **Anggaran** | Kartu total (limit, terpakai, sisa) + **DonutChart** per kategori; tile per kategori dengan tombol Atur/Ubah → `BudgetModal` |
+| **Tabungan** | Ringkasan total vs target; kartu goal dengan progres & **proyeksi** (laju harian dari umur goal ⇒ perkiraan tanggal tercapai); dialog setor/tarik/edit; FAB "Target Baru" |
+| **Laporan** (`stats_screen.dart`) | Donut analitik Keluar/Masuk + legenda %; **arus pengeluaran mingguan** (5 bucket); ringkasan bulan (rata-rata harian, sisa anggaran); **monitor pos anggaran** (slider batas vs realisasi); tombol **Ekspor CSV** (share teks) |
+| **Riwayat Saldo** (`monthly_balance_screen.dart`) | Akumulasi saldo bersih + daftar bulan (masuk/keluar/net) |
+| **E-Wallet** (`topup_screen.dart`) | Saldo virtual, tombol **Isi Saldo / Tarik / Keluar**, riwayat transaksi E-Wallet, dialog transfer dengan validasi saldo |
+| **Pengaturan Tema** (`theme_settings_screen.dart`) | Preset aksen & background + picker kustom (HSV & hex), preview kartu live; pintasan Backup & Restore |
+| **Backup & Restore** | Ekspor/share file JSON, pilih file → validasi → konfirmasi → restore; catatan khusus mode web |
+| **Splash** | Animasi blobs, logo bercincin emas, wordmark "Takara"+"Noto" (emas), tunggu provider siap, transisi fade |
+
+### Modal & dialog utama
+
+- **`AddTransactionModal`** — sheet transaksi: toggle animated Keluar/Masuk, format ribuan inline, grid kategori 4 kolom, dropdown goal khusus kategori `Tabungan`, penyaring kategori per konteks (mis. `Transfer Masuk` selalu disembunyikan), edit transfer = **read-only** (hapus = kedua sisi), tombol Kelola Kategori.
+- **`BudgetModal`** — atur batas bulanan/harian per kategori, prefill bulan lalu, hapus anggaran.
+- **`ManageCategoriesModal`** — daftar + form kategori (pilihan ikon & warna), kategori sistem terkunci.
+- Dialog tabungan (setor/tarik/edit goal), dialog transfer E-Wallet, dialog konfirmasi hapus.
+
+### Widget kustom bersama
+
+| Widget | Fungsi |
+|---|---|
+| `NotchedCard` | Kartu dengan potongan **notch step** di kanan-atas (+`buildNotchedCardPath`) — dipakai kartu dompet Home & ZainNoto |
+| `DonutChart` | Cincin CustomPainter dengan slot center |
+| `PillNavBar` | Nav bawah pill kustom + badge (dipakai kedua mode) |
+| `DecorativeHeaderCircles` | Lingkaran dekoratif banner (`Positioned.fill`) |
+| `ModeSwitchButton` | Tombol pindah mode (menampilkan mode tujuan) |
+| `RupiahInputFormatter` | Masker input ribuan `Rp` (utils, bersama kedua mode) |
+
+---
+
+## 7. Tema & Desain
+
+- **`AppTokens`** — `ThemeExtension` 20 warna semantik: `headerBg/Fg/Muted/Surface/Border`, `pageBg`, `card`, `softSurface(+Strong)`, `textPrimary/Muted`, `border`, `accent/onAccent`, `income` `#10B981`, `expense` `#F43F5E`, `warning` `#FBBF24`, `incomeOnHeader`, `expenseOnHeader`, `transfer` `#3F51B5`. Diakses dengan `context.tokens` di seluruh layar.
+- **`AppTheme`** — Material 3 `ColorScheme.fromSeed` dengan `primary` dioverride warna pilihan pengguna; tipografi **Poppins**; kartu putih radius 20 tanpa elevasi; input borderless; SnackBar & dialog mengikuti token. **Hanya mode terang** (`ThemeMode.light` dipaksa).
+- **`ThemeController`** — persist ke `SharedPreferences` (`custom_primary_color`, `custom_background_color`):
+  - **7 preset aksen**: Plum Klasik (default `#381932`), Emerald Green, Electric Indigo, Deep Navy, Royal Purple, Warm Amber, Rose Crimson.
+  - **4 preset background**: Krem Hangat (default `#FFF3E6`), Slate Lembut, Putih Bersih, Abu Sejuk.
+  - Warna banner header dihitung otomatis dari aksen (varian alpha), sehingga semua layar konsisten dengan tema apa pun.
+
+---
+
+## 8. Mode Kelompok (ZainNoto) — Ringkas
+
+Pembahasan lengkap ada di **[`ZAINNOTO.md`](ZAINNOTO.md)**. Ringkas:
+
+- **Fitur**: grup kas + anggota, rencana iuran (mingguan/bulanan), periode & tagihan otomatis, pembayaran 1-tap/parsial dengan **alokasi FIFO**, kelebihan bayar menjadi **kredit** (terpakai otomatis), bebas iuran, tunggakan, rekap WhatsApp, statistik kontribusi, pengaturan grup.
+- **Logic kunci**: status tagihan **selalu turunan** (unpaid/partial/paid/waived, tidak disimpan); periode idempoten; `client_ref` = kunci idempotensi anti double-transaction; edit/hapus pembayaran = realokasi/revert penuh (tanpa void+replace); saldo murni dari transaksi.
+- **Data**: DB SQLite terpisah `zainnoto.db` (9 tabel) + `ZainNotoProvider` + audit log (tanpa UI).
+- **UI**: shell 4 tab (Beranda, Iuran checklist/matriks, Transaksi, Statistik) + `GroupManagementSheet`.
+
+---
+
+## 9. Backup & Restore (`backup_service.dart`)
+
+- **Cakupan**: satu file **JSON** (`app: 'takaranoto'`, `version: 1`) berisi **kedua mode sekaligus** — 4 tabel finflow + 9 tabel zainnoto + seluruh `SharedPreferences` (termasuk tema).
+- **Ekspor**: tulis `takaranoto-backup-YYYYMMDD-HHmm.json` ke folder temp lalu bagikan lewat share sheet.
+- **Impor**: pilih file → validasi marker/versi/struktur → **backup pengaman otomatis** (`pra-restore-*.json`) → dalam transaksi DB: hapus children-first lalu insert parents-first (`ConflictAlgorithm.replace`) → pulihkan prefs. Setelah restore: `refreshAll()` + reload tema.
+- **Batasan**: **tidak didukung di web** (layar menampilkan catatan khusus).
+
+---
+
+## 10. Platform & Menjalankan Aplikasi
+
+- Folder platform lengkap: `android/`, `ios/`, `web/`, `windows/`, `linux/`, `macos/`.
+- **Web**: sqlite3 wasm + IndexedDB (data **persisten**, berbeda dari yang tertulis di README lama); metadata tampilan: Android label `TakaraNoto`, iOS masih `Finflow Flutter` (belum di-rebrand), bundle `com.finflow.finflow_flutter`.
+- **Penyimpanan**: file `finflow.db` & `zainnoto.db` di dokumen aplikasi (native) / IndexedDB (web).
+- **Aset**: hanya `assets/images/logo.png`.
+
+```bash
+flutter pub get
+flutter analyze
+flutter test
+flutter run                # pilih device; web: flutter run -d chrome
+flutter build web
+```
+
+---
+
+## 11. Test
+
+| File | Cakupan |
+|---|---|
+| `test/finance_calc_test.dart` | `daysInMonth` (termasuk kabisat & fallback), `monthlyBudgetLimit`, agregasi income/expense/net, `displayName` transfer (4 kasus), `Category.isSpecial` |
+| `test/backup_service_test.dart` | Round-trip backup penuh (finflow + zainnoto + prefs), impor mengganti (bukan menambah), tolak marker salah/versi lebih baru/struktur tidak lengkap |
+| `test/notched_card_test.dart` | Geometri notch `buildNotchedCardPath` + render widget |
+| `test/widget_test.dart` | `DonutChart` render + aman saat kosong |
+| `test/zainnoto/*` (8 file) | Alokasi FIFO, status iuran, generator periode, constraint skema, operasi pembayaran anti double-transaction, group flow, smoke shell |
+
+Total **54 test** — semuanya lulus.
+
+---
+
+## 12. Catatan & Keterbatasan Diketahui
+
+**Bug terkonfirmasi (analisis statis):**
+
+1. **Anggaran tidak bisa dibuat untuk bulan baru bila kategori sama pernah dianggarkan di bulan mana pun sebelumnya.**
+   Kolom `budgets.category_id` didefinisikan **UNIQUE global**, padahal aplikasi memperlakukan kunci `(category_id, month_year)`. Alur prefill "salin dari bulan lalu" justru memicu ini: `addOrUpdateBudget` tidak menemukan baris bulan baru → `INSERT` → langgar UNIQUE → gagal senyap (perlu perbaikan skema: UNIQUE komposit `(category_id, month_year)`).
+2. **`BudgetModal._monthlyHint` memakai `DateTime.now()`**, bukan bulan yang dipilih — estimasi batas harian→bulanan bisa salah saat menganggarkan bulan lain.
+
+**Quirk & perilaku yang perlu diketahui:**
+
+- Undo hapus transaksi menulis ulang sebagai baris **baru** (id baru; pasangan transfer tidak ikut dipulihkan).
+- `FinanceProvider` menelan error ke `debugPrint` — kegagalan DB tampil sebagai UI kosong/statis tanpa pesan.
+- Semua transaksi di-load ke memori (tanpa paginasi) dan setiap mutasi memicu reload penuh — sederhana tapi O(semua baris).
+- Font Poppins diambil runtime via Google Fonts (offline first-run memakai font fallback).
+- Duplikasi helper kecil antar layar (`_monthName`, map `_icon`, parse `_color`); **`tabs/lainnya_tab.dart` (ZainNoto) adalah kode mati**; beberapa util (`getCategorySpendingList`, `isPresetSelected`, sebagian fungsi `finance_calc`) hanya dipakai test.
+- Penamaan hybrid: package `finflow_flutter` vs produk `TakaraNoto`; label iOS belum diganti.
+- Mode aplikasi sengaja tidak dipersist (selalu mulai dari Pribadi).

@@ -20,13 +20,14 @@ class ZainNotoDatabase {
   Future<Database> open({DatabaseFactory? factory, String? path}) async {
     final existing = _db;
     if (existing != null && existing.isOpen) return existing;
-    if (kIsWeb) {
-      throw UnsupportedError('Database ZainNoto tidak didukung di Web');
-    }
 
     final String dbPath;
     if (path != null) {
       dbPath = path;
+    } else if (kIsWeb) {
+      // The web factory (sqlite3 wasm + IndexedDB, set in main) stores
+      // databases by virtual name instead of a file system path.
+      dbPath = dbName;
     } else {
       final dir = await getApplicationDocumentsDirectory();
       dbPath = join(dir.path, dbName);

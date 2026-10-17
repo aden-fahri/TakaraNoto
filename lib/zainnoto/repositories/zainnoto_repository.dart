@@ -137,6 +137,28 @@ class ZainNotoRepository {
       await txn.insert('members', row);
       await _audit(txn,
           entity: 'member', entityId: id, action: 'insert', newMap: row);
+
+      // Backfill charges for all periods of the group so the new member immediately appears in dues checklist
+      final periods = await txn.query(
+        'periods',
+        where: 'group_id = ? AND deleted_at IS NULL',
+        whereArgs: [groupId],
+      );
+      for (final p in periods) {
+        await txn.insert(
+          'charges',
+          {
+            'id': _newId(),
+            'member_id': id,
+            'period_id': p['id'],
+            'amount_due': p['amount_snapshot'],
+            'waived': 0,
+            'created_at': now,
+            'updated_at': now,
+          },
+          conflictAlgorithm: ConflictAlgorithm.ignore,
+        );
+      }
     });
     return id;
   }
@@ -321,11 +343,10 @@ class ZainNotoRepository {
           final members = await txn.query(
             'members',
             where:
-                'group_id = ? AND deleted_at IS NULL AND status = ? AND joined_at <= ?',
+                'group_id = ? AND deleted_at IS NULL AND status = ?',
             whereArgs: [
               groupId,
               MemberStatus.active.dbValue,
-              dateToStr(draft.endDate),
             ],
           );
           for (final member in members) {
@@ -674,6 +695,23 @@ class ZainNotoRepository {
     return rows.map(Allocation.fromMap).toList();
   }
 
+  /// Allocations joined with the label of the period they pay into.
+  Future<List<AllocationDetail>> getAllocationDetails(
+    String transactionId,
+  ) async {
+    final db = await _db;
+    final rows = await db.rawQuery('''
+      SELECT a.id, a.transaction_id, a.charge_id, a.amount_allocated,
+             a.created_at, p.label AS period_label
+      FROM allocations a
+      JOIN charges c ON c.id = a.charge_id
+      JOIN periods p ON p.id = c.period_id
+      WHERE a.transaction_id = ?
+      ORDER BY a.created_at ASC
+    ''', [transactionId]);
+    return rows.map(AllocationDetail.fromMap).toList();
+  }
+
   Future<List<MemberCredit>> getMemberCredits(String memberId) async {
     final db = await _db;
     final rows = await db.query(
@@ -730,9 +768,12 @@ class ZainNotoRepository {
     final balance = ((balanceRows.first['balance'] as num?) ?? 0).toInt();
 
     final overdueRows = await db.rawQuery('''
-      SELECT COALESCE(SUM(CASE WHEN paid < amount_due THEN amount_due - paid ELSE 0 END), 0) AS overdue
+      SELECT sub.member_id,
+             COUNT(sub.id) AS unpaid_count,
+             SUM(sub.amount_due - sub.paid) AS total_overdue
       FROM (
         SELECT c.id,
+               c.member_id,
                c.amount_due,
                COALESCE(SUM(CASE WHEN t.id IS NULL THEN 0 ELSE a.amount_allocated END), 0) AS paid
         FROM charges c
@@ -745,13 +786,24 @@ class ZainNotoRepository {
           AND p.group_id = ?
           AND p.due_date < ?
         GROUP BY c.id
-      )
+      ) sub
+      WHERE sub.paid < sub.amount_due
+      GROUP BY sub.member_id
     ''', [groupId, day]);
-    final overdue = ((overdueRows.first['overdue'] as num?) ?? 0).toInt();
+
+    var overdue = 0;
+    for (final r in overdueRows) {
+      overdue += ((r['total_overdue'] as num?) ?? 0).toInt();
+    }
+    final overdueMemberCount = overdueRows.length;
 
     final currentPeriod = await getCurrentPeriod(groupId, asOf: asOf);
     if (currentPeriod == null) {
-      return GroupSummary(balance: balance, overdueTotal: overdue);
+      return GroupSummary(
+        balance: balance,
+        overdueTotal: overdue,
+        overdueMemberCount: overdueMemberCount,
+      );
     }
 
     final rows = await getPeriodRows(currentPeriod.id);
@@ -761,10 +813,57 @@ class ZainNotoRepository {
     return GroupSummary(
       balance: balance,
       overdueTotal: overdue,
+      overdueMemberCount: overdueMemberCount,
       currentPeriodLabel: currentPeriod.label,
       currentPeriodPaidCount: paidCount,
       currentPeriodTotalCount: counted.length,
     );
+  }
+
+  /// Returns the breakdown of overdue members with unpaid period count and total owed.
+  Future<List<MemberOverdueSummary>> getOverdueMembers({
+    required String groupId,
+    DateTime? asOf,
+  }) async {
+    final db = await _db;
+    final day = dateToStr(dateOnly(asOf ?? DateTime.now()));
+
+    final rows = await db.rawQuery('''
+      SELECT m.id AS member_id,
+             m.name AS member_name,
+             COUNT(sub.charge_id) AS unpaid_count,
+             SUM(sub.remaining) AS total_overdue,
+             MIN(sub.due_date) AS oldest_due_date
+      FROM (
+        SELECT c.id AS charge_id,
+               c.member_id,
+               p.due_date,
+               (c.amount_due - COALESCE(SUM(CASE WHEN t.id IS NULL THEN 0 ELSE a.amount_allocated END), 0)) AS remaining
+        FROM charges c
+        JOIN periods p ON p.id = c.period_id
+        LEFT JOIN allocations a ON a.charge_id = c.id
+        LEFT JOIN transactions t ON t.id = a.transaction_id AND t.is_deleted = 0
+        WHERE c.deleted_at IS NULL
+          AND c.waived = 0
+          AND p.deleted_at IS NULL
+          AND p.group_id = ?
+          AND p.due_date < ?
+        GROUP BY c.id
+        HAVING remaining > 0
+      ) sub
+      JOIN members m ON m.id = sub.member_id
+      WHERE m.deleted_at IS NULL
+      GROUP BY m.id
+      ORDER BY total_overdue DESC, unpaid_count DESC
+    ''', [groupId, day]);
+
+    return rows.map((r) => MemberOverdueSummary(
+      memberId: r['member_id'] as String,
+      memberName: r['member_name'] as String,
+      unpaidPeriodsCount: ((r['unpaid_count'] as num?) ?? 0).toInt(),
+      totalOverdueAmount: ((r['total_overdue'] as num?) ?? 0).toInt(),
+      oldestDueDate: dateFromStr(r['oldest_due_date'] as String),
+    )).toList();
   }
 
   // ── Internals ─────────────────────────────────────────────────────────────

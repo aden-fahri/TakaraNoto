@@ -1,7 +1,13 @@
 # TakaraNoto (finflow_flutter)
 
-Aplikasi pencatatan keuangan pribadi berbasis Flutter: dompet utama + dompet
-E-Wallet, anggaran, tabungan, statistik, dan riwayat transaksi.
+Aplikasi pencatatan keuangan berbasis Flutter dengan **dua mode**: keuangan
+pribadi (**TakaraNoto**: dompet utama + dompet E-Wallet, anggaran, tabungan,
+statistik, riwayat) dan kas kelompok (**ZainNoto**: iuran anggota, tunggakan,
+rekap).
+
+📚 Dokumentasi lengkap: [`DOKUMENTASI.md`](DOKUMENTASI.md) — arsitektur, stack,
+logic, tampilan, dan catatan penting.
+📚 Khusus mode kas kelompok: [`ZAINNOTO.md`](ZAINNOTO.md).
 
 ## Fitur
 
@@ -24,19 +30,15 @@ E-Wallet, anggaran, tabungan, statistik, dan riwayat transaksi.
 
 ## Struktur Singkat
 
-- `lib/services/database_helper.dart` — sqflite (versi 6) + fallback in-memory
-  untuk web. Migrasi v6 menambahkan kolom `is_transfer` / `transfer_group`
-  dan mengubah baris "Top Up" lama menjadi pasangan transfer.
+- `lib/services/database_helper.dart` — sqflite (versi 6) untuk `finflow.db`;
+  di web memakai factory sqlite3 wasm + IndexedDB (di-set di `main.dart`)
+  sehingga data tetap persisten di browser.
 - `lib/providers/finance_provider.dart` — state utama aplikasi.
 - `lib/utils/finance_calc.dart` — perhitungan agregat (income, expense, net,
   batas anggaran) yang dipakai lintas layar.
 - `lib/screens/` — dashboard, riwayat, anggaran, statistik, e-wallet, tabungan.
 - `lib/widgets/` — modal transaksi/anggaran, donut chart.
-
-## Keterbatasan Diketahui
-
-- **Web**: data hanya tersimpan in-memory (hilang saat refresh). Persistence
-  web (mis. `sqflite_common_ffi_web` / IndexedDB) belum diimplementasikan.
+- `lib/zainnoto/` — logika mode kas kelompok (ZainNoto).
 
 ## Pengembangan
 
