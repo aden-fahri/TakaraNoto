@@ -247,9 +247,9 @@ flutter build web
 | `test/widget_test.dart` | `DonutChart` render + aman saat kosong |
 | `test/ui_polish_test.dart` | `MaxWidthBody` membatasi lebar di layar lebar & penuh di layar sempit; `PillNavBar` punya label semantik per tab |
 | `test/theme_dark_test.dart` | D6a: token & scaffold gelap (terang tetap utuh), persistensi `dark_mode_enabled` di `ThemeController` |
-| `test/zainnoto/*` (11 file) | Alokasi FIFO, status iuran, generator periode, constraint skema, operasi pembayaran anti double-transaction, aturan tagihan (`dues_rules_test.dart`: B1 tagihan mulai `joined_at`, B2 ganti frekuensi, B3 anggota terhapus, B4 idempotensi `recordTransaction`, B5 plan tunggal + validasi), fitur B6 (`b6_features_test.dart`: warna/ikon grup, audit log, nomor WhatsApp), group flow, smoke shell |
+| `test/zainnoto/*` (12 file) | Alokasi FIFO, status iuran, generator periode, constraint skema, operasi pembayaran anti double-transaction, aturan tagihan (`dues_rules_test.dart`: B1 tagihan mulai `joined_at`, B2 ganti frekuensi, B3 anggota terhapus, B4 idempotensi `recordTransaction`, B5 plan tunggal + validasi), fitur B6 (`b6_features_test.dart`: warna/ikon grup, audit log, normalisasi nomor WhatsApp), form anggota tab Iuran (`iuran_member_form_test.dart`: FAB/CTA empty state & `addMember` cukup nama), group flow, smoke shell |
 
-Total **78 test** — semuanya lulus.
+Total **80 test** — semuanya lulus.
 
 ---
 
@@ -288,8 +288,14 @@ Total **78 test** — semuanya lulus.
 **Fitur baru dari audit (B6):**
 
 1. **Pemilih warna & ikon grup.** Dialog buat/ubah grup kini punya palette 10 warna, 12 pilihan ikon (indeks 0 = inisial nama), dan preview avatar langsung; `GroupAvatar` menampilkan ikon pilihan di switcher, banner, dan info grup.
-2. **Aksi WhatsApp.** Nomor HP anggota bisa ditekan (atau tombol chat) untuk membuka `wa.me`; di sheet "Daftar Penunggak Kas" tiap anggota bisa **"Tagih via WhatsApp"** dengan pesan berisi nominal, jumlah periode, dan tanggal menunggak tertua. Nomor dinormalisasi ke awalan 62 (`utils/whatsapp.dart`, dependensi baru `url_launcher`).
+2. **Aksi WhatsApp (dihapus dari UI).** Awalnya nomor HP anggota bisa ditekan untuk `wa.me` dan ada "Tagih via WhatsApp" di sheet penunggak. Kini UI anggota cukup **nama**: field nomor dihapus dari form, tile anggota menampilkan status, tombol chat & tagih dihapus dari `beranda_tab.dart`. Layer data (kolom `phone_number`, param `phoneNumber`, `utils/whatsapp.dart`, `url_launcher`, format backup) tetap utuh agar util test & data lama aman.
 3. **Layar riwayat aktivitas.** Sheet `audit_log_sheet.dart` membaca `getAuditLog` (200 entri terakhir, terbaru dulu) dengan filter per entitas dan dialog detail JSON lama/baru; dibuka dari section "Riwayat Aktivitas" di `GroupManagementSheet`.
+
+**Form anggota dari tab Iuran:**
+
+1. **Satu dialog bersama.** `widgets/member_form.dart` (`MemberFormDialog` + helper `showMemberForm`) menggantikan `_MemberFormDialog` privat di `group_management_sheet.dart`; dipakai bersama oleh tab Iuran & sheet pengaturan. Mode tambah = satu field nama; mode ubah menambah switch "Anggota aktif".
+2. **Pintu masuk dari tab Iuran.** FAB "Tambah Anggota" (`heroTag: zainnoto-iuran-fab`) tampil saat ada grup, plus tombol pada dua empty state (checklist "Belum Ada Tagihan" & matriks "Belum Ada Anggota"). Checkbox tagihan periode berjalan ikut memuat anggota baru lewat refresh otomatis.
+3. **Catatan test.** `flutter test` widget tidak bisa menuntaskan transaksi sqfliteFfi yang dipicu dari callback widget (zona fake-async → transaksi menggantung & "database has been locked"); karena itu tes `iuran_member_form_test.dart` menguji UI dialog (FAB/CTA, tanpa field WA) lewat widget test dan alur simpan lewat test provider (non-widget).
 
 **Merger database (Fase 3):**
 

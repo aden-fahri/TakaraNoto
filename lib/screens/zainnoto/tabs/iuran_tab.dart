@@ -12,6 +12,7 @@ import '../../../zainnoto/utils/format.dart';
 import '../widgets/dues_style.dart';
 import '../widgets/iuran_matrix.dart';
 import '../widgets/member_avatar.dart';
+import '../widgets/member_form.dart';
 import '../widgets/payment_detail_sheet.dart';
 
 /// Iuran tab: per-period checklist with 1-tap payments and a members ×
@@ -32,32 +33,52 @@ class _IuranTabState extends State<IuranTab> {
     final t = context.tokens;
     final group = provider.selectedGroup;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _Banner(
-          provider: provider,
-          matrixMode: _matrixMode,
-          onModeChanged: (value) => setState(() => _matrixMode = value),
-        ),
-        if (provider.isRefreshing)
-          LinearProgressIndicator(
-            minHeight: 2,
-            color: t.accent,
-            backgroundColor: Colors.transparent,
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      floatingActionButton: group != null
+          ? FloatingActionButton.extended(
+              heroTag: 'zainnoto-iuran-fab',
+              onPressed: () => showMemberForm(context),
+              backgroundColor: t.accent,
+              foregroundColor: t.onAccent,
+              icon: const Icon(Icons.person_add_rounded, size: 20),
+              label: const Text(
+                'Tambah Anggota',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: AppText.bodyLarge,
+                ),
+              ),
+              elevation: 4,
+            )
+          : null,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _Banner(
+            provider: provider,
+            matrixMode: _matrixMode,
+            onModeChanged: (value) => setState(() => _matrixMode = value),
           ),
-        Expanded(
-          child: group == null
-              ? const _EmptyNotice(
-                  icon: Icons.groups_rounded,
-                  title: 'Belum Ada Grup',
-                  message: 'Buat grup dulu di tab Beranda.',
-                )
-              : _matrixMode
-                  ? const IuranMatrix()
-                  : const _Checklist(),
-        ),
-      ],
+          if (provider.isRefreshing)
+            LinearProgressIndicator(
+              minHeight: 2,
+              color: t.accent,
+              backgroundColor: Colors.transparent,
+            ),
+          Expanded(
+            child: group == null
+                ? const _EmptyNotice(
+                    icon: Icons.groups_rounded,
+                    title: 'Belum Ada Grup',
+                    message: 'Buat grup dulu di tab Beranda.',
+                  )
+                : _matrixMode
+                    ? const IuranMatrix()
+                    : const _Checklist(),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -397,16 +418,18 @@ class _Checklist extends StatelessWidget {
       return const _EmptyNotice(
         icon: Icons.event_busy_rounded,
         title: 'Belum Ada Periode',
-        message: 'Atur rencana iuran di tab Lainnya untuk mulai '
-            'membuat periode.',
+        message: 'Atur rencana iuran lewat tombol pengaturan grup di tab '
+            'Beranda untuk mulai membuat periode.',
       );
     }
     if (rows.isEmpty) {
-      return const _EmptyNotice(
+      return _EmptyNotice(
         icon: Icons.person_add_alt_1_rounded,
         title: 'Belum Ada Tagihan',
-        message: 'Tambahkan anggota di tab Lainnya agar tagihan '
-            'periode ini terbuat otomatis.',
+        message: 'Tambahkan anggota agar tagihan periode ini terbuat '
+            'otomatis.',
+        actionLabel: 'Tambah Anggota',
+        onAction: () => showMemberForm(context),
       );
     }
 
@@ -631,11 +654,15 @@ class _EmptyNotice extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.message,
+    this.actionLabel,
+    this.onAction,
   });
 
   final IconData icon;
   final String title;
   final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -671,6 +698,14 @@ class _EmptyNotice extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: AppText.bodyLarge, height: 1.5, color: t.textMuted),
             ),
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: onAction,
+                icon: const Icon(Icons.person_add_rounded, size: 18),
+                label: Text(actionLabel!),
+              ),
+            ],
           ],
         ),
       ),

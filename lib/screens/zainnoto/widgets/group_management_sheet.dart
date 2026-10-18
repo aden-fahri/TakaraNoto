@@ -10,12 +10,12 @@ import '../../../zainnoto/models/entities.dart';
 import '../../../zainnoto/providers/zainnoto_provider.dart';
 import '../../../zainnoto/utils/dates.dart';
 import '../../../zainnoto/utils/format.dart';
-import '../../../zainnoto/utils/whatsapp.dart';
 import '../../backup_restore_screen.dart';
 import 'audit_log_sheet.dart';
 import 'group_avatar.dart';
 import 'group_sheets.dart';
 import 'member_avatar.dart';
+import 'member_form.dart';
 
 /// Modal bottom sheet untuk mengelola grup, anggota, dan rencana iuran
 /// yang dipindahkan dari tab Lainnya agar mudah diakses langsung dari Beranda.
@@ -329,143 +329,10 @@ class _GroupSection extends StatelessWidget {
 }
 
 // ─── Member Section ───────────────────────────────────────────────────────────
-typedef _MemberFormResult = ({String name, String phone, bool active});
-
-class _MemberFormDialog extends StatefulWidget {
-  const _MemberFormDialog({this.member});
-
-  final Member? member;
-
-  @override
-  State<_MemberFormDialog> createState() => _MemberFormDialogState();
-}
-
-class _MemberFormDialogState extends State<_MemberFormDialog> {
-  late final TextEditingController _nameCtrl =
-      TextEditingController(text: widget.member?.name ?? '');
-  late final TextEditingController _phoneCtrl =
-      TextEditingController(text: widget.member?.phoneNumber ?? '');
-  late bool _active = widget.member == null || widget.member!.isActive;
-
-  @override
-  void dispose() {
-    _nameCtrl.dispose();
-    _phoneCtrl.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    final name = _nameCtrl.text.trim();
-    if (name.isEmpty) return;
-    Navigator.pop(
-      context,
-      (name: name, phone: _phoneCtrl.text.trim(), active: _active),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final t = context.tokens;
-    final member = widget.member;
-    return AlertDialog(
-      title: Text(member == null ? 'Tambah Anggota' : 'Ubah Anggota'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _nameCtrl,
-            autofocus: true,
-            textCapitalization: TextCapitalization.words,
-            decoration: groupInputDecoration(t, 'Nama anggota'),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _phoneCtrl,
-            keyboardType: TextInputType.phone,
-            decoration: groupInputDecoration(
-              t,
-              'Nomor HP (opsional)',
-              hint: 'mis. 0812xxxxxxx',
-            ),
-          ),
-          if (member != null) ...[
-            const SizedBox(height: 4),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(
-                'Anggota aktif',
-                style: TextStyle(fontSize: AppText.bodyLarge, color: t.textPrimary),
-              ),
-              subtitle: Text(
-                _active
-                    ? 'Ikut ditagih iuran periode baru'
-                    : 'Tidak ikut ditagih iuran periode baru',
-                style: TextStyle(fontSize: AppText.label, color: t.textMuted),
-              ),
-              value: _active,
-              onChanged: (value) => setState(() => _active = value),
-            ),
-          ],
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Batal'),
-        ),
-        ElevatedButton(
-          onPressed: _submit,
-          child: const Text('Simpan'),
-        ),
-      ],
-    );
-  }
-}
-
 class _MembersSection extends StatelessWidget {
   const _MembersSection({required this.provider});
 
   final ZainNotoProvider provider;
-
-  Future<void> _showMemberDialog(BuildContext context, {Member? member}) async {
-    final result = await showDialog<_MemberFormResult>(
-      context: context,
-      builder: (_) => _MemberFormDialog(member: member),
-    );
-    if (result == null || !context.mounted) return;
-
-    final messenger = ScaffoldMessenger.of(context);
-    final ok = member == null
-        ? await provider.addMember(
-            name: result.name,
-            phoneNumber: result.phone.isEmpty ? null : result.phone,
-          )
-        : await provider.updateMember(
-            id: member.id,
-            name: result.name,
-            phoneNumber: result.phone.isEmpty ? null : result.phone,
-            status: result.active ? MemberStatus.active : MemberStatus.inactive,
-          );
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          ok
-              ? (member == null ? 'Anggota ditambahkan' : 'Anggota diperbarui')
-              : 'Gagal menyimpan anggota',
-        ),
-      ),
-    );
-  }
-
-  Future<void> _chatMember(BuildContext context, Member member) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final ok = await openWhatsApp(member.phoneNumber);
-    if (!ok) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Nomor WhatsApp tidak bisa dibuka')),
-      );
-    }
-  }
 
   Future<void> _confirmRemove(BuildContext context, Member member) async {
     final confirmed = await showDialog<bool>(
@@ -507,7 +374,7 @@ class _MembersSection extends StatelessWidget {
     return _SectionCard(
       title: 'Anggota (${members.length})',
       trailing: TextButton.icon(
-        onPressed: () => _showMemberDialog(context),
+        onPressed: () => showMemberForm(context),
         icon: const Icon(Icons.add_rounded, size: 16),
         label: const Text('Tambah'),
       ),
@@ -548,60 +415,21 @@ class _MembersSection extends StatelessWidget {
                                   color: t.textPrimary,
                                 ),
                               ),
-                              if (member.isActive && member.phoneNumber != null)
-                                InkWell(
-                                  onTap: () => _chatMember(context, member),
-                                  borderRadius: BorderRadius.circular(4),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.chat_rounded,
-                                        size: 12,
-                                        color: t.accent,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Flexible(
-                                        child: Text(
-                                          member.phoneNumber!,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            fontSize: AppText.label,
-                                            color: t.accent,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                              else
-                                Text(
-                                  member.isActive ? 'Anggota aktif' : 'Nonaktif',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: AppText.label,
-                                    color: t.textMuted,
-                                  ),
+                              Text(
+                                member.isActive ? 'Anggota aktif' : 'Nonaktif',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: AppText.label,
+                                  color: t.textMuted,
                                 ),
+                              ),
                             ],
                           ),
                         ),
-                        if (member.isActive && member.phoneNumber != null)
-                          IconButton(
-                            onPressed: () => _chatMember(context, member),
-                            tooltip: 'Chat WhatsApp',
-                            visualDensity: VisualDensity.compact,
-                            icon: Icon(
-                              Icons.chat_rounded,
-                              size: 17,
-                              color: t.accent,
-                            ),
-                          ),
                         IconButton(
                           onPressed: () =>
-                              _showMemberDialog(context, member: member),
+                              showMemberForm(context, member: member),
                           tooltip: 'Ubah anggota',
                           visualDensity: VisualDensity.compact,
                           icon: Icon(

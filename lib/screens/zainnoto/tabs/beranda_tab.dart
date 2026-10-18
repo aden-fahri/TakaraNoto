@@ -5,12 +5,10 @@ import '../../../theme/app_tokens.dart';
 import '../../../widgets/decorative_header_circles.dart';
 import '../../../widgets/mode_switch_button.dart';
 import '../../../widgets/notched_card.dart';
-import '../../../zainnoto/models/derived.dart';
 import '../../../zainnoto/models/entities.dart';
 import '../../../zainnoto/providers/zainnoto_provider.dart';
 import '../../../zainnoto/utils/dates.dart';
 import '../../../zainnoto/utils/format.dart';
-import '../../../zainnoto/utils/whatsapp.dart';
 import '../widgets/group_avatar.dart';
 import '../widgets/group_management_sheet.dart';
 import '../widgets/group_sheets.dart';
@@ -903,34 +901,6 @@ class _OverdueListSheet extends StatelessWidget {
 
   final ZainNotoProvider provider;
 
-  Member? _memberById(String id) {
-    for (final member in provider.allMembers) {
-      if (member.id == id) return member;
-    }
-    return null;
-  }
-
-  Future<void> _chargeViaWhatsApp(
-    BuildContext context,
-    MemberOverdueSummary item,
-    Member member,
-  ) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final groupName = provider.selectedGroup?.name ?? 'kas';
-    final message =
-        'Halo ${item.memberName}, iuran $groupName kamu masih kurang '
-        '${formatRupiah(item.totalOverdueAmount)} untuk '
-        '${item.unpaidPeriodsCount} periode '
-        '(sejak ${formatTanggalSingkat(dateToStr(item.oldestDueDate))}). '
-        'Mohon dilunasi ya. Terima kasih.';
-    final ok = await openWhatsApp(member.phoneNumber, message: message);
-    if (!ok) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Nomor WhatsApp tidak bisa dibuka')),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final t = context.tokens;
@@ -1005,7 +975,6 @@ class _OverdueListSheet extends StatelessWidget {
                   separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
                     final item = overdueList[index];
-                    final member = _memberById(item.memberId);
                     return Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -1063,20 +1032,6 @@ class _OverdueListSheet extends StatelessWidget {
                               color: t.expense,
                             ),
                           ),
-                          if (member != null && member.phoneNumber != null) ...[
-                            const SizedBox(width: 2),
-                            IconButton(
-                              onPressed: () =>
-                                  _chargeViaWhatsApp(context, item, member),
-                              tooltip: 'Tagih via WhatsApp',
-                              visualDensity: VisualDensity.compact,
-                              icon: Icon(
-                                Icons.chat_rounded,
-                                size: 18,
-                                color: t.accent,
-                              ),
-                            ),
-                          ],
                         ],
                       ),
                     );

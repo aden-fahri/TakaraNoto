@@ -6,6 +6,7 @@ import '../../../zainnoto/logic/dues_status.dart';
 import '../../../zainnoto/models/derived.dart';
 import '../../../zainnoto/models/entities.dart';
 import '../../../zainnoto/providers/zainnoto_provider.dart';
+import 'member_form.dart';
 import '../../../zainnoto/utils/format.dart';
 import 'dues_style.dart';
 import 'payment_detail_sheet.dart';
@@ -60,10 +61,12 @@ class _IuranMatrixState extends State<IuranMatrix> {
       );
     }
     if (members.isEmpty) {
-      return const _MatrixNotice(
+      return _MatrixNotice(
         icon: Icons.person_add_alt_1_rounded,
         title: 'Belum Ada Anggota',
-        message: 'Tambahkan anggota grup di menu Kelola agar tagihan otomatis terbuat.',
+        message: 'Tambahkan anggota agar tagihan otomatis terbuat.',
+        actionLabel: 'Tambah Anggota',
+        onAction: () => showMemberForm(context),
       );
     }
 
@@ -362,11 +365,15 @@ class _MatrixNotice extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.message,
+    this.actionLabel,
+    this.onAction,
   });
 
   final IconData icon;
   final String title;
   final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -402,6 +409,14 @@ class _MatrixNotice extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: AppText.bodyLarge, height: 1.5, color: t.textMuted),
             ),
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: onAction,
+                icon: const Icon(Icons.person_add_rounded, size: 18),
+                label: Text(actionLabel!),
+              ),
+            ],
           ],
         ),
       ),

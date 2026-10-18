@@ -37,7 +37,7 @@ Aplikasi memiliki **dua mode** yang dikelola `AppModeController` (`lib/providers
 | `repositories/zainnoto_repository.dart` | Semua baca/tulis DB, operasi multi-langkah dalam transaksi, mirroring audit, agregat ringkasan |
 | `utils/dates.dart` | `monthNamesId`, `dateToStr`, `dateFromStr`, `dateOnly`, `nowIso` |
 | `utils/format.dart` | `formatRupiah`, `periodShortLabel`, `formatTanggalSingkat`, `formatTanggal`, `formatWaktuLengkap` (locale `id` dengan fallback aman) |
-| `utils/whatsapp.dart` | `whatsappDigits`/`whatsappUri`/`openWhatsApp` — normalisasi nomor Indonesia ke `wa.me` (awalan 62) |
+| `utils/whatsapp.dart` | `whatsappDigits`/`whatsappUri`/`openWhatsApp` — normalisasi nomor Indonesia ke `wa.me` (awalan 62); kini **tak dipakai UI** (aksi WA anggota dihapus), tersisa untuk util/test |
 
 ### UI — `lib/screens/zainnoto/`
 
@@ -45,7 +45,7 @@ Aplikasi memiliki **dua mode** yang dikelola `AppModeController` (`lib/providers
 |---|---|
 | `zainnoto_shell_screen.dart` | Shell 4 tab (Beranda, Iuran, Transaksi, Statistik) + `PillNavBar`; load grup pasca-frame |
 | `tabs/beranda_tab.dart` | Dashboard: banner, kartu dompet, kartu keaktifan & tunggakan, quick actions, FAB belanja, sheet daftar penunggak |
-| `tabs/iuran_tab.dart` | Tab iuran: navigator periode, mode Checklist/Matriks, 1-tap "Lunas" dengan undo |
+| `tabs/iuran_tab.dart` | Tab iuran: navigator periode, mode Checklist/Matriks, 1-tap "Lunas" dengan undo, FAB + CTA empty-state "Tambah Anggota" |
 | `tabs/transaksi_tab.dart` | Buku transaksi dengan filter tipe, dikelompokkan per tanggal |
 | `tabs/statistik_tab.dart` | Ringkasan keuangan, tingkat ketertiban, donut pengeluaran, leaderboard kontribusi anggota |
 | `tabs/lainnya_tab.dart` | **Kode legacy (orphan)** — tidak dipakai shell; fiturnya digantikan `GroupManagementSheet` |
@@ -58,6 +58,7 @@ Aplikasi memiliki **dua mode** yang dikelola `AppModeController` (`lib/providers
 | `widgets/transaction_form_sheet.dart` | Form tambah/edit transaksi kas |
 | `widgets/group_management_sheet.dart` | Sheet pengaturan: info grup, anggota, rencana iuran & periode, rekap WhatsApp, shortcut backup |
 | `widgets/group_sheets.dart` | `showGroupSwitcher`, `showCreateGroupDialog`/`showEditGroupDialog` (nama, deskripsi, warna & ikon grup), style input grup |
+| `widgets/member_form.dart` | Dialog tambah/ubah anggota (`MemberFormDialog`, helper `showMemberForm`) - cukup nama + switch aktif saat ubah, tanpa nomor WA |
 
 ---
 
@@ -237,7 +238,7 @@ Pola error: catch → `_error = 'Gagal …: $error'`, `notifyListeners()`, kemba
 
 - Banner mengikuti tema aktif (`t.headerBg` — warna aksen pilihan pengguna, bukan selalu hijau) dengan lingkaran dekoratif + tombol `ModeSwitchButton` ("TakaraNoto →"), tombol setelan grup (tooltip "Kelola grup & anggota"), dan tombol ganti grup (tooltip "Ganti grup").
 - `_ModernGroupWalletCard` (kartu notch): label "DOMPET KAS KELOMPOK", chip periode berjalan, **Saldo Kas Bersama** (merah bila negatif), pill "Masuk"/"Keluar".
-- Bento: **Keaktifan** (lunas/total periode ini + progress) dan **Tunggakan** (nominal + jumlah orang). Tunggakan > 0 → sheet "Daftar Penunggak Kas" (tombol **"Tagih via WhatsApp"** per anggota yang punya nomor — pesan berisi nominal, jumlah periode, dan tanggal tertua).
+- Bento: **Keaktifan** (lunas/total periode ini + progress) dan **Tunggakan** (nominal + jumlah orang). Tunggakan > 0 → sheet "Daftar Penunggak Kas" (nominal, jumlah periode, dan tanggal tertua per anggota; tanpa aksi WhatsApp).
 - Quick actions: Catat Iuran (→ tab Iuran), Transaksi (→ tab Transaksi), Statistik (→ tab Statistik), Kelola (→ sheet pengaturan).
 - FAB "Catat Belanja / Kas Keluar" → form transaksi (default `expense`).
 - Empty state tanpa grup: CTA "Buat Grup Kas Sekarang" + kartu error & tombol coba lagi bila gagal load.
@@ -245,6 +246,7 @@ Pola error: catch → `_error = 'Gagal …: $error'`, `notifyListeners()`, kemba
 ### Iuran
 
 - Banner: judul, chip `lunas/total`, navigator periode (‹ label ›, jatuh tempo), toggle **Checklist / Matriks**.
+- FAB "Tambah Anggota" (`person_add_rounded`) membuka `showMemberForm` (cukup nama); dua empty state (Belum Ada Tagihan di checklist, Belum Ada Anggota di matriks) juga punya tombol yang sama.
 - **Checklist**: per anggota — avatar berwarna status, nama, chip status, sisa (bila sebagian), tanggal jatuh tempo/lewat; tombol "Lunas" (nominal sisa) → `markPaid` + SnackBar undo "Batal". Tap baris → `PaymentDetailSheet`.
 - **Matriks** (`iuran_matrix.dart`): baris anggota × 12 periode terakhir; ikon sel = lunas ✓ / dicicil ⏳ / nunggak ⚠ / belum jatuh tempo 🗓 / bebas ⛔; lazy-load saat perlu.
 
@@ -268,7 +270,7 @@ Pola error: catch → `_error = 'Gagal …: $error'`, `notifyListeners()`, kemba
 ### GroupManagementSheet (Pengaturan & Anggota)
 
 1. **Info Grup** — ubah (nama, deskripsi, warna & ikon), ganti, tambah, hapus grup (soft delete; data kas tetap tersimpan).
-2. **Anggota** — tambah/ubah/hapus; switch "Nonaktif" berarti tidak ikut ditagih periode baru; nomor HP bisa ditekan untuk **chat WhatsApp** (`url_launcher`, `wa.me`, normalisasi awalan 62 via `utils/whatsapp.dart`).
+2. **Anggota** — tambah/ubah/hapus; switch "Nonaktif" berarti tidak ikut ditagih periode baru; form cukup **nama** (tanpa nomor HP); tile menampilkan status "Anggota aktif"/"Nonaktif".
 3. **Rencana Iuran & Jadwal** — nominal, frekuensi (default bulanan), hari jatuh tempo (mingguan: Senin–Minggu; bulanan: tanggal 1–28), tanggal mulai; tombol **"Buat/Sinkron Periode Sekarang"**.
 4. **Rekap WhatsApp** — ringkasan periode berjalan (saldo, tunggakan, daftar lunas/belum) dibagikan via `share_plus`.
 5. **Riwayat Aktivitas** — buka sheet `audit_log_sheet.dart` (filter per entitas, detail JSON lama/baru).
@@ -298,6 +300,7 @@ Pola error: catch → `_error = 'Gagal …: $error'`, `notifyListeners()`, kemba
 | `b6_features_test.dart` | B6: `iconIndex`/`colorHex` grup tersimpan & ter-update, audit `group` insert/update + filter entitas, normalisasi nomor WhatsApp & `whatsappUri` |
 | `schema_constraints_test.dart` | Unique charge/allocation, FK, CHECK amount, idempotency `client_ref` |
 | `payment_ops_test.dart` | Anti double-transaction (edit/hapus/ganti anggota/dobel tap), generator idempoten, kredit otomatis, waived, audit, ringkasan |
+| `iuran_member_form_test.dart` | Form anggota dari tab Iuran (FAB + tombol empty state, field cukup nama tanpa nomor HP) & `provider.addMember` cukup nama |
 | `shell_smoke_test.dart` | Widget: shell tanpa grup & dengan data, semua tab aman dibuild |
 
 Di luar folder ini: `test/backup_service_test.dart` menguji round-trip backup termasuk 9 tabel ZainNoto.
