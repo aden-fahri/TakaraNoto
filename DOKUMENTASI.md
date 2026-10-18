@@ -242,9 +242,9 @@ flutter build web
 | `test/notched_card_test.dart` | Geometri notch `buildNotchedCardPath` + render widget |
 | `test/widget_test.dart` | `DonutChart` render + aman saat kosong |
 | `test/ui_polish_test.dart` | `MaxWidthBody` membatasi lebar di layar lebar & penuh di layar sempit; `PillNavBar` punya label semantik per tab |
-| `test/zainnoto/*` (10 file) | Alokasi FIFO, status iuran, generator periode, constraint skema, operasi pembayaran anti double-transaction, aturan tagihan (`dues_rules_test.dart`: B1 tagihan mulai `joined_at`, B2 ganti frekuensi, B3 anggota terhapus, B4 idempotensi `recordTransaction`, B5 plan tunggal + validasi), group flow, smoke shell |
+| `test/zainnoto/*` (11 file) | Alokasi FIFO, status iuran, generator periode, constraint skema, operasi pembayaran anti double-transaction, aturan tagihan (`dues_rules_test.dart`: B1 tagihan mulai `joined_at`, B2 ganti frekuensi, B3 anggota terhapus, B4 idempotensi `recordTransaction`, B5 plan tunggal + validasi), fitur B6 (`b6_features_test.dart`: warna/ikon grup, audit log, nomor WhatsApp), group flow, smoke shell |
 
-Total **69 test** — semuanya lulus.
+Total **75 test** — semuanya lulus.
 
 ---
 
@@ -275,6 +275,12 @@ Total **69 test** — semuanya lulus.
 4. **D5 — Aksesibilitas dasar.** Item `PillNavBar` kini punya `Semantics(button, selected, label)`; tooltip ditambahkan pada kontrol ikon-saja (setelan/ganti grup di banner ZainNoto, palet tema & navigasi bulan di Beranda Pribadi, edit/hapus transaksi, anggota, kategori, target tabungan).
 
 **Sisa audit UI (belum dikerjakan):** D3 migrasi skala tipografi (395 literal `fontSize`, 24 nilai berbeda) dan D6 dark mode + bundling font Poppins.
+
+**Fitur baru dari audit (B6):**
+
+1. **Pemilih warna & ikon grup.** Dialog buat/ubah grup kini punya palette 10 warna, 12 pilihan ikon (indeks 0 = inisial nama), dan preview avatar langsung; `GroupAvatar` menampilkan ikon pilihan di switcher, banner, dan info grup.
+2. **Aksi WhatsApp.** Nomor HP anggota bisa ditekan (atau tombol chat) untuk membuka `wa.me`; di sheet "Daftar Penunggak Kas" tiap anggota bisa **"Tagih via WhatsApp"** dengan pesan berisi nominal, jumlah periode, dan tanggal menunggak tertua. Nomor dinormalisasi ke awalan 62 (`utils/whatsapp.dart`, dependensi baru `url_launcher`).
+3. **Layar riwayat aktivitas.** Sheet `audit_log_sheet.dart` membaca `getAuditLog` (200 entri terakhir, terbaru dulu) dengan filter per entitas dan dialog detail JSON lama/baru; dibuka dari section "Riwayat Aktivitas" di `GroupManagementSheet`.
 
 **Quirk & perilaku yang perlu diketahui:**
 

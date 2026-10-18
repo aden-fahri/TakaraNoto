@@ -208,11 +208,15 @@ class ZainNotoProvider extends ChangeNotifier {
   Future<Group?> createGroup({
     required String name,
     String? description,
+    int iconIndex = 0,
+    String colorHex = '#059669',
   }) async {
     try {
       final id = await _repository.createGroup(
         name: name,
         description: description,
+        iconIndex: iconIndex,
+        colorHex: colorHex,
       );
       _groups = await _repository.getGroups();
       final created = _groups.firstWhere((g) => g.id == id, orElse: () => _groups.first);
@@ -231,12 +235,16 @@ class ZainNotoProvider extends ChangeNotifier {
     required String id,
     required String name,
     String? description,
+    int? iconIndex,
+    String? colorHex,
   }) async {
     try {
       await _repository.updateGroup(
         id: id,
         name: name,
         description: description,
+        iconIndex: iconIndex,
+        colorHex: colorHex,
       );
       await loadGroups();
       return true;

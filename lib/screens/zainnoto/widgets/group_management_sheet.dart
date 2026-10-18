@@ -10,7 +10,9 @@ import '../../../zainnoto/models/entities.dart';
 import '../../../zainnoto/providers/zainnoto_provider.dart';
 import '../../../zainnoto/utils/dates.dart';
 import '../../../zainnoto/utils/format.dart';
+import '../../../zainnoto/utils/whatsapp.dart';
 import '../../backup_restore_screen.dart';
+import 'audit_log_sheet.dart';
 import 'group_avatar.dart';
 import 'group_sheets.dart';
 import 'member_avatar.dart';
@@ -125,6 +127,8 @@ class GroupManagementSheet extends StatelessWidget {
                           const SizedBox(height: 14),
                           _ShareSection(provider: provider),
                           const SizedBox(height: 14),
+                          const _AuditSection(),
+                          const SizedBox(height: 14),
                           const _BackupSection(),
                         ],
                       ),
@@ -236,6 +240,7 @@ class _GroupSection extends StatelessWidget {
               GroupAvatar(
                 name: group.name,
                 colorHex: group.colorHex,
+                iconIndex: group.iconIndex,
                 size: 44,
               ),
               const SizedBox(width: 12),
@@ -452,6 +457,16 @@ class _MembersSection extends StatelessWidget {
     );
   }
 
+  Future<void> _chatMember(BuildContext context, Member member) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await openWhatsApp(member.phoneNumber);
+    if (!ok) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Nomor WhatsApp tidak bisa dibuka')),
+      );
+    }
+  }
+
   Future<void> _confirmRemove(BuildContext context, Member member) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -533,20 +548,57 @@ class _MembersSection extends StatelessWidget {
                                   color: t.textPrimary,
                                 ),
                               ),
-                              Text(
-                                member.isActive
-                                    ? (member.phoneNumber ?? 'Anggota aktif')
-                                    : 'Nonaktif',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: t.textMuted,
+                              if (member.isActive && member.phoneNumber != null)
+                                InkWell(
+                                  onTap: () => _chatMember(context, member),
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.chat_rounded,
+                                        size: 12,
+                                        color: t.accent,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Flexible(
+                                        child: Text(
+                                          member.phoneNumber!,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: t.accent,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              else
+                                Text(
+                                  member.isActive ? 'Anggota aktif' : 'Nonaktif',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: t.textMuted,
+                                  ),
                                 ),
-                              ),
                             ],
                           ),
                         ),
+                        if (member.isActive && member.phoneNumber != null)
+                          IconButton(
+                            onPressed: () => _chatMember(context, member),
+                            tooltip: 'Chat WhatsApp',
+                            visualDensity: VisualDensity.compact,
+                            icon: Icon(
+                              Icons.chat_rounded,
+                              size: 17,
+                              color: t.accent,
+                            ),
+                          ),
                         IconButton(
                           onPressed: () =>
                               _showMemberDialog(context, member: member),
@@ -1065,6 +1117,36 @@ class _ShareSection extends StatelessWidget {
             onPressed: () => _shareRecap(context),
             icon: const Icon(Icons.share_rounded, size: 18),
             label: const Text('Bagikan Rekap ke Grup WA'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Audit Section ────────────────────────────────────────────────────────────
+class _AuditSection extends StatelessWidget {
+  const _AuditSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+
+    return _SectionCard(
+      title: 'Riwayat Aktivitas',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Catatan otomatis perubahan data kas: transaksi, tagihan, '
+            'anggota, dan jadwal iuran.',
+            style: TextStyle(fontSize: 12.5, height: 1.4, color: t.textMuted),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () => showAuditLogSheet(context),
+            icon: const Icon(Icons.history_rounded, size: 18),
+            label: const Text('Lihat Riwayat Perubahan'),
           ),
         ],
       ),

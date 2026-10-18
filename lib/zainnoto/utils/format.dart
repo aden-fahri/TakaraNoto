@@ -37,3 +37,6 @@ String formatTanggalSingkat(String date) => _formatDateId(date, 'd MMM yyyy');
 
 /// `2024-10-16` → `16 Oktober 2024`.
 String formatTanggal(String date) => _formatDateId(date, 'd MMMM yyyy');
+
+/// Timestamp ISO → `16 Okt 2024 14:05` (untuk riwayat audit).
+String formatWaktuLengkap(String iso) => _formatDateId(iso, 'd MMM yyyy HH:mm');

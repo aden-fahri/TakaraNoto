@@ -36,7 +36,8 @@ Aplikasi memiliki **dua mode** yang dikelola `AppModeController` (`lib/providers
 | `providers/zainnoto_provider.dart` | `ZainNotoProvider extends ChangeNotifier` — state UI, alur load/refresh, wrapper CRUD, state matriks |
 | `repositories/zainnoto_repository.dart` | Semua baca/tulis DB, operasi multi-langkah dalam transaksi, mirroring audit, agregat ringkasan |
 | `utils/dates.dart` | `monthNamesId`, `dateToStr`, `dateFromStr`, `dateOnly`, `nowIso` |
-| `utils/format.dart` | `formatRupiah`, `periodShortLabel`, `formatTanggalSingkat`, `formatTanggal` (locale `id` dengan fallback aman) |
+| `utils/format.dart` | `formatRupiah`, `periodShortLabel`, `formatTanggalSingkat`, `formatTanggal`, `formatWaktuLengkap` (locale `id` dengan fallback aman) |
+| `utils/whatsapp.dart` | `whatsappDigits`/`whatsappUri`/`openWhatsApp` — normalisasi nomor Indonesia ke `wa.me` (awalan 62) |
 
 ### UI — `lib/screens/zainnoto/`
 
@@ -49,13 +50,14 @@ Aplikasi memiliki **dua mode** yang dikelola `AppModeController` (`lib/providers
 | `tabs/statistik_tab.dart` | Ringkasan keuangan, tingkat ketertiban, donut pengeluaran, leaderboard kontribusi anggota |
 | `tabs/lainnya_tab.dart` | **Kode legacy (orphan)** — tidak dipakai shell; fiturnya digantikan `GroupManagementSheet` |
 | `widgets/dues_style.dart` | Warna & label Indonesia untuk status iuran |
-| `widgets/group_avatar.dart` | Avatar lingkaran inisial grup (parse `colorHex`, fallback `0xFF059669`) |
+| `widgets/group_avatar.dart` | Avatar lingkaran grup: ikon pilihan (`groupIconOptions`) atau inisial nama, warna dari `colorHex` (fallback `0xFF059669`) |
+| `widgets/audit_log_sheet.dart` | Sheet read-only riwayat perubahan (`getAuditLog`): filter entitas, detail old/new JSON |
 | `widgets/member_avatar.dart` | Avatar anggota diwarnai status (bg 14% alpha) |
 | `widgets/iuran_matrix.dart` | Matriks anggota × 12 periode terakhir + legenda |
 | `widgets/payment_detail_sheet.dart` | Detail pembayaran: riwayat, bayar sebagian, edit/hapus, bebas iuran |
 | `widgets/transaction_form_sheet.dart` | Form tambah/edit transaksi kas |
 | `widgets/group_management_sheet.dart` | Sheet pengaturan: info grup, anggota, rencana iuran & periode, rekap WhatsApp, shortcut backup |
-| `widgets/group_sheets.dart` | `showGroupSwitcher`, `showCreateGroupDialog`, `showEditGroupDialog`, style input grup |
+| `widgets/group_sheets.dart` | `showGroupSwitcher`, `showCreateGroupDialog`/`showEditGroupDialog` (nama, deskripsi, warna & ikon grup), style input grup |
 
 ---
 
@@ -181,7 +183,7 @@ Soft delete (`is_deleted = 1`), hapus alokasi per transaksi & kredit yang bersum
 
 ### 4.11 Audit log
 
-`_audit` menulis `entity` (group/member/dues_plan/charge/transaction), `entity_id`, `action` (insert/update/delete), `old_json`, `new_json`, timestamp — **di dalam transaksi DB yang sama** dengan mutasinya. Dibaca via `getAuditLog(...)`; **belum ada layar UI yang menampilkannya** (hanya test).
+`_audit` menulis `entity` (group/member/dues_plan/charge/transaction), `entity_id`, `action` (insert/update/delete), `old_json`, `new_json`, timestamp — **di dalam transaksi DB yang sama** dengan mutasinya. Dibaca via `getAuditLog(...)`; ditampilkan lewat sheet `audit_log_sheet.dart` (tombol "Lihat Riwayat Perubahan" di section Riwayat Aktivitas `GroupManagementSheet`), lengkap dengan filter entitas dan detail JSON lama/baru.
 
 ### 4.12 Rencana iuran: validasi, plan tunggal & perubahan jadwal (`repository.upsertDuesPlan`)
 
@@ -205,8 +207,8 @@ Derived: `totalIncome`, `totalExpense`, `memberById(id)`.
 |---|---|
 | `loadGroups()` | Muat daftar grup; auto-pilih grup pertama & load datanya |
 | `selectGroup(group)` / `refreshGroup()` | Pindah grup / muat ulang data grup terpilih |
-| `createGroup({name, description})` | Buat grup, reload daftar, pilih & load grup baru |
-| `updateGroup({id, name, description})` | Ubah info grup |
+| `createGroup({name, description, iconIndex, colorHex})` | Buat grup (warna & ikon pilihan), reload daftar, pilih & load grup baru |
+| `updateGroup({id, name, description, iconIndex?, colorHex?})` | Ubah info, warna, dan/atau ikon grup |
 | `deleteGroup(id)` | Soft delete grup, bersihkan pilihan |
 | `markPaid({memberId, amount, date?})` | Catat iuran dengan idempotency key UUID; lalu refresh |
 | `editTransaction({id, amount?, date?, note?, category?, memberId?})` | Edit transaksi (re-alokasi otomatis untuk dues) |
@@ -235,7 +237,7 @@ Pola error: catch → `_error = 'Gagal …: $error'`, `notifyListeners()`, kemba
 
 - Banner mengikuti tema aktif (`t.headerBg` — warna aksen pilihan pengguna, bukan selalu hijau) dengan lingkaran dekoratif + tombol `ModeSwitchButton` ("TakaraNoto →"), tombol setelan grup (tooltip "Kelola grup & anggota"), dan tombol ganti grup (tooltip "Ganti grup").
 - `_ModernGroupWalletCard` (kartu notch): label "DOMPET KAS KELOMPOK", chip periode berjalan, **Saldo Kas Bersama** (merah bila negatif), pill "Masuk"/"Keluar".
-- Bento: **Keaktifan** (lunas/total periode ini + progress) dan **Tunggakan** (nominal + jumlah orang). Tunggakan > 0 → sheet "Daftar Penunggak Kas".
+- Bento: **Keaktifan** (lunas/total periode ini + progress) dan **Tunggakan** (nominal + jumlah orang). Tunggakan > 0 → sheet "Daftar Penunggak Kas" (tombol **"Tagih via WhatsApp"** per anggota yang punya nomor — pesan berisi nominal, jumlah periode, dan tanggal tertua).
 - Quick actions: Catat Iuran (→ tab Iuran), Transaksi (→ tab Transaksi), Statistik (→ tab Statistik), Kelola (→ sheet pengaturan).
 - FAB "Catat Belanja / Kas Keluar" → form transaksi (default `expense`).
 - Empty state tanpa grup: CTA "Buat Grup Kas Sekarang" + kartu error & tombol coba lagi bila gagal load.
@@ -265,11 +267,12 @@ Pola error: catch → `_error = 'Gagal …: $error'`, `notifyListeners()`, kemba
 
 ### GroupManagementSheet (Pengaturan & Anggota)
 
-1. **Info Grup** — ubah, ganti, tambah, hapus grup (soft delete; data kas tetap tersimpan).
-2. **Anggota** — tambah/ubah/hapus; switch "Nonaktif" berarti tidak ikut ditagih periode baru.
+1. **Info Grup** — ubah (nama, deskripsi, warna & ikon), ganti, tambah, hapus grup (soft delete; data kas tetap tersimpan).
+2. **Anggota** — tambah/ubah/hapus; switch "Nonaktif" berarti tidak ikut ditagih periode baru; nomor HP bisa ditekan untuk **chat WhatsApp** (`url_launcher`, `wa.me`, normalisasi awalan 62 via `utils/whatsapp.dart`).
 3. **Rencana Iuran & Jadwal** — nominal, frekuensi (default bulanan), hari jatuh tempo (mingguan: Senin–Minggu; bulanan: tanggal 1–28), tanggal mulai; tombol **"Buat/Sinkron Periode Sekarang"**.
 4. **Rekap WhatsApp** — ringkasan periode berjalan (saldo, tunggakan, daftar lunas/belum) dibagikan via `share_plus`.
-5. **Data & Cadangan** — pintasan ke layar backup/restore.
+5. **Riwayat Aktivitas** — buka sheet `audit_log_sheet.dart` (filter per entitas, detail JSON lama/baru).
+6. **Data & Cadangan** — pintasan ke layar backup/restore.
 
 ---
 
@@ -292,6 +295,7 @@ Pola error: catch → `_error = 'Gagal …: $error'`, `notifyListeners()`, kemba
 | `group_flow_test.dart` | `loadGroups` pada DB kosong, `createGroup` sukses & auto-select |
 | `period_generator_test.dart` | Blok mingguan, dueDay, label; bulan kalender, clamp Februari, snapshot amount |
 | `dues_rules_test.dart` | B1 tagihan mulai `joined_at` (generate & backfill), B2 ganti frekuensi (periode lunas tetap, belum lunas diganti), B3 anggota terhapus keluar dari rekap/checklist, B4 idempotensi `recordTransaction`, B5 plan tunggal + validasi input |
+| `b6_features_test.dart` | B6: `iconIndex`/`colorHex` grup tersimpan & ter-update, audit `group` insert/update + filter entitas, normalisasi nomor WhatsApp & `whatsappUri` |
 | `schema_constraints_test.dart` | Unique charge/allocation, FK, CHECK amount, idempotency `client_ref` |
 | `payment_ops_test.dart` | Anti double-transaction (edit/hapus/ganti anggota/dobel tap), generator idempoten, kredit otomatis, waived, audit, ringkasan |
 | `shell_smoke_test.dart` | Widget: shell tanpa grup & dengan data, semua tab aman dibuild |
@@ -308,7 +312,7 @@ Di luar folder ini: `test/backup_service_test.dart` menguji round-trip backup te
 - **Saldo ≠ Σ sisa tagihan** — saldo murni dari transaksi; kredit/kelebihan bayar tersimpan sebagai `member_credits`, bukan saldo kedua.
 - **Anggota nonaktif** berhenti menerima tagihan baru, tetapi tagihan lama & kreditnya tetap dihitung (kredit tetap dikonsumsi otomatis).
 - **Edit-in-place**: mengedit pembayaran menghapus & mengalokasikan ulang seluruh nominalnya — tidak ada void+replace, sehingga konsisten dan idempoten.
-- **Audit log lengkap tapi tanpa UI** — siap dipakai untuk fitur riwayat aktivitas di masa depan.
+- **Audit log lengkap** — ditampilkan lewat sheet Riwayat Perubahan (filter entitas + detail JSON lama/baru) dari `GroupManagementSheet`.
 - **`tabs/lainnya_tab.dart` adalah kode mati** (1181 baris) — tidak diimport siapa pun; fungsinya sudah digantikan `GroupManagementSheet`. Kandidat penghapusan.
-- **Warna/ikon grup** tersimpan di skema (`colorHex`, `iconIndex`) tetapi belum ada UI pemilihnya (dialog buat grup hanya nama + deskripsi).
+- **Warna/ikon grup** disimpan di skema (`colorHex`, `iconIndex`) dan dipilih dari dialog buat/ubah grup (preview avatar langsung, `groupIconOptions` indeks 0 = inisial nama).
 - **Semua operasi multi-langkah dibungkus transaksi DB**; pengaman berlapis: idempotency key + partial unique index, FIFO tie-break by id, leftover never dropped.
