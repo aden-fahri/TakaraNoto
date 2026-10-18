@@ -16,6 +16,7 @@ import 'screens/savings_screen.dart';
 import 'screens/stats_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/zainnoto/zainnoto_shell_screen.dart';
+import 'widgets/max_width_body.dart';
 import 'widgets/pill_nav_bar.dart';
 import 'zainnoto/providers/zainnoto_provider.dart';
 
@@ -182,9 +183,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _buildScreens(),
+      body: MaxWidthBody(
+        child: IndexedStack(
+          index: _currentIndex,
+          children: _buildScreens(),
+        ),
       ),
       bottomNavigationBar: Consumer<FinanceProvider>(
         builder: (context, provider, _) => PillNavBar(

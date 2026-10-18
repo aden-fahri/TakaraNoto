@@ -35,7 +35,7 @@ class _TransaksiTabState extends State<TransaksiTab> {
               heroTag: 'zainnoto-transaksi-fab',
               onPressed: () => TransactionFormSheet.show(context),
               backgroundColor: t.accent,
-              foregroundColor: Colors.black,
+              foregroundColor: t.onAccent,
               icon: const Icon(Icons.add_shopping_cart_rounded, size: 20),
               label: const Text(
                 'Catat Transaksi Kas',

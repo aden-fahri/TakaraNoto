@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../widgets/max_width_body.dart';
 import '../../widgets/pill_nav_bar.dart';
 import '../../zainnoto/providers/zainnoto_provider.dart';
 import 'tabs/beranda_tab.dart';
@@ -53,14 +54,16 @@ class _ZainNotoShellScreenState extends State<ZainNotoShellScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: [
-          BerandaTab(onGoToTab: _goToTab),
-          const IuranTab(),
-          const TransaksiTab(),
-          const StatistikTab(),
-        ],
+      body: MaxWidthBody(
+        child: IndexedStack(
+          index: _currentIndex,
+          children: [
+            BerandaTab(onGoToTab: _goToTab),
+            const IuranTab(),
+            const TransaksiTab(),
+            const StatistikTab(),
+          ],
+        ),
       ),
       bottomNavigationBar: PillNavBar(
         currentIndex: _currentIndex,

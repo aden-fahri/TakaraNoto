@@ -337,6 +337,7 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
               // Internal categories are locked; user categories can be deleted
               if (!isDefault)
                 IconButton(
+                  tooltip: 'Hapus kategori',
                   icon: Icon(Icons.delete_outline_rounded, color: tokens.expense),
                   onPressed: () => _deleteCategory(cat),
                 ),

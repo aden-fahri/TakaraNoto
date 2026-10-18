@@ -233,7 +233,7 @@ Pola error: catch → `_error = 'Gagal …: $error'`, `notifyListeners()`, kemba
 
 ### Beranda
 
-- Banner hijau (dengan lingkaran dekoratif) + tombol `ModeSwitchButton` ("TakaraNoto →"), tombol setelan grup, dan tombol ganti grup.
+- Banner mengikuti tema aktif (`t.headerBg` — warna aksen pilihan pengguna, bukan selalu hijau) dengan lingkaran dekoratif + tombol `ModeSwitchButton` ("TakaraNoto →"), tombol setelan grup (tooltip "Kelola grup & anggota"), dan tombol ganti grup (tooltip "Ganti grup").
 - `_ModernGroupWalletCard` (kartu notch): label "DOMPET KAS KELOMPOK", chip periode berjalan, **Saldo Kas Bersama** (merah bila negatif), pill "Masuk"/"Keluar".
 - Bento: **Keaktifan** (lunas/total periode ini + progress) dan **Tunggakan** (nominal + jumlah orang). Tunggakan > 0 → sheet "Daftar Penunggak Kas".
 - Quick actions: Catat Iuran (→ tab Iuran), Transaksi (→ tab Transaksi), Statistik (→ tab Statistik), Kelola (→ sheet pengaturan).

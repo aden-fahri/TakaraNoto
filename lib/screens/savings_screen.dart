@@ -336,6 +336,7 @@ class SavingsScreen extends StatelessWidget {
                                                     ),
                                                     IconButton(
                                                       onPressed: () => _showEditGoalDialog(context, goal),
+                                                      tooltip: 'Ubah target',
                                                       padding: EdgeInsets.zero,
                                                       constraints: const BoxConstraints(),
                                                       icon: Icon(
@@ -347,6 +348,7 @@ class SavingsScreen extends StatelessWidget {
                                                     const SizedBox(width: 12),
                                                     IconButton(
                                                       onPressed: () => _showDeleteConfirmDialog(context, goal),
+                                                      tooltip: 'Hapus target',
                                                       padding: EdgeInsets.zero,
                                                       constraints: const BoxConstraints(),
                                                       icon: Icon(

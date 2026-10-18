@@ -34,7 +34,7 @@ class BerandaTab extends StatelessWidget {
               heroTag: 'zainnoto-beranda-fab',
               onPressed: () => TransactionFormSheet.show(context),
               backgroundColor: t.accent,
-              foregroundColor: Colors.black,
+              foregroundColor: t.onAccent,
               icon: const Icon(Icons.add_shopping_cart_rounded, size: 20),
               label: const Text(
                 'Catat Belanja / Kas Keluar',
@@ -212,8 +212,32 @@ class _Banner extends StatelessWidget {
                   const ModeSwitchButton(),
                   const SizedBox(width: 8),
                   if (group != null) ...[
-                    GestureDetector(
-                      onTap: onManageGroup,
+                    Tooltip(
+                      message: 'Kelola grup & anggota',
+                      child: GestureDetector(
+                        onTap: onManageGroup,
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: t.headerSurface,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: t.headerBorder, width: 1),
+                          ),
+                          child: Icon(
+                            Icons.settings_rounded,
+                            color: t.headerFg,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  Tooltip(
+                    message: 'Ganti grup',
+                    child: GestureDetector(
+                      onTap: onSwitch,
                       child: Container(
                         width: 40,
                         height: 40,
@@ -223,28 +247,10 @@ class _Banner extends StatelessWidget {
                           border: Border.all(color: t.headerBorder, width: 1),
                         ),
                         child: Icon(
-                          Icons.settings_rounded,
+                          Icons.swap_horiz_rounded,
                           color: t.headerFg,
-                          size: 20,
+                          size: 22,
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  GestureDetector(
-                    onTap: onSwitch,
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: t.headerSurface,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: t.headerBorder, width: 1),
-                      ),
-                      child: Icon(
-                        Icons.swap_horiz_rounded,
-                        color: t.headerFg,
-                        size: 22,
                       ),
                     ),
                   ),

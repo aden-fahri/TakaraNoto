@@ -680,6 +680,7 @@ class _PaymentTile extends StatelessWidget {
               ),
               IconButton(
                 onPressed: onEdit,
+                tooltip: 'Edit transaksi',
                 visualDensity: VisualDensity.compact,
                 icon: Icon(
                   Icons.edit_outlined,
@@ -689,6 +690,7 @@ class _PaymentTile extends StatelessWidget {
               ),
               IconButton(
                 onPressed: onDelete,
+                tooltip: 'Hapus transaksi',
                 visualDensity: VisualDensity.compact,
                 icon: Icon(
                   Icons.delete_outline_rounded,

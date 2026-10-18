@@ -241,9 +241,10 @@ flutter build web
 | `test/backup_service_test.dart` | Round-trip backup penuh (finflow + zainnoto + prefs), impor mengganti (bukan menambah), tolak marker salah/versi lebih baru/struktur tidak lengkap |
 | `test/notched_card_test.dart` | Geometri notch `buildNotchedCardPath` + render widget |
 | `test/widget_test.dart` | `DonutChart` render + aman saat kosong |
+| `test/ui_polish_test.dart` | `MaxWidthBody` membatasi lebar di layar lebar & penuh di layar sempit; `PillNavBar` punya label semantik per tab |
 | `test/zainnoto/*` (10 file) | Alokasi FIFO, status iuran, generator periode, constraint skema, operasi pembayaran anti double-transaction, aturan tagihan (`dues_rules_test.dart`: B1 tagihan mulai `joined_at`, B2 ganti frekuensi, B3 anggota terhapus, B4 idempotensi `recordTransaction`, B5 plan tunggal + validasi), group flow, smoke shell |
 
-Total **66 test** — semuanya lulus.
+Total **69 test** — semuanya lulus.
 
 ---
 
@@ -265,6 +266,15 @@ Total **66 test** — semuanya lulus.
 4. **B4 — `recordTransaction` idempoten** dengan `idempotencyKey` + `client_ref` (sebelumnya hanya `recordDuesPayment`).
 5. **B5 — Rencana iuran aman.** Insert plan kedua ditolak (satu plan aktif per grup, cegah dobel tap), `start_date` & `dueDay` divalidasi; error simpan tampil di SnackBar (bukan pesan generik).
 6. **Pipeline load:** semua query `_loadGroupData` dijalankan paralel, refresh berulang di-coalesce (satu loop menandai `pending`), matrix periode dimuat paralel. Splash: durasi minimum betul-betul 1,8 detik (sebelumnya delay berurutan total ~2,7 detik).
+
+**Perbaikan UI tahap 1 (dari audit UI):**
+
+1. **D1 — Kontras FAB ZainNoto.** `foregroundColor: Colors.black` (kontras ~1,3:1 untuk aksen gelap seperti Plum) diganti `t.onAccent` di dua FAB (Beranda & Transaksi).
+2. **D2 — Dokumentasi dibetulkan.** Klaim "banner hijau" di `ZAINNOTO.md` dihapus; banner memang sengaja mengikuti tema aktif (`t.headerBg`), bukan warna tetap.
+3. **D4 — Lebar konten maksimal.** Widget baru `MaxWidthBody` (maks 600 px) membungkus shell Pribadi dan ZainNoto, supaya konten tidak melar selebar layar di tablet/desktop/web.
+4. **D5 — Aksesibilitas dasar.** Item `PillNavBar` kini punya `Semantics(button, selected, label)`; tooltip ditambahkan pada kontrol ikon-saja (setelan/ganti grup di banner ZainNoto, palet tema & navigasi bulan di Beranda Pribadi, edit/hapus transaksi, anggota, kategori, target tabungan).
+
+**Sisa audit UI (belum dikerjakan):** D3 migrasi skala tipografi (395 literal `fontSize`, 24 nilai berbeda) dan D6 dark mode + bundling font Poppins.
 
 **Quirk & perilaku yang perlu diketahui:**
 

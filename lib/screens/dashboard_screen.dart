@@ -347,14 +347,17 @@ class _DashboardBanner extends StatelessWidget {
                                 builder: (_) => const ThemeSettingsScreen(),
                               ),
                             ),
-                            child: Container(
-                              width: 40, height: 40,
-                              decoration: BoxDecoration(
-                                color: tokens.headerSurface,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: tokens.headerBorder, width: 1),
+                            child: Tooltip(
+                              message: 'Pengaturan tema',
+                              child: Container(
+                                width: 40, height: 40,
+                                decoration: BoxDecoration(
+                                  color: tokens.headerSurface,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: tokens.headerBorder, width: 1),
+                                ),
+                                child: Icon(Icons.palette_rounded, color: tokens.headerFg, size: 20),
                               ),
-                              child: Icon(Icons.palette_rounded, color: tokens.headerFg, size: 20),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -442,9 +445,12 @@ class _DashboardBanner extends StatelessWidget {
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        GestureDetector(
-                                          onTap: onPrev,
-                                          child: Icon(Icons.chevron_left_rounded, size: 16, color: tokens.headerFg),
+                                        Tooltip(
+                                          message: 'Bulan sebelumnya',
+                                          child: GestureDetector(
+                                            onTap: onPrev,
+                                            child: Icon(Icons.chevron_left_rounded, size: 16, color: tokens.headerFg),
+                                          ),
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
@@ -456,9 +462,12 @@ class _DashboardBanner extends StatelessWidget {
                                           ),
                                         ),
                                         const SizedBox(width: 4),
-                                        GestureDetector(
-                                          onTap: onNext,
-                                          child: Icon(Icons.chevron_right_rounded, size: 16, color: tokens.headerFg),
+                                        Tooltip(
+                                          message: 'Bulan berikutnya',
+                                          child: GestureDetector(
+                                            onTap: onNext,
+                                            child: Icon(Icons.chevron_right_rounded, size: 16, color: tokens.headerFg),
+                                          ),
                                         ),
                                       ],
                                     ),

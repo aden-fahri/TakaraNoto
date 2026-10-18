@@ -59,10 +59,14 @@ class PillNavBar extends StatelessWidget {
                     final showDot = showBadge && i == badgeIndex;
 
                     return Expanded(
-                      child: GestureDetector(
-                        onTap: () => onTap(i),
-                        behavior: HitTestBehavior.opaque,
-                        child: AnimatedContainer(
+                      child: Semantics(
+                        button: true,
+                        selected: isActive,
+                        label: items[i].label,
+                        child: GestureDetector(
+                          onTap: () => onTap(i),
+                          behavior: HitTestBehavior.opaque,
+                          child: AnimatedContainer(
                           duration: const Duration(milliseconds: 220),
                           curve: Curves.easeInOut,
                           margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -119,6 +123,7 @@ class PillNavBar extends StatelessWidget {
                           ),
                         ),
                       ),
+                    ),
                     );
                   }),
                 ),

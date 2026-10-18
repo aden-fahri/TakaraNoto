@@ -96,6 +96,7 @@ class GroupManagementSheet extends StatelessWidget {
                         ),
                         IconButton(
                           onPressed: () => Navigator.pop(sheetContext),
+                          tooltip: 'Tutup',
                           icon: Icon(Icons.close_rounded, color: t.textMuted),
                         ),
                       ],
@@ -549,6 +550,7 @@ class _MembersSection extends StatelessWidget {
                         IconButton(
                           onPressed: () =>
                               _showMemberDialog(context, member: member),
+                          tooltip: 'Ubah anggota',
                           visualDensity: VisualDensity.compact,
                           icon: Icon(
                             Icons.edit_outlined,
@@ -558,6 +560,7 @@ class _MembersSection extends StatelessWidget {
                         ),
                         IconButton(
                           onPressed: () => _confirmRemove(context, member),
+                          tooltip: 'Hapus anggota',
                           visualDensity: VisualDensity.compact,
                           icon: Icon(
                             Icons.delete_outline_rounded,
