@@ -311,7 +311,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   ),
                                   child: Text(
                                     _formatDate(date),
-                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textPrimary),
+                                    style: TextStyle(fontSize: AppText.body, fontWeight: FontWeight.w600, color: tokens.textPrimary),
                                   ),
                                 ),
                                 Container(
@@ -323,7 +323,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   ),
                                   child: Text(
                                     '${net >= 0 ? '+' : ''}${Provider.of<FinanceProvider>(context, listen: false).formatCurrency(net)}',
-                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: netColor),
+                                    style: TextStyle(fontSize: AppText.label, fontWeight: FontWeight.w700, color: netColor),
                                   ),
                                 ),
                               ],
@@ -388,7 +388,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                             Text(
                                               tx.displayName,
                                               style: TextStyle(
-                                                fontSize: 13,
+                                                fontSize: AppText.bodyLarge,
                                                 fontWeight: FontWeight.w700,
                                                 color: tokens.textPrimary,
                                               ),
@@ -399,7 +399,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
                                                 style: TextStyle(
-                                                  fontSize: 11,
+                                                  fontSize: AppText.label,
                                                   color: tokens.textMuted,
                                                 ),
                                               ),
@@ -410,7 +410,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                       Text(
                                         '${isIncome ? '+' : '-'}${provider.formatCurrency(tx.amount)}',
                                         style: TextStyle(
-                                          fontSize: 13,
+                                          fontSize: AppText.bodyLarge,
                                           fontWeight: FontWeight.w800,
                                           color: isTransfer
                                               ? transferColor
@@ -451,10 +451,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
             child: Icon(Icons.search_off_rounded, size: 32, color: tokens.textMuted),
           ),
           const SizedBox(height: 16),
-          Text('Tidak ada transaksi', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: tokens.textPrimary)),
+          Text('Tidak ada transaksi', style: TextStyle(fontSize: AppText.subtitle, fontWeight: FontWeight.w600, color: tokens.textPrimary)),
           const SizedBox(height: 6),
           Text('Coba ubah filter atau kata kunci pencarian',
-              style: TextStyle(fontSize: 12, color: tokens.textMuted)),
+              style: TextStyle(fontSize: AppText.body, color: tokens.textMuted)),
         ],
       ),
     );
@@ -515,7 +515,7 @@ class _HistoryBanner extends StatelessWidget {
                 children: [
                   Text(
                     'Riwayat',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: tokens.headerFg),
+                    style: TextStyle(fontSize: AppText.headline, fontWeight: FontWeight.w800, color: tokens.headerFg),
                   ),
                   // Month navigator
                   Container(
@@ -534,7 +534,7 @@ class _HistoryBanner extends StatelessWidget {
                           child: Text(
                             monthName,
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: AppText.body,
                               fontWeight: FontWeight.w600,
                               color: tokens.headerMuted,
                             ),
@@ -584,12 +584,12 @@ class _HistoryBanner extends StatelessWidget {
                     Expanded(
                       child: TextField(
                         controller: searchCtrl,
-                        style: TextStyle(fontSize: 14, color: tokens.headerFg),
+                        style: TextStyle(fontSize: AppText.subtitle, color: tokens.headerFg),
                         decoration: InputDecoration(
                           border: InputBorder.none,
                           hintText: 'Cari transaksi...',
                           hintStyle: TextStyle(
-                            fontSize: 13,
+                            fontSize: AppText.bodyLarge,
                             color: tokens.headerMuted.withValues(alpha: 0.7),
                           ),
                           isDense: true,
@@ -654,7 +654,7 @@ class _MiniStat extends StatelessWidget {
                   Text(
                     label,
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: AppText.micro,
                       fontWeight: FontWeight.w500,
                       color: color.withValues(alpha: 0.8),
                     ),
@@ -664,7 +664,7 @@ class _MiniStat extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: AppText.body,
                       fontWeight: FontWeight.w800,
                       color: color,
                     ),
@@ -737,7 +737,7 @@ class _CatChip extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: AppText.label,
               fontWeight: FontWeight.w600,
               color: active ? color : tokens.textMuted,
             ),
@@ -788,7 +788,7 @@ class _FilterChip extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: AppText.label,
                   fontWeight: FontWeight.w600,
                   color: isActive ? ac : tokens.textMuted,
                 ),

@@ -48,7 +48,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
   /// Scaffold / page background (user-selectable).
   final Color pageBg;
 
-  /// Card background (white).
+  /// Card background (white in light mode, dark slate in dark mode).
   final Color card;
 
   /// Accent-tinted light surface (chips, pills, input fills).
@@ -93,11 +93,26 @@ class AppTokens extends ThemeExtension<AppTokens> {
   static const Color _warning = Color(0xFFFBBF24);
   static const Color _transfer = Color(0xFF3F51B5);
 
+  /// Dark palette (D6a): brighter status colors and dark surfaces so the
+  /// tokens keep the same contrast relationships as in light mode.
+  static const Color _darkCard = Color(0xFF1E293B);
+  static const Color _darkTextPrimary = Color(0xFFF1F5F9);
+  static const Color _darkTextMuted = Color(0xFF94A3B8);
+  static const Color _darkBorder = Color(0xFF334155);
+  static const Color _darkIncome = Color(0xFF34D399);
+  static const Color _darkExpense = Color(0xFFFB7185);
+  static const Color _darkWarning = Color(0xFFFCD34D);
+  static const Color _darkTransfer = Color(0xFF818CF8);
+
   factory AppTokens.fromScheme(
     ColorScheme scheme, {
     required Color pageBg,
   }) {
+    final isDark = scheme.brightness == Brightness.dark;
     final onHeader = scheme.onPrimary;
+    final card = isDark ? _darkCard : Colors.white;
+    final income = isDark ? _darkIncome : _income;
+    final expense = isDark ? _darkExpense : _expense;
     return AppTokens(
       headerBg: scheme.primary,
       headerFg: onHeader,
@@ -105,26 +120,26 @@ class AppTokens extends ThemeExtension<AppTokens> {
       headerSurface: onHeader.withValues(alpha: 0.20),
       headerBorder: onHeader.withValues(alpha: 0.45),
       pageBg: pageBg,
-      card: Colors.white,
+      card: card,
       softSurface: Color.alphaBlend(
-        scheme.primary.withValues(alpha: 0.10),
-        Colors.white,
+        scheme.primary.withValues(alpha: isDark ? 0.22 : 0.10),
+        card,
       ),
       softSurfaceStrong: Color.alphaBlend(
-        scheme.primary.withValues(alpha: 0.18),
-        Colors.white,
+        scheme.primary.withValues(alpha: isDark ? 0.34 : 0.18),
+        card,
       ),
-      textPrimary: _textPrimary,
-      textMuted: _textMuted,
-      border: _border,
+      textPrimary: isDark ? _darkTextPrimary : _textPrimary,
+      textMuted: isDark ? _darkTextMuted : _textMuted,
+      border: isDark ? _darkBorder : _border,
       accent: scheme.primary,
       onAccent: scheme.onPrimary,
-      income: _income,
-      expense: _expense,
-      warning: _warning,
-      incomeOnHeader: Color.lerp(_income, onHeader, 0.30)!,
-      expenseOnHeader: Color.lerp(_expense, onHeader, 0.30)!,
-      transfer: _transfer,
+      income: income,
+      expense: expense,
+      warning: isDark ? _darkWarning : _warning,
+      incomeOnHeader: Color.lerp(income, onHeader, 0.30)!,
+      expenseOnHeader: Color.lerp(expense, onHeader, 0.30)!,
+      transfer: isDark ? _darkTransfer : _transfer,
     );
   }
 
@@ -202,6 +217,46 @@ class AppTokens extends ThemeExtension<AppTokens> {
       transfer: Color.lerp(transfer, other.transfer, t)!,
     );
   }
+}
+
+/// Typography scale (D3).
+///
+/// Screens used to carry 24 different literal `fontSize` values; this scale
+/// folds them into 11 named steps. Prefer `AppText.*` over raw numbers so
+/// the text hierarchy stays consistent across the app.
+abstract final class AppText {
+  /// Smallest text (badges, micro captions). Absorbs 8/9/10/10.5.
+  static const double micro = 10;
+
+  /// Small labels (chips, captions). Absorbs 11/11.5.
+  static const double label = 11;
+
+  /// Main body text / dense tables. Absorbs 12/12.5.
+  static const double body = 12;
+
+  /// Slightly larger body (list tiles, small paragraphs). Absorbs 13/13.5.
+  static const double bodyLarge = 13;
+
+  /// Sub-headings / button text. Absorbs 14/15.
+  static const double subtitle = 14;
+
+  /// Card & dialog titles. Absorbs 16/18.
+  static const double title = 16;
+
+  /// Prominent numbers & headings. Absorbs 20/22.
+  static const double headline = 20;
+
+  /// Large stat numbers. Absorbs 24/26.
+  static const double display = 24;
+
+  /// Extra-large numbers. 28.
+  static const double displayLarge = 28;
+
+  /// Primary balances / hero amounts. Absorbs 32/34.
+  static const double stat = 32;
+
+  /// App name / hero numerals. Absorbs 36/40.
+  static const double hero = 36;
 }
 
 extension AppTokensContext on BuildContext {

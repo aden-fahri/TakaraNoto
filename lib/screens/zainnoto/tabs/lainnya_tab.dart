@@ -86,7 +86,7 @@ class _Banner extends StatelessWidget {
               Text(
                 'Lainnya',
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: AppText.headline,
                   fontWeight: FontWeight.w800,
                   color: t.headerFg,
                 ),
@@ -96,7 +96,7 @@ class _Banner extends StatelessWidget {
                 groupName ?? 'Belum ada grup',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 12, color: t.headerMuted),
+                style: TextStyle(fontSize: AppText.body, color: t.headerMuted),
               ),
             ],
           ),
@@ -134,7 +134,7 @@ class _SectionCard extends StatelessWidget {
                 child: Text(
                   title,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: AppText.subtitle,
                     fontWeight: FontWeight.w700,
                     color: t.textPrimary,
                   ),
@@ -217,7 +217,7 @@ class _GroupSection extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: AppText.subtitle,
                         fontWeight: FontWeight.w700,
                         color: t.textPrimary,
                       ),
@@ -229,7 +229,7 @@ class _GroupSection extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 11.5,
+                          fontSize: AppText.label,
                           height: 1.4,
                           color: t.textMuted,
                         ),
@@ -361,7 +361,7 @@ class _MemberFormDialogState extends State<_MemberFormDialog> {
               title: Text(
                 'Anggota aktif',
                 style: TextStyle(
-                  fontSize: 13.5,
+                  fontSize: AppText.bodyLarge,
                   color: t.textPrimary,
                 ),
               ),
@@ -369,7 +369,7 @@ class _MemberFormDialogState extends State<_MemberFormDialog> {
                 _active
                     ? 'Ikut ditagih iuran periode baru'
                     : 'Tidak ikut ditagih iuran periode baru',
-                style: TextStyle(fontSize: 11.5, color: t.textMuted),
+                style: TextStyle(fontSize: AppText.label, color: t.textMuted),
               ),
               value: _active,
               onChanged: (value) => setState(() => _active = value),
@@ -476,7 +476,7 @@ class _MembersSection extends StatelessWidget {
               'Belum ada anggota. Tambahkan anggota agar tagihan iuran '
               'terbuat otomatis.',
               style: TextStyle(
-                fontSize: 12.5,
+                fontSize: AppText.body,
                 height: 1.4,
                 color: t.textMuted,
               ),
@@ -503,7 +503,7 @@ class _MembersSection extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  fontSize: 13.5,
+                                  fontSize: AppText.bodyLarge,
                                   fontWeight: FontWeight.w600,
                                   color: t.textPrimary,
                                 ),
@@ -516,7 +516,7 @@ class _MembersSection extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  fontSize: 11,
+                                  fontSize: AppText.label,
                                   color: t.textMuted,
                                 ),
                               ),
@@ -661,7 +661,7 @@ class _DuesPlanFormDialogState extends State<_DuesPlanFormDialog> {
               _frequency == DuesFrequency.weekly
                   ? 'Jatuh tempo (hari ke-N dalam blok minggu)'
                   : 'Tanggal jatuh tempo',
-              style: TextStyle(fontSize: 11.5, color: t.textMuted),
+              style: TextStyle(fontSize: AppText.label, color: t.textMuted),
             ),
             const SizedBox(height: 6),
             Container(
@@ -683,7 +683,7 @@ class _DuesPlanFormDialogState extends State<_DuesPlanFormDialog> {
                               ? 'Hari ke-$day'
                               : 'Tanggal $day',
                           style: TextStyle(
-                            fontSize: 13.5,
+                            fontSize: AppText.bodyLarge,
                             color: t.textPrimary,
                           ),
                         ),
@@ -732,7 +732,7 @@ class _DuesPlanFormDialogState extends State<_DuesPlanFormDialog> {
                       Text(
                         'Mulai ${formatTanggalSingkat(dateToStr(_startDate))}',
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: AppText.bodyLarge,
                           color: t.textPrimary,
                         ),
                       ),
@@ -745,7 +745,7 @@ class _DuesPlanFormDialogState extends State<_DuesPlanFormDialog> {
                 'Mulai ${formatTanggalSingkat(plan.startDate)} · '
                 'perubahan berlaku untuk periode baru',
                 style: TextStyle(
-                  fontSize: 11.5,
+                  fontSize: AppText.label,
                   height: 1.4,
                   color: t.textMuted,
                 ),
@@ -836,7 +836,7 @@ class _DuesSection extends StatelessWidget {
               'Belum ada rencana iuran. Atur nominal dan jadwal agar '
               'periode dan tagihan dibuat otomatis.',
               style: TextStyle(
-                fontSize: 12.5,
+                fontSize: AppText.body,
                 height: 1.4,
                 color: t.textMuted,
               ),
@@ -872,7 +872,7 @@ class _DuesSection extends StatelessWidget {
                           '${formatRupiah(plan.amount)} · '
                           '${isWeekly ? 'Mingguan' : 'Bulanan'}',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: AppText.subtitle,
                             fontWeight: FontWeight.w700,
                             color: t.textPrimary,
                           ),
@@ -885,7 +885,7 @@ class _DuesSection extends StatelessWidget {
                               : 'Jatuh tempo tanggal ${plan.dueDay} · '
                                   'mulai ${formatTanggalSingkat(plan.startDate)}',
                           style: TextStyle(
-                            fontSize: 11.5,
+                            fontSize: AppText.label,
                             color: t.textMuted,
                           ),
                         ),
@@ -901,7 +901,7 @@ class _DuesSection extends StatelessWidget {
               Expanded(
                 child: Text(
                   '${provider.periods.length} periode tercatat',
-                  style: TextStyle(fontSize: 11.5, color: t.textMuted),
+                  style: TextStyle(fontSize: AppText.label, color: t.textMuted),
                 ),
               ),
             ],
@@ -953,7 +953,7 @@ class _PlanFrequencyPill extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              fontSize: 12.5,
+              fontSize: AppText.body,
               fontWeight: FontWeight.w700,
               color: selected ? t.accent : t.textMuted,
             ),
@@ -1047,7 +1047,7 @@ class _ShareSection extends StatelessWidget {
           Text(
             'Bagikan ringkasan iuran periode berjalan: status per anggota, '
             'saldo kas, dan tunggakan.',
-            style: TextStyle(fontSize: 12.5, height: 1.4, color: t.textMuted),
+            style: TextStyle(fontSize: AppText.body, height: 1.4, color: t.textMuted),
           ),
           const SizedBox(height: 12),
           ElevatedButton.icon(
@@ -1101,14 +1101,14 @@ class _BackupSection extends StatelessWidget {
                   Text(
                     'Backup & Restore',
                     style: TextStyle(
-                      fontSize: 13.5,
+                      fontSize: AppText.bodyLarge,
                       fontWeight: FontWeight.w600,
                       color: t.textPrimary,
                     ),
                   ),
                   Text(
                     'Cadangkan seluruh data aplikasi',
-                    style: TextStyle(fontSize: 11.5, color: t.textMuted),
+                    style: TextStyle(fontSize: AppText.label, color: t.textMuted),
                   ),
                 ],
               ),
@@ -1158,7 +1158,7 @@ class _NoGroup extends StatelessWidget {
             Text(
               'Belum Ada Grup',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: AppText.title,
                 fontWeight: FontWeight.w700,
                 color: t.textPrimary,
               ),
@@ -1167,7 +1167,7 @@ class _NoGroup extends StatelessWidget {
             Text(
               'Buat grup dulu untuk mengelola anggota dan iuran.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, height: 1.5, color: t.textMuted),
+              style: TextStyle(fontSize: AppText.bodyLarge, height: 1.5, color: t.textMuted),
             ),
             const SizedBox(height: 20),
             ElevatedButton.icon(

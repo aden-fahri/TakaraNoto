@@ -46,7 +46,7 @@ class ThemeSettingsScreen extends StatelessWidget {
                 Text(
                   'Warna Aksen',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: AppText.title,
                     fontWeight: FontWeight.w700,
                     color: t.textPrimary,
                   ),
@@ -54,7 +54,7 @@ class ThemeSettingsScreen extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   'Warna ini dipakai untuk banner, tombol utama, dan elemen aktif di seluruh aplikasi.',
-                  style: TextStyle(fontSize: 13, color: t.textMuted),
+                  style: TextStyle(fontSize: AppText.bodyLarge, color: t.textMuted),
                 ),
                 const SizedBox(height: 20),
                 const _PreviewCard(),
@@ -62,7 +62,7 @@ class ThemeSettingsScreen extends StatelessWidget {
                 Text(
                   'Preset Warna',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: AppText.subtitle,
                     fontWeight: FontWeight.w700,
                     color: t.textPrimary,
                   ),
@@ -85,7 +85,7 @@ class ThemeSettingsScreen extends StatelessWidget {
                 Text(
                   'Warna Kustom',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: AppText.subtitle,
                     fontWeight: FontWeight.w700,
                     color: t.textPrimary,
                   ),
@@ -101,7 +101,7 @@ class ThemeSettingsScreen extends StatelessWidget {
                 Text(
                   'Warna Latar',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: AppText.title,
                     fontWeight: FontWeight.w700,
                     color: t.textPrimary,
                   ),
@@ -109,7 +109,7 @@ class ThemeSettingsScreen extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   'Warna dasar halaman di belakang kartu-kartu aplikasi.',
-                  style: TextStyle(fontSize: 13, color: t.textMuted),
+                  style: TextStyle(fontSize: AppText.bodyLarge, color: t.textMuted),
                 ),
                 const SizedBox(height: 18),
                 Wrap(
@@ -134,9 +134,28 @@ class ThemeSettingsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 32),
                 Text(
+                  'Tampilan',
+                  style: TextStyle(
+                    fontSize: AppText.title,
+                    fontWeight: FontWeight.w700,
+                    color: t.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Mode gelap memakai latar gelap dengan warna aksen yang sama. Warna latar di atas hanya berpengaruh halus di mode gelap.',
+                  style: TextStyle(fontSize: AppText.bodyLarge, color: t.textMuted),
+                ),
+                const SizedBox(height: 14),
+                _DarkModeTile(
+                  value: controller.darkMode,
+                  onChanged: controller.setDarkMode,
+                ),
+                const SizedBox(height: 32),
+                Text(
                   'Data',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: AppText.title,
                     fontWeight: FontWeight.w700,
                     color: t.textPrimary,
                   ),
@@ -203,7 +222,7 @@ class _Header extends StatelessWidget {
               Text(
                 'Pengaturan',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: AppText.title,
                   fontWeight: FontWeight.w700,
                   color: t.headerFg,
                 ),
@@ -237,7 +256,7 @@ class _PreviewCard extends StatelessWidget {
           Text(
             'PRATINJAU',
             style: TextStyle(
-              fontSize: 11,
+              fontSize: AppText.label,
               fontWeight: FontWeight.w700,
               color: t.textMuted,
               letterSpacing: 1.2,
@@ -247,7 +266,7 @@ class _PreviewCard extends StatelessWidget {
           Text(
             'Rp 2.450.000',
             style: TextStyle(
-              fontSize: 26,
+              fontSize: AppText.display,
               fontWeight: FontWeight.w800,
               color: t.textPrimary,
             ),
@@ -255,7 +274,7 @@ class _PreviewCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             'Saldo saat ini',
-            style: TextStyle(fontSize: 12, color: t.textMuted),
+            style: TextStyle(fontSize: AppText.body, color: t.textMuted),
           ),
           const SizedBox(height: 16),
           Wrap(
@@ -281,7 +300,7 @@ class _PreviewCard extends StatelessWidget {
                   child: Text(
                     'Tombol Utama',
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: AppText.subtitle,
                       fontWeight: FontWeight.w600,
                       color: t.onAccent,
                     ),
@@ -333,7 +352,7 @@ class _PreviewChip extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: AppText.label,
               fontWeight: FontWeight.w600,
               color: color,
             ),
@@ -402,13 +421,61 @@ class _PresetCircle extends StatelessWidget {
               preset.name,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 10.5,
+                fontSize: AppText.micro,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 color: selected ? t.textPrimary : t.textMuted,
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Dark mode toggle tile ────────────────────────────────────────────────────
+class _DarkModeTile extends StatelessWidget {
+  const _DarkModeTile({required this.value, required this.onChanged});
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      decoration: BoxDecoration(
+        color: t.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: t.border),
+      ),
+      child: SwitchListTile(
+        contentPadding: EdgeInsets.zero,
+        secondary: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: t.softSurface,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(Icons.dark_mode_rounded, color: t.accent, size: 20),
+        ),
+        title: Text(
+          'Mode Gelap',
+          style: TextStyle(
+            fontSize: AppText.bodyLarge,
+            fontWeight: FontWeight.w600,
+            color: t.textPrimary,
+          ),
+        ),
+        subtitle: Text(
+          value ? 'Aktif - tampilan gelap' : 'Nonaktif - tampilan terang',
+          style: TextStyle(fontSize: AppText.label, color: t.textMuted),
+        ),
+        value: value,
+        onChanged: onChanged,
       ),
     );
   }
@@ -466,7 +533,7 @@ class _CustomColorTile extends StatelessWidget {
                   Text(
                     label,
                     style: TextStyle(
-                      fontSize: 13.5,
+                      fontSize: AppText.bodyLarge,
                       fontWeight: FontWeight.w600,
                       color: t.textPrimary,
                     ),
@@ -474,7 +541,7 @@ class _CustomColorTile extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     '#$_hex',
-                    style: TextStyle(fontSize: 11.5, color: t.textMuted),
+                    style: TextStyle(fontSize: AppText.label, color: t.textMuted),
                   ),
                 ],
               ),
@@ -534,7 +601,7 @@ class _SettingsTile extends StatelessWidget {
                   Text(
                     title,
                     style: TextStyle(
-                      fontSize: 13.5,
+                      fontSize: AppText.bodyLarge,
                       fontWeight: FontWeight.w600,
                       color: t.textPrimary,
                     ),
@@ -542,7 +609,7 @@ class _SettingsTile extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: TextStyle(fontSize: 11.5, color: t.textMuted),
+                    style: TextStyle(fontSize: AppText.label, color: t.textMuted),
                   ),
                 ],
               ),
@@ -647,7 +714,7 @@ class _CustomColorDialogState extends State<_CustomColorDialog> {
               controller: _hexCtrl,
               onChanged: _onHexChanged,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: AppText.subtitle,
                 fontWeight: FontWeight.w600,
                 color: t.textPrimary,
               ),
@@ -694,7 +761,7 @@ class _CustomColorDialogState extends State<_CustomColorDialog> {
         Text(
           label,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: AppText.body,
             fontWeight: FontWeight.w600,
             color: t.textMuted,
           ),

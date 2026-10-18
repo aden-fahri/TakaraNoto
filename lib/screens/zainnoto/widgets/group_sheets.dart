@@ -57,7 +57,7 @@ Future<void> showGroupSwitcher(BuildContext context) async {
               Text(
                 'Pilih Grup',
                 style: TextStyle(
-                  fontSize: 15,
+                  fontSize: AppText.subtitle,
                   fontWeight: FontWeight.w700,
                   color: t.textPrimary,
                 ),
@@ -75,7 +75,7 @@ Future<void> showGroupSwitcher(BuildContext context) async {
                   title: Text(
                     group.name,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: AppText.subtitle,
                       fontWeight: FontWeight.w600,
                       color: t.textPrimary,
                     ),
@@ -85,7 +85,7 @@ Future<void> showGroupSwitcher(BuildContext context) async {
                           group.description!,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 11.5, color: t.textMuted),
+                          style: TextStyle(fontSize: AppText.label, color: t.textMuted),
                         )
                       : null,
                   trailing: provider.selectedGroup?.id == group.id
@@ -319,7 +319,7 @@ class _GroupFormDialogState extends State<_GroupFormDialog> {
                 Expanded(
                   child: Text(
                     'Tampilan grup di daftar & banner',
-                    style: TextStyle(fontSize: 11.5, color: t.textMuted),
+                    style: TextStyle(fontSize: AppText.label, color: t.textMuted),
                   ),
                 ),
               ],
@@ -328,7 +328,7 @@ class _GroupFormDialogState extends State<_GroupFormDialog> {
             Text(
               'Warna',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: AppText.body,
                 fontWeight: FontWeight.w600,
                 color: t.textMuted,
               ),
@@ -372,7 +372,7 @@ class _GroupFormDialogState extends State<_GroupFormDialog> {
             Text(
               'Ikon',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: AppText.body,
                 fontWeight: FontWeight.w600,
                 color: t.textMuted,
               ),
@@ -408,7 +408,7 @@ class _GroupFormDialogState extends State<_GroupFormDialog> {
                             child: Text(
                               'A',
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: AppText.subtitle,
                                 fontWeight: FontWeight.w800,
                                 color: selected ? t.accent : t.textMuted,
                               ),

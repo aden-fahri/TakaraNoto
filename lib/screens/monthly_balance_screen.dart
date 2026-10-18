@@ -73,7 +73,7 @@ class MonthlyBalanceScreen extends StatelessWidget {
                         Text(
                           'Riwayat Saldo',
                           style: TextStyle(
-                            fontSize: 20,
+                            fontSize: AppText.headline,
                             fontWeight: FontWeight.w800,
                             color: tokens.headerFg,
                           ),
@@ -100,7 +100,7 @@ class MonthlyBalanceScreen extends StatelessWidget {
                           Text(
                             'Total Akumulasi Saldo Bersih',
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: AppText.body,
                               fontWeight: FontWeight.w500,
                               color: tokens.headerMuted,
                             ),
@@ -112,7 +112,7 @@ class MonthlyBalanceScreen extends StatelessWidget {
                             child: Text(
                               provider.formatCurrency(grandTotalBalance),
                               style: TextStyle(
-                                fontSize: 32,
+                                fontSize: AppText.stat,
                                 fontWeight: FontWeight.w800,
                                 color: totalColor,
                               ),
@@ -147,7 +147,7 @@ class MonthlyBalanceScreen extends StatelessWidget {
                         const SizedBox(height: 16),
                         Text(
                           'Belum ada riwayat bulanan',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: tokens.textPrimary),
+                          style: TextStyle(fontSize: AppText.subtitle, fontWeight: FontWeight.w600, color: tokens.textPrimary),
                         ),
                       ],
                     ),
@@ -179,7 +179,7 @@ class MonthlyBalanceScreen extends StatelessWidget {
                                   Text(
                                     _monthName(monthStr),
                                     style: TextStyle(
-                                      fontSize: 15,
+                                      fontSize: AppText.subtitle,
                                       fontWeight: FontWeight.w700,
                                       color: tokens.textPrimary,
                                     ),
@@ -194,7 +194,7 @@ class MonthlyBalanceScreen extends StatelessWidget {
                                     child: Text(
                                       '${bal >= 0 ? '+' : ''}${provider.formatCurrency(bal)}',
                                       style: TextStyle(
-                                        fontSize: 12,
+                                        fontSize: AppText.body,
                                         fontWeight: FontWeight.w700,
                                         color: balColor,
                                       ),
@@ -229,14 +229,14 @@ class MonthlyBalanceScreen extends StatelessWidget {
                                             children: [
                                               Text(
                                                 'Masuk',
-                                                style: TextStyle(fontSize: 10, color: tokens.textMuted, fontWeight: FontWeight.w500),
+                                                style: TextStyle(fontSize: AppText.micro, color: tokens.textMuted, fontWeight: FontWeight.w500),
                                               ),
                                               Text(
                                                 provider.formatCurrency(inc),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
                                                 style: TextStyle(
-                                                  fontSize: 12,
+                                                  fontSize: AppText.body,
                                                   fontWeight: FontWeight.w700,
                                                   color: tokens.textPrimary,
                                                 ),
@@ -269,14 +269,14 @@ class MonthlyBalanceScreen extends StatelessWidget {
                                             children: [
                                               Text(
                                                 'Keluar',
-                                                style: TextStyle(fontSize: 10, color: tokens.textMuted, fontWeight: FontWeight.w500),
+                                                style: TextStyle(fontSize: AppText.micro, color: tokens.textMuted, fontWeight: FontWeight.w500),
                                               ),
                                               Text(
                                                 provider.formatCurrency(exp),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
                                                 style: TextStyle(
-                                                  fontSize: 12,
+                                                  fontSize: AppText.body,
                                                   fontWeight: FontWeight.w700,
                                                   color: tokens.textPrimary,
                                                 ),

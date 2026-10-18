@@ -30,9 +30,9 @@ TakaraNoto adalah aplikasi pencatatan keuangan berbasis **Flutter** dengan **dua
 | State management | **`provider` ^6.1.5** (`ChangeNotifierProvider` + `context.watch/read`) |
 | Database | **SQLite** via **`sqflite` ^2.4.2** — satu file DB (`finflow.db` v8, sejak merger Fase 3) berisi tabel Pribadi + 9 tabel ZainNoto berprefix `zn_` |
 | Web | **`sqflite_common_ffi_web` ^1.1.1** (sqlite3 wasm + **IndexedDB**) — set di `main.dart`; aset `web/sqlite3.wasm` + `web/sqflite_sw.js` ikut di-commit |
-| Penyimpanan preferensi | **`shared_preferences` ^2.5.0** (warna tema) |
+| Penyimpanan preferensi | **`shared_preferences` ^2.5.0** (warna tema + mode gelap) |
 | Lokalisasi & format | **`intl` ^0.20.2** (`initializeDateFormatting('id')`, `NumberFormat` locale `id_ID`) |
-| Tipografi | **`google_fonts` ^6.2.1** — font **Poppins** diambil runtime (butuh internet saat pertama kali) |
+| Tipografi | **Poppins** dibundel di `assets/fonts/` (6 weight) via **`google_fonts` ^6.2.1** — runtime fetching dimatikan, tampilan identik saat offline |
 | Berbagi & file | **`share_plus` ^13.1.0** (backup & CSV), **`file_picker` ^13.1.0** (pilih file restore) |
 | Utilitas | **`uuid` ^4.5.3** (ID ZainNoto), **`path`**, **`path_provider`** |
 | Dev/test | `flutter_test`, **`sqflite_common_ffi` ^2.3.4** (DB in-memory untuk test), **`flutter_lints` ^6.0.0** |
@@ -162,7 +162,7 @@ Home · Riwayat · Anggaran · Tabungan · Laporan — `IndexedStack` + `PillNav
 | **Laporan** (`stats_screen.dart`) | Donut analitik Keluar/Masuk + legenda %; **arus pengeluaran mingguan** (5 bucket); ringkasan bulan (rata-rata harian, sisa anggaran, **Ditabung Bersih**); **monitor pos anggaran** (slider batas vs realisasi); tombol **Ekspor CSV** (share teks) |
 | **Riwayat Saldo** (`monthly_balance_screen.dart`) | Akumulasi saldo bersih + daftar bulan (masuk/keluar/net) |
 | **E-Wallet** (`topup_screen.dart`) | Saldo virtual, tombol **Isi Saldo / Tarik / Keluar**, riwayat transaksi E-Wallet, dialog transfer dengan validasi saldo |
-| **Pengaturan Tema** (`theme_settings_screen.dart`) | Preset aksen & background + picker kustom (HSV & hex), preview kartu live; pintasan Backup & Restore |
+| **Pengaturan Tema** (`theme_settings_screen.dart`) | Preset aksen & background + picker kustom (HSV & hex), preview kartu live, **toggle Mode Gelap**; pintasan Backup & Restore |
 | **Backup & Restore** | Ekspor/share file JSON, pilih file → validasi → konfirmasi → restore; catatan khusus mode web |
 | **Splash** | Animasi blobs, logo bercincin emas, wordmark "Takara"+"Noto" (emas), tunggu provider siap, transisi fade |
 
@@ -188,9 +188,11 @@ Home · Riwayat · Anggaran · Tabungan · Laporan — `IndexedStack` + `PillNav
 
 ## 7. Tema & Desain
 
-- **`AppTokens`** — `ThemeExtension` 20 warna semantik: `headerBg/Fg/Muted/Surface/Border`, `pageBg`, `card`, `softSurface(+Strong)`, `textPrimary/Muted`, `border`, `accent/onAccent`, `income` `#10B981`, `expense` `#F43F5E`, `warning` `#FBBF24`, `incomeOnHeader`, `expenseOnHeader`, `transfer` `#3F51B5`. Diakses dengan `context.tokens` di seluruh layar.
-- **`AppTheme`** — Material 3 `ColorScheme.fromSeed` dengan `primary` dioverride warna pilihan pengguna; tipografi **Poppins**; kartu putih radius 20 tanpa elevasi; input borderless; SnackBar & dialog mengikuti token. **Hanya mode terang** (`ThemeMode.light` dipaksa).
-- **`ThemeController`** — persist ke `SharedPreferences` (`custom_primary_color`, `custom_background_color`):
+- **`AppTokens`** — `ThemeExtension` 20 warna semantik: `headerBg/Fg/Muted/Surface/Border`, `pageBg`, `card`, `softSurface(+Strong)`, `textPrimary/Muted`, `border`, `accent/onAccent`, `income` `#10B981`, `expense` `#F43F5E`, `warning` `#FBBF24`, `incomeOnHeader`, `expenseOnHeader`, `transfer` `#3F51B5`. Diakses dengan `context.tokens` di seluruh layar; otomatis berbalik ke varian gelap saat mode gelap aktif.
+- **Skala tipografi `AppText` (D3)** — 11 langkah bernama (`micro` 10, `label` 11, `body` 12, `bodyLarge` 13, `subtitle` 14, `title` 16, `headline` 20, `display` 24, `displayLarge` 28, `stat` 32, `hero` 36). Semua literal `fontSize` di `lib/` sudah dimigrasikan ke konstanta ini (24 nilai lama dipadatkan, 0 literal tersisa).
+- **`AppTheme`** — Material 3 `ColorScheme.fromSeed` dengan `primary` dioverride warna pilihan pengguna; tipografi **Poppins** (dibundel); kartu radius 20 tanpa elevasi; input borderless; SnackBar & dialog mengikuti token. Mendukung **mode terang & gelap** (`getTheme(..., dark: true)`), `themeMode` mengikuti `ThemeController.darkMode`.
+- **Mode gelap (D6a)** — palet token gelap: kartu `#1E293B`, teks `#F1F5F9`/`#94A3B8`, border `#334155`, status lebih terang (`#34D399`/`#FB7185`/`#FCD34D`); background halaman = warna latar pilihan pengguna dicampur 88% ke `#0B1120` agar tetap ada sentuhan warna pilihan. Toggle di Pengaturan Tema, persist sebagai `dark_mode_enabled`.
+- **`ThemeController`** — persist ke `SharedPreferences` (`custom_primary_color`, `custom_background_color`, `dark_mode_enabled`):
   - **7 preset aksen**: Plum Klasik (default `#381932`), Emerald Green, Electric Indigo, Deep Navy, Royal Purple, Warm Amber, Rose Crimson.
   - **4 preset background**: Krem Hangat (default `#FFF3E6`), Slate Lembut, Putih Bersih, Abu Sejuk.
   - Warna banner header dihitung otomatis dari aksen (varian alpha), sehingga semua layar konsisten dengan tema apa pun.
@@ -244,9 +246,10 @@ flutter build web
 | `test/notched_card_test.dart` | Geometri notch `buildNotchedCardPath` + render widget |
 | `test/widget_test.dart` | `DonutChart` render + aman saat kosong |
 | `test/ui_polish_test.dart` | `MaxWidthBody` membatasi lebar di layar lebar & penuh di layar sempit; `PillNavBar` punya label semantik per tab |
+| `test/theme_dark_test.dart` | D6a: token & scaffold gelap (terang tetap utuh), persistensi `dark_mode_enabled` di `ThemeController` |
 | `test/zainnoto/*` (11 file) | Alokasi FIFO, status iuran, generator periode, constraint skema, operasi pembayaran anti double-transaction, aturan tagihan (`dues_rules_test.dart`: B1 tagihan mulai `joined_at`, B2 ganti frekuensi, B3 anggota terhapus, B4 idempotensi `recordTransaction`, B5 plan tunggal + validasi), fitur B6 (`b6_features_test.dart`: warna/ikon grup, audit log, nomor WhatsApp), group flow, smoke shell |
 
-Total **76 test** — semuanya lulus.
+Total **78 test** — semuanya lulus.
 
 ---
 
@@ -276,7 +279,11 @@ Total **76 test** — semuanya lulus.
 3. **D4 — Lebar konten maksimal.** Widget baru `MaxWidthBody` (maks 600 px) membungkus shell Pribadi dan ZainNoto, supaya konten tidak melar selebar layar di tablet/desktop/web.
 4. **D5 — Aksesibilitas dasar.** Item `PillNavBar` kini punya `Semantics(button, selected, label)`; tooltip ditambahkan pada kontrol ikon-saja (setelan/ganti grup di banner ZainNoto, palet tema & navigasi bulan di Beranda Pribadi, edit/hapus transaksi, anggota, kategori, target tabungan).
 
-**Sisa audit UI (belum dikerjakan):** D3 migrasi skala tipografi (395 literal `fontSize`, 24 nilai berbeda) dan D6 dark mode + bundling font Poppins.
+**Perbaikan UI tahap 2 (D3 + D6):**
+
+1. **D3 — Skala tipografi.** 24 nilai `fontSize` literal (240+ pemakaian di 28 file Pribadi & ZainNoto) dipadatkan menjadi 11 konstanta `AppText.*` di `theme/app_tokens.dart`; semua literal dimigrasikan (angka di luar skala dilipat ke langkah terdekat, mis. 15→14, 18→16, 22→20, 40→36). Tidak ada lagi `fontSize` angka mentah di `lib/`.
+2. **D6a — Mode gelap.** `AppTheme.getTheme(..., dark: true)` + `AppTokens` varian gelap; toggle "Mode Gelap" di Pengaturan Tema, tersimpan (`dark_mode_enabled`) dan ikut ter-backup karena pref-nya di-dump semua. Background gelap diturunkan dari warna latar pilihan agar tetap personal.
+3. **D6b — Font dibundel.** Poppins (400/500/600/700/800/900 + `OFL.txt`) masuk `assets/fonts/` + deklarasi `fonts:` di pubspec, dan `GoogleFonts.config.allowRuntimeFetching = false` di `main()` — tidak ada lagi unduhan font runtime, first-run offline tampil benar.
 
 **Fitur baru dari audit (B6):**
 
@@ -295,7 +302,7 @@ Total **76 test** — semuanya lulus.
 - Undo hapus transaksi menulis ulang sebagai baris **baru** (id baru; pasangan transfer tidak ikut dipulihkan).
 - `FinanceProvider` menelan error ke `debugPrint` — kegagalan DB tampil sebagai UI kosong/statis tanpa pesan.
 - Semua transaksi di-load ke memori (tanpa paginasi) dan setiap mutasi memicu reload penuh — sederhana tapi O(semua baris).
-- Font Poppins diambil runtime via Google Fonts (offline first-run memakai font fallback).
+- Font Poppins dibundel di `assets/fonts/` (runtime fetching Google Fonts dimatikan) — tidak ada lagi fallback font saat offline.
 - Duplikasi helper kecil antar layar (`_monthName`, map `_icon`, parse `_color`); **`tabs/lainnya_tab.dart` (ZainNoto) adalah kode mati**; beberapa util (`getCategorySpendingList`, `isPresetSelected`, sebagian fungsi `finance_calc`) hanya dipakai test.
 - Penamaan hybrid: package `finflow_flutter` vs produk `TakaraNoto`; label iOS belum diganti.
 - Mode aplikasi sengaja tidak dipersist (selalu mulai dari Pribadi).

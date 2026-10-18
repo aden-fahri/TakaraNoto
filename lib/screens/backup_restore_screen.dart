@@ -111,7 +111,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           '${validation.exportedAt != null ? ' (dibuat ${_formatDate(validation.exportedAt!)})' : ''}.\n\n'
           'Seluruh data saat ini (Pribadi + Kelompok) akan diganti dengan isi '
           'file backup. Salinan data lama otomatis dibuat sebelum impor.',
-          style: TextStyle(fontSize: 13, color: t.textMuted, height: 1.5),
+          style: TextStyle(fontSize: AppText.bodyLarge, color: t.textMuted, height: 1.5),
         ),
         actions: [
           TextButton(
@@ -137,7 +137,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           'Data Pribadi: ${result.finflowRows} baris\n'
           'Data Kelompok: ${result.zainnotoRows} baris\n\n'
           'Salinan data lama disimpan di:\n${result.safetyBackupPath}',
-          style: TextStyle(fontSize: 13, color: t.textMuted, height: 1.5),
+          style: TextStyle(fontSize: AppText.bodyLarge, color: t.textMuted, height: 1.5),
         ),
         actions: [
           ElevatedButton(
@@ -232,7 +232,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                                     'anggaran, tabungan, seluruh data kas '
                                     'kelompok, dan pengaturan tema.',
                                     style: TextStyle(
-                                      fontSize: 12,
+                                      fontSize: AppText.body,
                                       height: 1.5,
                                       color: t.textMuted,
                                     ),
@@ -294,7 +294,7 @@ class _Header extends StatelessWidget {
               Text(
                 'Backup & Restore',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: AppText.title,
                   fontWeight: FontWeight.w700,
                   color: t.headerFg,
                 ),
@@ -355,7 +355,7 @@ class _ActionCard extends StatelessWidget {
               Text(
                 title,
                 style: TextStyle(
-                  fontSize: 15,
+                  fontSize: AppText.subtitle,
                   fontWeight: FontWeight.w700,
                   color: t.textPrimary,
                 ),
@@ -365,7 +365,7 @@ class _ActionCard extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             description,
-            style: TextStyle(fontSize: 12.5, height: 1.5, color: t.textMuted),
+            style: TextStyle(fontSize: AppText.body, height: 1.5, color: t.textMuted),
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -395,7 +395,7 @@ class _WebNotice extends StatelessWidget {
         child: Text(
           'Backup & Restore hanya tersedia di Android, iOS, dan desktop.',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 13, color: t.textMuted),
+          style: TextStyle(fontSize: AppText.bodyLarge, color: t.textMuted),
         ),
       ),
     );
@@ -430,7 +430,7 @@ class _BusyOverlay extends StatelessWidget {
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: AppText.bodyLarge,
                     fontWeight: FontWeight.w600,
                     color: t.textPrimary,
                   ),

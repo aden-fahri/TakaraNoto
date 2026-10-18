@@ -94,7 +94,7 @@ class SavingsScreen extends StatelessWidget {
             child: Text(
               'Selamat! Target tabungan Anda sudah tercapai! 🎉',
               style: TextStyle(
-                fontSize: 11,
+                fontSize: AppText.label,
                 fontWeight: FontWeight.w600,
                 color: tokens.income,
               ),
@@ -126,7 +126,7 @@ class SavingsScreen extends StatelessWidget {
             child: Text(
               'Belum ada tabungan. Mulai menabung secara konsisten untuk melihat perkiraan selesai!',
               style: TextStyle(
-                fontSize: 11,
+                fontSize: AppText.label,
                 fontWeight: FontWeight.w500,
                 color: tokens.textMuted,
               ),
@@ -150,7 +150,7 @@ class SavingsScreen extends StatelessWidget {
           child: RichText(
             text: TextSpan(
               style: TextStyle(
-                fontSize: 11,
+                fontSize: AppText.label,
                 color: tokens.textMuted,
                 height: 1.3,
               ),
@@ -215,7 +215,7 @@ class SavingsScreen extends StatelessWidget {
                             Text(
                               _monthName(currentMonth),
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: AppText.body,
                                 fontWeight: FontWeight.w500,
                                 color: tokens.headerMuted,
                               ),
@@ -223,7 +223,7 @@ class SavingsScreen extends StatelessWidget {
                             Text(
                               'Tabungan',
                               style: TextStyle(
-                                fontSize: 22,
+                                fontSize: AppText.headline,
                                 fontWeight: FontWeight.w800,
                                 color: tokens.headerFg,
                               ),
@@ -244,7 +244,7 @@ class SavingsScreen extends StatelessWidget {
                               Text(
                                 '${goals.length} Target',
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: AppText.body,
                                   color: tokens.headerMuted,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -328,7 +328,7 @@ class SavingsScreen extends StatelessWidget {
                                                       child: Text(
                                                         goal.title,
                                                         style: TextStyle(
-                                                          fontSize: 15,
+                                                          fontSize: AppText.subtitle,
                                                           fontWeight: FontWeight.w700,
                                                           color: tokens.textPrimary,
                                                         ),
@@ -368,7 +368,7 @@ class SavingsScreen extends StatelessWidget {
                                                     Text(
                                                       '${provider.formatCurrency(goal.currentAmount)} dari ${provider.formatCurrency(goal.targetAmount)}',
                                                       style: TextStyle(
-                                                        fontSize: 12,
+                                                        fontSize: AppText.body,
                                                         fontWeight: FontWeight.w600,
                                                         color: tokens.textMuted,
                                                       ),
@@ -376,7 +376,7 @@ class SavingsScreen extends StatelessWidget {
                                                     Text(
                                                       pctText,
                                                       style: TextStyle(
-                                                        fontSize: 12,
+                                                        fontSize: AppText.body,
                                                         fontWeight: FontWeight.w800,
                                                         color: pct >= 1.0 ? tokens.income : tokens.textPrimary,
                                                       ),
@@ -448,7 +448,7 @@ class SavingsScreen extends StatelessWidget {
                                                         label: Text(
                                                           'Tarik Dana',
                                                           style: TextStyle(
-                                                            fontSize: 12,
+                                                            fontSize: AppText.body,
                                                             fontWeight: FontWeight.w600,
                                                             color: goal.currentAmount > 0
                                                                 ? tokens.expense
@@ -477,7 +477,7 @@ class SavingsScreen extends StatelessWidget {
                                                         label: const Text(
                                                           'Isi Saldo',
                                                           style: TextStyle(
-                                                            fontSize: 12,
+                                                            fontSize: AppText.body,
                                                             fontWeight: FontWeight.w600,
                                                           ),
                                                         ),
@@ -543,7 +543,7 @@ class _SavingsSummaryCard extends StatelessWidget {
             'Total Tabungan Saya',
             style: TextStyle(
               color: tokens.headerMuted,
-              fontSize: 11,
+              fontSize: AppText.label,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -551,7 +551,7 @@ class _SavingsSummaryCard extends StatelessWidget {
           Text(
             provider.formatCurrency(totalSavings),
             style: TextStyle(
-              fontSize: 22,
+              fontSize: AppText.headline,
               fontWeight: FontWeight.w800,
               color: tokens.headerFg,
             ),
@@ -580,13 +580,13 @@ class _SavingsSummaryCard extends StatelessWidget {
             children: [
               Text(
                 '${(progressPct * 100).toStringAsFixed(1)}% dari target total',
-                style: TextStyle(color: tokens.headerMuted, fontSize: 11),
+                style: TextStyle(color: tokens.headerMuted, fontSize: AppText.label),
               ),
               const Spacer(),
               Text(
                 'Target: ${provider.formatCurrency(totalTarget)}',
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: AppText.label,
                   fontWeight: FontWeight.w600,
                   color: tokens.headerMuted,
                 ),
@@ -643,7 +643,7 @@ class _EmptySavingsState extends StatelessWidget {
           Text(
             'Belum Ada Target Tabungan',
             style: TextStyle(
-              fontSize: 15,
+              fontSize: AppText.subtitle,
               fontWeight: FontWeight.w700,
               color: tokens.textPrimary,
             ),
@@ -653,7 +653,7 @@ class _EmptySavingsState extends StatelessWidget {
             'Mulai buat target impian Anda dan pantau kemajuannya di sini!',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: AppText.body,
               color: tokens.textMuted,
             ),
           ),
@@ -750,13 +750,13 @@ class _AddSavingsGoalDialogState extends State<_AddSavingsGoalDialog> {
             children: [
               Text(
                 'Nama Target',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textMuted),
+                style: TextStyle(fontSize: AppText.body, fontWeight: FontWeight.w600, color: tokens.textMuted),
               ),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _titleCtrl,
                 autofocus: true,
-                style: TextStyle(fontSize: 14, color: tokens.textPrimary),
+                style: TextStyle(fontSize: AppText.subtitle, color: tokens.textPrimary),
                 decoration: InputDecoration(
                   hintText: 'Misal: Beli Laptop Baru',
                   fillColor: tokens.softSurface.withValues(alpha: 0.3),
@@ -781,13 +781,13 @@ class _AddSavingsGoalDialogState extends State<_AddSavingsGoalDialog> {
               const SizedBox(height: 18),
               Text(
                 'Nominal Target (Rp)',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textMuted),
+                style: TextStyle(fontSize: AppText.body, fontWeight: FontWeight.w600, color: tokens.textMuted),
               ),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _amountCtrl,
                 keyboardType: TextInputType.number,
-                style: TextStyle(fontSize: 14, color: tokens.textPrimary, fontWeight: FontWeight.w700),
+                style: TextStyle(fontSize: AppText.subtitle, color: tokens.textPrimary, fontWeight: FontWeight.w700),
                 onChanged: _onAmountChanged,
                 decoration: InputDecoration(
                   hintText: '0',
@@ -911,14 +911,14 @@ class _AddSavingFundsDialogState extends State<_AddSavingFundsDialog> {
             children: [
               Text(
                 'Nominal Setoran (Rp)',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textMuted),
+                style: TextStyle(fontSize: AppText.body, fontWeight: FontWeight.w600, color: tokens.textMuted),
               ),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _amountCtrl,
                 keyboardType: TextInputType.number,
                 autofocus: true,
-                style: TextStyle(fontSize: 16, color: tokens.textPrimary, fontWeight: FontWeight.w700),
+                style: TextStyle(fontSize: AppText.title, color: tokens.textPrimary, fontWeight: FontWeight.w700),
                 onChanged: _onAmountChanged,
                 decoration: InputDecoration(
                   hintText: '0',
@@ -944,12 +944,12 @@ class _AddSavingFundsDialogState extends State<_AddSavingFundsDialog> {
               const SizedBox(height: 18),
               Text(
                 'Catatan (Opsional)',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textMuted),
+                style: TextStyle(fontSize: AppText.body, fontWeight: FontWeight.w600, color: tokens.textMuted),
               ),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _noteCtrl,
-                style: TextStyle(fontSize: 14, color: tokens.textPrimary),
+                style: TextStyle(fontSize: AppText.subtitle, color: tokens.textPrimary),
                 decoration: InputDecoration(
                   hintText: 'Misal: Sisa uang belanja mingguan',
                   fillColor: tokens.softSurface.withValues(alpha: 0.3),
@@ -1088,7 +1088,7 @@ class _WithdrawFundsDialogState extends State<_WithdrawFundsDialog> {
                     Expanded(
                       child: RichText(
                         text: TextSpan(
-                          style: TextStyle(fontSize: 12, color: tokens.textMuted),
+                          style: TextStyle(fontSize: AppText.body, color: tokens.textMuted),
                           children: [
                             const TextSpan(text: 'Saldo tersedia: '),
                             TextSpan(
@@ -1109,14 +1109,14 @@ class _WithdrawFundsDialogState extends State<_WithdrawFundsDialog> {
               const SizedBox(height: 16),
               Text(
                 'Nominal Penarikan (Rp)',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textMuted),
+                style: TextStyle(fontSize: AppText.body, fontWeight: FontWeight.w600, color: tokens.textMuted),
               ),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _amountCtrl,
                 keyboardType: TextInputType.number,
                 autofocus: true,
-                style: TextStyle(fontSize: 16, color: tokens.expense, fontWeight: FontWeight.w700),
+                style: TextStyle(fontSize: AppText.title, color: tokens.expense, fontWeight: FontWeight.w700),
                 onChanged: _onAmountChanged,
                 decoration: InputDecoration(
                   hintText: '0',
@@ -1142,12 +1142,12 @@ class _WithdrawFundsDialogState extends State<_WithdrawFundsDialog> {
               const SizedBox(height: 18),
               Text(
                 'Catatan (Opsional)',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textMuted),
+                style: TextStyle(fontSize: AppText.body, fontWeight: FontWeight.w600, color: tokens.textMuted),
               ),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _noteCtrl,
-                style: TextStyle(fontSize: 14, color: tokens.textPrimary),
+                style: TextStyle(fontSize: AppText.subtitle, color: tokens.textPrimary),
                 decoration: InputDecoration(
                   hintText: 'Misal: Dipakai untuk keperluan darurat',
                   fillColor: tokens.softSurface.withValues(alpha: 0.3),
@@ -1272,13 +1272,13 @@ class _EditSavingsGoalDialogState extends State<_EditSavingsGoalDialog> {
             children: [
               Text(
                 'Nama Target',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textMuted),
+                style: TextStyle(fontSize: AppText.body, fontWeight: FontWeight.w600, color: tokens.textMuted),
               ),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _titleCtrl,
                 autofocus: true,
-                style: TextStyle(fontSize: 14, color: tokens.textPrimary),
+                style: TextStyle(fontSize: AppText.subtitle, color: tokens.textPrimary),
                 decoration: InputDecoration(
                   hintText: 'Misal: Beli Laptop Baru',
                   fillColor: tokens.softSurface.withValues(alpha: 0.3),
@@ -1303,13 +1303,13 @@ class _EditSavingsGoalDialogState extends State<_EditSavingsGoalDialog> {
               const SizedBox(height: 18),
               Text(
                 'Nominal Target (Rp)',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textMuted),
+                style: TextStyle(fontSize: AppText.body, fontWeight: FontWeight.w600, color: tokens.textMuted),
               ),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _amountCtrl,
                 keyboardType: TextInputType.number,
-                style: TextStyle(fontSize: 14, color: tokens.textPrimary, fontWeight: FontWeight.w700),
+                style: TextStyle(fontSize: AppText.subtitle, color: tokens.textPrimary, fontWeight: FontWeight.w700),
                 onChanged: _onAmountChanged,
                 decoration: InputDecoration(
                   hintText: '0',

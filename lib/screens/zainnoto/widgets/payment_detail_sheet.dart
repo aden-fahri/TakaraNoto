@@ -70,7 +70,7 @@ class _PartialPayDialogState extends State<_PartialPayDialog> {
             'Sisa tagihan ${formatRupiah(widget.remaining)}. Pembayaran '
             'otomatis mengisi tagihan tertua lebih dulu.',
             style: TextStyle(
-              fontSize: 11.5,
+              fontSize: AppText.label,
               height: 1.4,
               color: t.textMuted,
             ),
@@ -191,7 +191,7 @@ class _EditPaymentDialogState extends State<_EditPaymentDialog> {
                   Text(
                     formatTanggalSingkat(dateToStr(_date)),
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: AppText.bodyLarge,
                       color: t.textPrimary,
                     ),
                   ),
@@ -460,7 +460,7 @@ class _PaymentDetailSheetState extends State<PaymentDetailSheet> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: AppText.title,
                             fontWeight: FontWeight.w700,
                             color: t.textPrimary,
                           ),
@@ -469,7 +469,7 @@ class _PaymentDetailSheetState extends State<PaymentDetailSheet> {
                         Text(
                           widget.period.label,
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: AppText.body,
                             color: t.textMuted,
                           ),
                         ),
@@ -488,7 +488,7 @@ class _PaymentDetailSheetState extends State<PaymentDetailSheet> {
                     child: Text(
                       duesStatusLabel(status),
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: AppText.label,
                         fontWeight: FontWeight.w700,
                         color: statusColor,
                       ),
@@ -529,7 +529,7 @@ class _PaymentDetailSheetState extends State<PaymentDetailSheet> {
               Text(
                 'Riwayat Pembayaran',
                 style: TextStyle(
-                  fontSize: 13.5,
+                  fontSize: AppText.bodyLarge,
                   fontWeight: FontWeight.w700,
                   color: t.textPrimary,
                 ),
@@ -539,7 +539,7 @@ class _PaymentDetailSheetState extends State<PaymentDetailSheet> {
                 Text(
                   'Belum ada pembayaran untuk anggota ini.',
                   style: TextStyle(
-                    fontSize: 12.5,
+                    fontSize: AppText.body,
                     height: 1.4,
                     color: t.textMuted,
                   ),
@@ -607,7 +607,7 @@ class _Stat extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontSize: 10.5,
+              fontSize: AppText.micro,
               fontWeight: FontWeight.w500,
               color: t.textMuted,
             ),
@@ -618,7 +618,7 @@ class _Stat extends StatelessWidget {
             child: Text(
               value,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: AppText.subtitle,
                 fontWeight: FontWeight.w800,
                 color: color,
               ),
@@ -673,7 +673,7 @@ class _PaymentTile extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       formatTanggalSingkat(tx.date),
-                      style: TextStyle(fontSize: 11.5, color: t.textMuted),
+                      style: TextStyle(fontSize: AppText.label, color: t.textMuted),
                     ),
                   ],
                 ),
@@ -707,7 +707,7 @@ class _PaymentTile extends StatelessWidget {
               child: Text(
                 tx.note!,
                 style: TextStyle(
-                  fontSize: 11.5,
+                  fontSize: AppText.label,
                   height: 1.4,
                   color: t.textMuted,
                 ),
@@ -744,7 +744,7 @@ class _PaymentTile extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  fontSize: 11,
+                                  fontSize: AppText.label,
                                   color: t.textMuted,
                                 ),
                               ),

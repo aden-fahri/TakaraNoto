@@ -283,7 +283,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
             Text(
               tx.displayName,
               style: TextStyle(
-                fontSize: 15,
+                fontSize: AppText.subtitle,
                 fontWeight: FontWeight.w700,
                 color: tokens.textPrimary,
               ),
@@ -291,12 +291,12 @@ class _AddTransactionModalState extends State<AddTransactionModal>
             const SizedBox(height: 6),
             Text(
               provider.formatCurrency(tx.amount),
-              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: transferColor),
+              style: const TextStyle(fontSize: AppText.displayLarge, fontWeight: FontWeight.w800, color: transferColor),
             ),
             const SizedBox(height: 6),
             Text(
               tx.date,
-              style: TextStyle(fontSize: 12, color: tokens.textMuted),
+              style: TextStyle(fontSize: AppText.body, color: tokens.textMuted),
             ),
             if (tx.note.isNotEmpty) ...[
               const SizedBox(height: 6),
@@ -305,7 +305,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                 child: Text(
                   tx.note,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12, color: tokens.textMuted),
+                  style: TextStyle(fontSize: AppText.body, color: tokens.textMuted),
                 ),
               ),
             ],
@@ -328,7 +328,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                       child: Text(
                         'Transfer antar dompet tidak dihitung sebagai pemasukan atau pengeluaran. Menghapus transaksi ini akan menghapus kedua sisi pasangan transfer.',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: AppText.body,
                           fontWeight: FontWeight.w500,
                           color: transferColor,
                         ),
@@ -465,7 +465,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                     Text(
                       'Nominal',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: AppText.body,
                         fontWeight: FontWeight.w600,
                         color: tokens.textMuted,
                       ),
@@ -481,7 +481,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                           Text(
                             'Rp',
                             style: TextStyle(
-                              fontSize: 28,
+                              fontSize: AppText.displayLarge,
                               fontWeight: FontWeight.w700,
                               color: tokens.textMuted,
                             ),
@@ -493,7 +493,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                               keyboardType: TextInputType.number,
                               autofocus: widget.editTransaction == null,
                               style: TextStyle(
-                                fontSize: 40,
+                                fontSize: AppText.hero,
                                 fontWeight: FontWeight.w800,
                                 color: typeColor,
                               ),
@@ -501,7 +501,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                                 border: InputBorder.none,
                                 hintText: '0',
                                 hintStyle: TextStyle(
-                                  fontSize: 40,
+                                  fontSize: AppText.hero,
                                   fontWeight: FontWeight.w800,
                                   color: tokens.textMuted.withValues(alpha: 0.4),
                                 ),
@@ -521,7 +521,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                         Text(
                           'Kategori',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: AppText.body,
                             fontWeight: FontWeight.w600,
                             color: tokens.textMuted,
                           ),
@@ -538,7 +538,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                           child: Text(
                             'Kelola Kategori',
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: AppText.body,
                               fontWeight: FontWeight.w700,
                               color: typeColor,
                             ),
@@ -593,7 +593,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                                   overflow: TextOverflow.ellipsis,
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
-                                    fontSize: 10,
+                                    fontSize: AppText.micro,
                                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                                     color: isSelected
                                         ? color
@@ -624,7 +624,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                               child: Text(
                                 'Dicatat sebagai Transfer ke Dompet E-Wallet, tidak dihitung sebagai pengeluaran.',
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: AppText.body,
                                   fontWeight: FontWeight.w500,
                                   color: const Color(0xFF3f51b5),
                                 ),
@@ -652,7 +652,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                           Text(
                             'Target Tabungan',
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: AppText.body,
                               fontWeight: FontWeight.w600,
                               color: tokens.textMuted,
                             ),
@@ -674,7 +674,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                                         child: Text(
                                           'Belum ada target tabungan. Silakan buat target di tab Tabungan terlebih dahulu.',
                                           style: TextStyle(
-                                            fontSize: 12,
+                                            fontSize: AppText.body,
                                             fontWeight: FontWeight.w500,
                                             color: tokens.expense,
                                           ),
@@ -701,7 +701,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                                       icon: Icon(Icons.arrow_drop_down_rounded,
                                           color: tokens.textPrimary),
                                       style: TextStyle(
-                                        fontSize: 14,
+                                        fontSize: AppText.subtitle,
                                         fontWeight: FontWeight.w600,
                                         color: tokens.textPrimary,
                                       ),
@@ -726,7 +726,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                     Text(
                       'Tanggal',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: AppText.body,
                         fontWeight: FontWeight.w600,
                         color: tokens.textMuted,
                       ),
@@ -749,7 +749,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                             Text(
                               DateFormat('dd MMM yyyy', 'id').format(_selectedDate),
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: AppText.subtitle,
                                 fontWeight: FontWeight.w600,
                                 color: tokens.textPrimary,
                               ),
@@ -764,7 +764,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                     Text(
                       'Catatan (Opsional)',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: AppText.body,
                         fontWeight: FontWeight.w600,
                         color: tokens.textMuted,
                       ),
@@ -774,7 +774,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                       controller: _noteCtrl,
                       maxLines: 2,
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: AppText.subtitle,
                         color: tokens.textPrimary,
                       ),
                       decoration: InputDecoration(
@@ -812,7 +812,7 @@ class _AddTransactionModalState extends State<AddTransactionModal>
                   icon: const Icon(Icons.check_rounded, size: 20),
                   label: Text(
                     'Simpan Transaksi',
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                    style: const TextStyle(fontSize: AppText.subtitle, fontWeight: FontWeight.w700),
                   ),
                 ),
               ),
@@ -889,7 +889,7 @@ class _AnimatedTypeToggle extends StatelessWidget {
                         Text(
                           'Pengeluaran',
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: AppText.bodyLarge,
                             fontWeight: FontWeight.w600,
                             color: type == 'expense' ? Colors.white : Colors.grey,
                           ),
@@ -913,7 +913,7 @@ class _AnimatedTypeToggle extends StatelessWidget {
                         Text(
                           'Pemasukan',
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: AppText.bodyLarge,
                             fontWeight: FontWeight.w600,
                             color: type == 'income' ? Colors.white : Colors.grey,
                           ),

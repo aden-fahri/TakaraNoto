@@ -9,15 +9,18 @@ class ThemePreset {
   final Color color;
 }
 
-/// Holds the user's accent + background color choices and persists them.
+/// Holds the user's accent + background color choices plus the light/dark
+/// preference, and persists them.
 ///
-/// Storage keys: `custom_primary_color` (int ARGB), `custom_background_color`.
-/// Defaults: Plum Klasik accent + Krem Hangat background (tampilan lama).
+/// Storage keys: `custom_primary_color` (int ARGB), `custom_background_color`,
+/// `dark_mode_enabled` (bool).
+/// Defaults: Plum Klasik accent + Krem Hangat background, light mode.
 class ThemeController extends ChangeNotifier {
   ThemeController();
 
   static const String prefKey = 'custom_primary_color';
   static const String backgroundPrefKey = 'custom_background_color';
+  static const String darkModePrefKey = 'dark_mode_enabled';
   static const int defaultColorValue = 0xFF381932;
   static const int defaultBackgroundValue = 0xFFFFF3E6;
 
@@ -40,10 +43,12 @@ class ThemeController extends ChangeNotifier {
 
   Color _seed = const Color(defaultColorValue);
   Color _background = const Color(defaultBackgroundValue);
+  bool _darkMode = false;
   bool _isReady = false;
 
   Color get seed => _seed;
   Color get background => _background;
+  bool get darkMode => _darkMode;
   bool get isReady => _isReady;
 
   /// True when the given color matches one of the built-in accent presets.
@@ -65,6 +70,7 @@ class ThemeController extends ChangeNotifier {
       if (storedBackground != null) {
         _background = Color(storedBackground);
       }
+      _darkMode = prefs.getBool(darkModePrefKey) ?? false;
     } catch (error) {
       debugPrint('ThemeController: gagal memuat warna tema: $error');
     }
@@ -93,6 +99,18 @@ class ThemeController extends ChangeNotifier {
       await prefs.setInt(backgroundPrefKey, color.toARGB32());
     } catch (error) {
       debugPrint('ThemeController: gagal menyimpan warna latar: $error');
+    }
+  }
+
+  Future<void> setDarkMode(bool value) async {
+    if (value == _darkMode) return;
+    _darkMode = value;
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(darkModePrefKey, value);
+    } catch (error) {
+      debugPrint('ThemeController: gagal menyimpan mode gelap: $error');
     }
   }
 }

@@ -104,7 +104,7 @@ class _Banner extends StatelessWidget {
                         child: Text(
                           'Iuran Kas',
                           style: TextStyle(
-                            fontSize: 20,
+                            fontSize: AppText.headline,
                             fontWeight: FontWeight.w800,
                             color: t.headerFg,
                           ),
@@ -124,7 +124,7 @@ class _Banner extends StatelessWidget {
                           child: Text(
                             '$paid/$counted lunas',
                             style: TextStyle(
-                              fontSize: 11.5,
+                              fontSize: AppText.label,
                               fontWeight: FontWeight.w600,
                               color: t.headerFg,
                             ),
@@ -162,7 +162,7 @@ class _PeriodNavigator extends StatelessWidget {
         'Belum ada periode iuran',
         textAlign: TextAlign.center,
         style: TextStyle(
-          fontSize: 14,
+          fontSize: AppText.subtitle,
           fontWeight: FontWeight.w600,
           color: t.headerMuted,
         ),
@@ -189,7 +189,7 @@ class _PeriodNavigator extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 15,
+                  fontSize: AppText.subtitle,
                   fontWeight: FontWeight.w700,
                   color: t.headerFg,
                 ),
@@ -197,7 +197,7 @@ class _PeriodNavigator extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 'Jatuh tempo ${formatTanggalSingkat(selected.dueDate)}',
-                style: TextStyle(fontSize: 11, color: t.headerMuted),
+                style: TextStyle(fontSize: AppText.label, color: t.headerMuted),
               ),
             ],
           ),
@@ -369,7 +369,7 @@ class _ToggleSegment extends StatelessWidget {
               builder: (context, value, _) => Text(
                 label,
                 style: TextStyle(
-                  fontSize: 12.5,
+                  fontSize: AppText.body,
                   fontWeight: FontWeight.w700,
                   color: value,
                 ),
@@ -493,7 +493,7 @@ class _ChecklistItem extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: AppText.subtitle,
                       fontWeight: FontWeight.w600,
                       color: t.textPrimary,
                     ),
@@ -513,7 +513,7 @@ class _ChecklistItem extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: AppText.label,
                               color: t.textMuted,
                             ),
                           ),
@@ -530,7 +530,7 @@ class _ChecklistItem extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: AppText.label,
                               color: overdue ? t.expense : t.textMuted,
                             ),
                           ),
@@ -548,7 +548,7 @@ class _ChecklistItem extends StatelessWidget {
                 Text(
                   formatRupiah(row.amountDue),
                   style: TextStyle(
-                    fontSize: 13.5,
+                    fontSize: AppText.bodyLarge,
                     fontWeight: FontWeight.w700,
                     color: t.textPrimary,
                   ),
@@ -587,7 +587,7 @@ class _ChecklistItem extends StatelessWidget {
                 Text(
                   'Lunas',
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: AppText.label,
                     fontWeight: FontWeight.w700,
                     color: t.accent,
                   ),
@@ -617,7 +617,7 @@ class _StatusChip extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 10.5,
+          fontSize: AppText.micro,
           fontWeight: FontWeight.w700,
           color: color,
         ),
@@ -660,7 +660,7 @@ class _EmptyNotice extends StatelessWidget {
             Text(
               title,
               style: TextStyle(
-                fontSize: 16,
+                fontSize: AppText.title,
                 fontWeight: FontWeight.w700,
                 color: t.textPrimary,
               ),
@@ -669,7 +669,7 @@ class _EmptyNotice extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, height: 1.5, color: t.textMuted),
+              style: TextStyle(fontSize: AppText.bodyLarge, height: 1.5, color: t.textMuted),
             ),
           ],
         ),

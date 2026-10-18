@@ -181,7 +181,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 child: Text(
                                   'Lihat Semua →',
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: AppText.body,
                                     fontWeight: FontWeight.w600,
                                     color: tokens.accent,
                                   ),
@@ -222,7 +222,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 foregroundColor: tokens.onAccent,
                 elevation: 4,
                 icon: const Icon(Icons.add_rounded, size: 20),
-                label: const Text('Tambah', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                label: const Text('Tambah', style: TextStyle(fontWeight: FontWeight.w700, fontSize: AppText.subtitle)),
                 onPressed: _showAddTx,
               )
             : FloatingActionButton(
@@ -316,7 +316,7 @@ class _DashboardBanner extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontSize: 13,
+                                fontSize: AppText.bodyLarge,
                                 fontWeight: FontWeight.w500,
                                 color: tokens.headerMuted,
                               ),
@@ -326,7 +326,7 @@ class _DashboardBanner extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontSize: 22,
+                                fontSize: AppText.headline,
                                 fontWeight: FontWeight.w800,
                                 color: tokens.headerFg,
                               ),
@@ -426,7 +426,7 @@ class _DashboardBanner extends StatelessWidget {
                                       Text(
                                         'DOMPET UTAMA',
                                         style: TextStyle(
-                                          fontSize: 11,
+                                          fontSize: AppText.label,
                                           fontWeight: FontWeight.w800,
                                           letterSpacing: 1.1,
                                           color: tokens.headerFg.withValues(alpha: 0.85),
@@ -456,7 +456,7 @@ class _DashboardBanner extends StatelessWidget {
                                         Text(
                                           monthName,
                                           style: TextStyle(
-                                            fontSize: 10.5,
+                                            fontSize: AppText.micro,
                                             fontWeight: FontWeight.w700,
                                             color: tokens.headerFg,
                                           ),
@@ -487,7 +487,7 @@ class _DashboardBanner extends StatelessWidget {
                                         Text(
                                           'Saldo Bulan Ini',
                                           style: TextStyle(
-                                            fontSize: 12,
+                                            fontSize: AppText.body,
                                             fontWeight: FontWeight.w500,
                                             color: tokens.headerMuted,
                                           ),
@@ -507,7 +507,7 @@ class _DashboardBanner extends StatelessWidget {
                                       child: Text(
                                         provider.formatCurrency(balance),
                                         style: TextStyle(
-                                          fontSize: 32,
+                                          fontSize: AppText.stat,
                                           fontWeight: FontWeight.w900,
                                           letterSpacing: -0.5,
                                           color: tokens.headerFg,
@@ -541,14 +541,14 @@ class _DashboardBanner extends StatelessWidget {
                                     Text(
                                       'Uang Riil (Bulan Lalu + Ini): ',
                                       style: TextStyle(
-                                        fontSize: 11,
+                                        fontSize: AppText.label,
                                         color: tokens.headerMuted,
                                       ),
                                     ),
                                     Text(
                                       provider.formatCurrency(provider.cumulativeBalance),
                                       style: TextStyle(
-                                        fontSize: 12,
+                                        fontSize: AppText.body,
                                         fontWeight: FontWeight.w800,
                                         color: tokens.headerFg,
                                       ),
@@ -568,7 +568,7 @@ class _DashboardBanner extends StatelessWidget {
                                       Text(
                                         provider.formatCurrency(income),
                                         style: TextStyle(
-                                          fontSize: 12,
+                                          fontSize: AppText.body,
                                           fontWeight: FontWeight.w700,
                                           color: tokens.incomeOnHeader,
                                         ),
@@ -583,7 +583,7 @@ class _DashboardBanner extends StatelessWidget {
                                       Text(
                                         provider.formatCurrency(expense),
                                         style: TextStyle(
-                                          fontSize: 12,
+                                          fontSize: AppText.body,
                                           fontWeight: FontWeight.w700,
                                           color: tokens.expenseOnHeader,
                                         ),
@@ -648,8 +648,8 @@ class _QuickChip extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: TextStyle(fontSize: 10, color: tokens.textMuted, fontWeight: FontWeight.w500)),
-                Text(value, style: TextStyle(fontSize: 14, color: tokens.textPrimary, fontWeight: FontWeight.w700)),
+                Text(label, style: TextStyle(fontSize: AppText.micro, color: tokens.textMuted, fontWeight: FontWeight.w500)),
+                Text(value, style: TextStyle(fontSize: AppText.subtitle, color: tokens.textPrimary, fontWeight: FontWeight.w700)),
               ],
             ),
           ],
@@ -720,7 +720,7 @@ class _EWalletCard extends StatelessWidget {
                   Text(
                     'Dompet E-Wallet',
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: AppText.label,
                       fontWeight: FontWeight.w500,
                       color: tokens.textMuted,
                     ),
@@ -731,7 +731,7 @@ class _EWalletCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: AppText.title,
                       fontWeight: FontWeight.w800,
                       color: tokens.textPrimary,
                     ),
@@ -747,7 +747,7 @@ class _EWalletCard extends StatelessWidget {
               ),
               child: const Row(
                 children: [
-                  Text('Kelola', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF3f51b5))),
+                  Text('Kelola', style: TextStyle(fontSize: AppText.label, fontWeight: FontWeight.w700, color: Color(0xFF3f51b5))),
                   SizedBox(width: 3),
                   Icon(Icons.arrow_forward_ios_rounded, size: 9, color: Color(0xFF3f51b5)),
                 ],
@@ -824,20 +824,20 @@ class _TxCard extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(tx.displayName,
-                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: tokens.textPrimary)),
+                                  style: TextStyle(fontSize: AppText.subtitle, fontWeight: FontWeight.w600, color: tokens.textPrimary)),
                               if (tx.note.isNotEmpty) ...[
                                 const SizedBox(height: 2),
                                 Text(tx.note, maxLines: 1, overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(fontSize: 12, color: tokens.textMuted)),
+                                    style: TextStyle(fontSize: AppText.body, color: tokens.textMuted)),
                               ],
                               const SizedBox(height: 2),
-                              Text(tx.date, style: TextStyle(fontSize: 11, color: tokens.textMuted)),
+                              Text(tx.date, style: TextStyle(fontSize: AppText.label, color: tokens.textMuted)),
                             ],
                           ),
                         ),
                         Text(
                           '$sign ${provider.formatCurrency(tx.amount)}',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: txColor),
+                          style: TextStyle(fontSize: AppText.subtitle, fontWeight: FontWeight.w700, color: txColor),
                         ),
                       ],
                     ),
@@ -876,12 +876,12 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text('Belum ada transaksi',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: tokens.textPrimary)),
+                style: TextStyle(fontSize: AppText.subtitle, fontWeight: FontWeight.w600, color: tokens.textPrimary)),
             const SizedBox(height: 6),
             Text(
               'Mulai catat pemasukan dan pengeluaran\nkeuangan Anda di sini.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: tokens.textMuted, height: 1.6),
+              style: TextStyle(fontSize: AppText.body, color: tokens.textMuted, height: 1.6),
             ),
             const SizedBox(height: 20),
             ElevatedButton.icon(
@@ -893,7 +893,7 @@ class _EmptyState extends StatelessWidget {
               ),
               onPressed: onAdd,
               icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('Catat Sekarang', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+              label: const Text('Catat Sekarang', style: TextStyle(fontSize: AppText.bodyLarge, fontWeight: FontWeight.w600)),
             ),
           ],
         ),

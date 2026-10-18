@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:sqflite/sqflite.dart' show databaseFactory;
@@ -8,6 +9,7 @@ import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'providers/app_mode_controller.dart';
 import 'providers/finance_provider.dart';
 import 'theme/app_theme.dart';
+import 'theme/app_tokens.dart';
 import 'theme/theme_controller.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/history_screen.dart';
@@ -22,6 +24,9 @@ import 'zainnoto/providers/zainnoto_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // D6b: Poppins ikut dibundel di `assets/fonts/`, jadi jangan pernah ambil
+  // font dari internet saat runtime (offline-first, tanpa flicker font).
+  GoogleFonts.config.allowRuntimeFetching = false;
   // Ganti layar putih polos saat widget gagal di-build dengan kartu error
   // yang terlihat, supaya kegagalan tidak lagi menyamar menjadi blank screen.
   ErrorWidget.builder = (details) => _BuildErrorView(details: details);
@@ -64,7 +69,13 @@ class MyApp extends StatelessWidget {
             themeController.seed,
             themeController.background,
           ),
-          themeMode: ThemeMode.light, // ← Force light mode
+          darkTheme: AppTheme.getTheme(
+            themeController.seed,
+            themeController.background,
+            dark: true,
+          ),
+          themeMode:
+              themeController.darkMode ? ThemeMode.dark : ThemeMode.light,
           home: const SplashScreen(nextScreen: AppModeGate()),
         ),
       ),
@@ -101,7 +112,7 @@ class _BuildErrorView extends StatelessWidget {
                   'Terjadi kesalahan pada bagian ini',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 15,
+                    fontSize: AppText.subtitle,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF0F172A),
                   ),
@@ -113,7 +124,7 @@ class _BuildErrorView extends StatelessWidget {
                   maxLines: 6,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 11.5,
+                    fontSize: AppText.label,
                     color: Color(0xFF64748B),
                   ),
                 ),

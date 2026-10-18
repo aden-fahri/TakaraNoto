@@ -39,7 +39,7 @@ class _TransaksiTabState extends State<TransaksiTab> {
               icon: const Icon(Icons.add_shopping_cart_rounded, size: 20),
               label: const Text(
                 'Catat Transaksi Kas',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: AppText.bodyLarge),
               ),
               elevation: 4,
             )
@@ -109,7 +109,7 @@ class _Banner extends StatelessWidget {
                         child: Text(
                           'Transaksi Kas',
                           style: TextStyle(
-                            fontSize: 20,
+                            fontSize: AppText.headline,
                             fontWeight: FontWeight.w800,
                             color: t.headerFg,
                           ),
@@ -135,7 +135,7 @@ class _Banner extends StatelessWidget {
                               Text(
                                 'Catat',
                                 style: TextStyle(
-                                  fontSize: 12.5,
+                                  fontSize: AppText.body,
                                   fontWeight: FontWeight.w700,
                                   color: t.headerFg,
                                 ),
@@ -212,7 +212,7 @@ class _BannerStat extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: TextStyle(fontSize: 10.5, color: t.headerMuted),
+                  style: TextStyle(fontSize: AppText.micro, color: t.headerMuted),
                 ),
                 FittedBox(
                   fit: BoxFit.scaleDown,
@@ -220,7 +220,7 @@ class _BannerStat extends StatelessWidget {
                   child: Text(
                     value,
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: AppText.bodyLarge,
                       fontWeight: FontWeight.w700,
                       color: color,
                     ),
@@ -307,7 +307,7 @@ class _FilterChip extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: AppText.body,
             fontWeight: FontWeight.w600,
             color: selected ? t.onAccent : t.textMuted,
           ),
@@ -380,7 +380,7 @@ class _TransactionList extends StatelessWidget {
               child: Text(
                 _dateHeader(item),
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: AppText.body,
                   fontWeight: FontWeight.w700,
                   color: t.textMuted,
                 ),
@@ -474,7 +474,7 @@ class _TransactionTile extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: AppText.subtitle,
                       fontWeight: FontWeight.w600,
                       color: t.textPrimary,
                     ),
@@ -484,7 +484,7 @@ class _TransactionTile extends StatelessWidget {
                     subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 11.5, color: t.textMuted),
+                    style: TextStyle(fontSize: AppText.label, color: t.textMuted),
                   ),
                 ],
               ),
@@ -493,7 +493,7 @@ class _TransactionTile extends StatelessWidget {
             Text(
               '$amountPrefix${formatRupiah(tx.amount)}',
               style: TextStyle(
-                fontSize: 13.5,
+                fontSize: AppText.bodyLarge,
                 fontWeight: FontWeight.w700,
                 color: amountColor,
               ),
@@ -540,7 +540,7 @@ class _EmptyNotice extends StatelessWidget {
             Text(
               title,
               style: TextStyle(
-                fontSize: 16,
+                fontSize: AppText.title,
                 fontWeight: FontWeight.w700,
                 color: t.textPrimary,
               ),
@@ -549,7 +549,7 @@ class _EmptyNotice extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, height: 1.5, color: t.textMuted),
+              style: TextStyle(fontSize: AppText.bodyLarge, height: 1.5, color: t.textMuted),
             ),
           ],
         ),

@@ -131,7 +131,7 @@ class _IuranMatrixState extends State<IuranMatrix> {
                 Text(
                   'Keterangan Status:',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: AppText.body,
                     fontWeight: FontWeight.w700,
                     color: t.textPrimary,
                   ),
@@ -154,7 +154,7 @@ class _IuranMatrixState extends State<IuranMatrix> {
           child: Text(
             'Nama Anggota',
             style: TextStyle(
-              fontSize: 12.5,
+              fontSize: AppText.body,
               fontWeight: FontWeight.w700,
               color: t.textMuted,
             ),
@@ -195,7 +195,7 @@ class _IuranMatrixState extends State<IuranMatrix> {
                   child: Text(
                     member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: AppText.label,
                       fontWeight: FontWeight.w700,
                       color: t.accent,
                     ),
@@ -209,7 +209,7 @@ class _IuranMatrixState extends State<IuranMatrix> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: AppText.bodyLarge,
                     fontWeight: FontWeight.w600,
                     color: t.textPrimary,
                   ),
@@ -250,7 +250,7 @@ class _IuranMatrixState extends State<IuranMatrix> {
           border: Border.all(color: t.border.withValues(alpha: 0.6)),
         ),
         child: Center(
-          child: Text('—', style: TextStyle(color: t.textMuted, fontSize: 12)),
+          child: Text('—', style: TextStyle(color: t.textMuted, fontSize: AppText.body)),
         ),
       );
     }
@@ -319,7 +319,7 @@ class _IuranMatrixState extends State<IuranMatrix> {
         Text(
           label,
           style: TextStyle(
-            fontSize: 11.5,
+            fontSize: AppText.label,
             fontWeight: FontWeight.w500,
             color: t.textPrimary,
           ),
@@ -347,7 +347,7 @@ class _PeriodHeader extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: AppText.label,
               fontWeight: FontWeight.w700,
               color: t.textPrimary,
             ),
@@ -391,7 +391,7 @@ class _MatrixNotice extends StatelessWidget {
             Text(
               title,
               style: TextStyle(
-                fontSize: 16,
+                fontSize: AppText.title,
                 fontWeight: FontWeight.w700,
                 color: t.textPrimary,
               ),
@@ -400,7 +400,7 @@ class _MatrixNotice extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, height: 1.5, color: t.textMuted),
+              style: TextStyle(fontSize: AppText.bodyLarge, height: 1.5, color: t.textMuted),
             ),
           ],
         ),

@@ -128,7 +128,7 @@ class _StatsScreenState extends State<StatsScreen> {
                           children: [
                             Text(
                               'Statistik',
-                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: tokens.headerFg),
+                              style: TextStyle(fontSize: AppText.headline, fontWeight: FontWeight.w800, color: tokens.headerFg),
                             ),
                             const SizedBox(height: 8),
                             Row(
@@ -141,7 +141,7 @@ class _StatsScreenState extends State<StatsScreen> {
                                 Text(
                                   _monthName(current),
                                   style: TextStyle(
-                                    fontSize: 13, fontWeight: FontWeight.w600,
+                                    fontSize: AppText.bodyLarge, fontWeight: FontWeight.w600,
                                     color: tokens.headerMuted,
                                   ),
                                 ),
@@ -167,7 +167,7 @@ class _StatsScreenState extends State<StatsScreen> {
                               children: [
                                 Icon(Icons.share_outlined, size: 14, color: tokens.headerMuted),
                                 SizedBox(width: 6),
-                                Text('Ekspor', style: TextStyle(fontSize: 12, color: tokens.headerMuted, fontWeight: FontWeight.w600)),
+                                Text('Ekspor', style: TextStyle(fontSize: AppText.body, color: tokens.headerMuted, fontWeight: FontWeight.w600)),
                               ],
                             ),
                           ),
@@ -301,7 +301,7 @@ class _AnalyticsCard extends StatelessWidget {
                 Text(
                   showIncome ? 'Analitika Pemasukan' : 'Analitika Pengeluaran',
                   style: TextStyle(
-                    fontSize: 14, fontWeight: FontWeight.w700, color: tokens.textPrimary,
+                    fontSize: AppText.subtitle, fontWeight: FontWeight.w700, color: tokens.textPrimary,
                   ),
                 ),
                 _ModeToggle(showIncome: showIncome, onToggle: onToggle),
@@ -320,7 +320,7 @@ class _AnalyticsCard extends StatelessWidget {
                   Text(
                     usagePct != null ? 'TOTAL TERPAKAI' : 'TOTAL',
                     style: TextStyle(
-                      fontSize: 9, fontWeight: FontWeight.w700,
+                      fontSize: AppText.micro, fontWeight: FontWeight.w700,
                       color: tokens.textMuted, letterSpacing: 0.8,
                     ),
                   ),
@@ -329,7 +329,7 @@ class _AnalyticsCard extends StatelessWidget {
                     Text(
                       '${(usagePct! * 100).round()}%',
                       style: TextStyle(
-                        fontSize: 24, fontWeight: FontWeight.w800, color: tokens.textPrimary,
+                        fontSize: AppText.display, fontWeight: FontWeight.w800, color: tokens.textPrimary,
                       ),
                     )
                   else
@@ -338,7 +338,7 @@ class _AnalyticsCard extends StatelessWidget {
                       child: Text(
                         provider.formatCurrency(total),
                         style: TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w800, color: tokens.textPrimary,
+                          fontSize: AppText.title, fontWeight: FontWeight.w800, color: tokens.textPrimary,
                         ),
                       ),
                     ),
@@ -371,14 +371,14 @@ class _AnalyticsCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textPrimary,
+                          fontSize: AppText.body, fontWeight: FontWeight.w600, color: tokens.textPrimary,
                         ),
                       ),
                     ),
                     Text(
                       provider.formatCurrency(val),
                       style: TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.w700, color: tokens.textPrimary,
+                        fontSize: AppText.body, fontWeight: FontWeight.w700, color: tokens.textPrimary,
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -388,7 +388,7 @@ class _AnalyticsCard extends StatelessWidget {
                         '${pct.round()}%',
                         textAlign: TextAlign.right,
                         style: TextStyle(
-                          fontSize: 11, fontWeight: FontWeight.w600, color: tokens.textMuted,
+                          fontSize: AppText.label, fontWeight: FontWeight.w600, color: tokens.textMuted,
                         ),
                       ),
                     ),
@@ -426,7 +426,7 @@ class _ModeToggle extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: AppText.label,
               fontWeight: FontWeight.w700,
               color: active ? tokens.onAccent : tokens.textMuted,
             ),
@@ -495,12 +495,12 @@ class _WeeklyExpenseCard extends StatelessWidget {
           children: [
             Text(
               'Arus Pengeluaran',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: tokens.textPrimary),
+              style: TextStyle(fontSize: AppText.subtitle, fontWeight: FontWeight.w700, color: tokens.textPrimary),
             ),
             const SizedBox(height: 4),
             Text(
               'Rata-rata ${provider.formatCurrency(avg)}/minggu',
-              style: TextStyle(fontSize: 11, color: tokens.textMuted),
+              style: TextStyle(fontSize: AppText.label, color: tokens.textMuted),
             ),
             const SizedBox(height: 24),
             Row(
@@ -546,7 +546,7 @@ class _WeeklyExpenseCard extends StatelessWidget {
                       Text(
                         'M${index + 1}',
                         style: TextStyle(
-                          fontSize: 10, fontWeight: FontWeight.w600, color: tokens.textMuted,
+                          fontSize: AppText.micro, fontWeight: FontWeight.w600, color: tokens.textMuted,
                         ),
                       ),
                     ],
@@ -603,7 +603,7 @@ class _SummaryCard extends StatelessWidget {
             children: [
               Text(
                 'Ringkasan Bulan Ini',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: tokens.headerFg),
+                style: TextStyle(fontSize: AppText.bodyLarge, fontWeight: FontWeight.w700, color: tokens.headerFg),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -616,7 +616,7 @@ class _SummaryCard extends StatelessWidget {
                 child: Text(
                   hasBudget ? '${(pct * 100).round()}% terpakai' : 'Belum ada anggaran',
                   style: TextStyle(
-                    fontSize: 10, fontWeight: FontWeight.w700,
+                    fontSize: AppText.micro, fontWeight: FontWeight.w700,
                     color: hasBudget ? badgeColor : tokens.headerMuted,
                   ),
                 ),
@@ -626,12 +626,12 @@ class _SummaryCard extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             'Total Pengeluaran',
-            style: TextStyle(fontSize: 11, color: tokens.headerMuted),
+            style: TextStyle(fontSize: AppText.label, color: tokens.headerMuted),
           ),
           const SizedBox(height: 4),
           Text(
             provider.formatCurrency(expense),
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: tokens.headerFg),
+            style: TextStyle(fontSize: AppText.display, fontWeight: FontWeight.w800, color: tokens.headerFg),
           ),
           if (hasBudget) ...[
             const SizedBox(height: 10),
@@ -663,14 +663,14 @@ class _SummaryCard extends StatelessWidget {
                   children: [
                     Text(
                       'Rata-rata Harian',
-                      style: TextStyle(fontSize: 11, color: tokens.headerMuted),
+                      style: TextStyle(fontSize: AppText.label, color: tokens.headerMuted),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       provider.formatCurrency(dailyAvg),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: tokens.headerFg),
+                      style: TextStyle(fontSize: AppText.subtitle, fontWeight: FontWeight.w700, color: tokens.headerFg),
                     ),
                   ],
                 ),
@@ -681,7 +681,7 @@ class _SummaryCard extends StatelessWidget {
                   children: [
                     Text(
                       'Sisa Anggaran',
-                      style: TextStyle(fontSize: 11, color: tokens.headerMuted),
+                      style: TextStyle(fontSize: AppText.label, color: tokens.headerMuted),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -689,7 +689,7 @@ class _SummaryCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: AppText.subtitle,
                         fontWeight: FontWeight.w700,
                         color: hasBudget
                             ? (remaining >= 0 ? tokens.incomeOnHeader : tokens.expenseOnHeader)
@@ -708,13 +708,13 @@ class _SummaryCard extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 'Ditabung Bersih',
-                style: TextStyle(fontSize: 11, color: tokens.headerMuted),
+                style: TextStyle(fontSize: AppText.label, color: tokens.headerMuted),
               ),
               const Spacer(),
               Text(
                 provider.formatCurrency(netSaved),
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: AppText.subtitle,
                   fontWeight: FontWeight.w700,
                   color: netSaved >= 0 ? tokens.incomeOnHeader : tokens.expenseOnHeader,
                 ),
@@ -742,7 +742,7 @@ class _SummaryCard extends StatelessWidget {
                         'Atur anggaran sekarang',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.headerFg),
+                        style: TextStyle(fontSize: AppText.body, fontWeight: FontWeight.w600, color: tokens.headerFg),
                       ),
                     ),
                     SizedBox(width: 6),
@@ -803,14 +803,14 @@ class _PosMonitor extends StatelessWidget {
         Text(
           'PEMANTAUAN POS PENGELUARAN',
           style: TextStyle(
-            fontSize: 11, fontWeight: FontWeight.w800,
+            fontSize: AppText.label, fontWeight: FontWeight.w800,
             color: tokens.textPrimary, letterSpacing: 1.1,
           ),
         ),
         const SizedBox(height: 2),
         Text(
           'Slider Batas & Realisasi',
-          style: TextStyle(fontSize: 11, color: tokens.textMuted),
+          style: TextStyle(fontSize: AppText.label, color: tokens.textMuted),
         ),
         const SizedBox(height: 12),
         if (budgets.isEmpty)
@@ -834,7 +834,7 @@ class _PosMonitor extends StatelessWidget {
                     Expanded(
                       child: Text(
                         'Belum ada pos anggaran. Tekan untuk mengatur batas pengeluaran per kategori.',
-                        style: TextStyle(fontSize: 12, color: tokens.textMuted, height: 1.5),
+                        style: TextStyle(fontSize: AppText.body, color: tokens.textMuted, height: 1.5),
                       ),
                     ),
                     Icon(Icons.arrow_forward_ios_rounded, size: 14, color: tokens.textMuted),
@@ -880,7 +880,7 @@ class _PosMonitor extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontSize: 13, fontWeight: FontWeight.w700, color: tokens.textPrimary,
+                                fontSize: AppText.bodyLarge, fontWeight: FontWeight.w700, color: tokens.textPrimary,
                               ),
                             ),
                           ),
@@ -890,13 +890,13 @@ class _PosMonitor extends StatelessWidget {
                               Text(
                                 '${(pct * 100).round()}%',
                                 style: TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.w800, color: barColor,
+                                  fontSize: AppText.subtitle, fontWeight: FontWeight.w800, color: barColor,
                                 ),
                               ),
                               Text(
                                 provider.formatCurrency(spent),
                                 style: TextStyle(
-                                  fontSize: 10, color: tokens.textMuted,
+                                  fontSize: AppText.micro, color: tokens.textMuted,
                                 ),
                               ),
                             ],
@@ -928,7 +928,7 @@ class _PosMonitor extends StatelessWidget {
                               'Realisasi ${provider.formatCurrency(spent)}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 10, color: tokens.textMuted),
+                              style: TextStyle(fontSize: AppText.micro, color: tokens.textMuted),
                             ),
                           ),
                           Expanded(
@@ -939,7 +939,7 @@ class _PosMonitor extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               textAlign: TextAlign.right,
-                              style: TextStyle(fontSize: 10, color: tokens.textMuted),
+                              style: TextStyle(fontSize: AppText.micro, color: tokens.textMuted),
                             ),
                           ),
                         ],
@@ -981,13 +981,13 @@ class _EmptyChart extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               showIncome ? 'Belum ada data pemasukan' : 'Belum ada data pengeluaran',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: tokens.textPrimary),
+              style: TextStyle(fontSize: AppText.subtitle, fontWeight: FontWeight.w600, color: tokens.textPrimary),
             ),
             const SizedBox(height: 6),
             Text(
               'Tambahkan transaksi untuk melihat diagram di sini.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: tokens.textMuted, height: 1.6),
+              style: TextStyle(fontSize: AppText.body, color: tokens.textMuted, height: 1.6),
             ),
           ],
         ),

@@ -82,7 +82,7 @@ class GroupManagementSheet extends StatelessWidget {
                               Text(
                                 'Pengaturan & Anggota',
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: AppText.title,
                                   fontWeight: FontWeight.w800,
                                   color: t.textPrimary,
                                 ),
@@ -91,7 +91,7 @@ class GroupManagementSheet extends StatelessWidget {
                                 group?.name ?? 'Belum ada grup',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 12, color: t.textMuted),
+                                style: TextStyle(fontSize: AppText.body, color: t.textMuted),
                               ),
                             ],
                           ),
@@ -169,7 +169,7 @@ class _SectionCard extends StatelessWidget {
                 child: Text(
                   title,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: AppText.subtitle,
                     fontWeight: FontWeight.w700,
                     color: t.textPrimary,
                   ),
@@ -253,7 +253,7 @@ class _GroupSection extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: AppText.subtitle,
                         fontWeight: FontWeight.w700,
                         color: t.textPrimary,
                       ),
@@ -265,7 +265,7 @@ class _GroupSection extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 11.5,
+                          fontSize: AppText.label,
                           height: 1.4,
                           color: t.textMuted,
                         ),
@@ -394,13 +394,13 @@ class _MemberFormDialogState extends State<_MemberFormDialog> {
               contentPadding: EdgeInsets.zero,
               title: Text(
                 'Anggota aktif',
-                style: TextStyle(fontSize: 13.5, color: t.textPrimary),
+                style: TextStyle(fontSize: AppText.bodyLarge, color: t.textPrimary),
               ),
               subtitle: Text(
                 _active
                     ? 'Ikut ditagih iuran periode baru'
                     : 'Tidak ikut ditagih iuran periode baru',
-                style: TextStyle(fontSize: 11.5, color: t.textMuted),
+                style: TextStyle(fontSize: AppText.label, color: t.textMuted),
               ),
               value: _active,
               onChanged: (value) => setState(() => _active = value),
@@ -516,7 +516,7 @@ class _MembersSection extends StatelessWidget {
               'Belum ada anggota. Tambahkan anggota agar tagihan iuran '
               'terbuat otomatis.',
               style: TextStyle(
-                fontSize: 12.5,
+                fontSize: AppText.body,
                 height: 1.4,
                 color: t.textMuted,
               ),
@@ -543,7 +543,7 @@ class _MembersSection extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  fontSize: 13.5,
+                                  fontSize: AppText.bodyLarge,
                                   fontWeight: FontWeight.w600,
                                   color: t.textPrimary,
                                 ),
@@ -567,7 +567,7 @@ class _MembersSection extends StatelessWidget {
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           style: TextStyle(
-                                            fontSize: 11,
+                                            fontSize: AppText.label,
                                             color: t.accent,
                                           ),
                                         ),
@@ -581,7 +581,7 @@ class _MembersSection extends StatelessWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    fontSize: 11,
+                                    fontSize: AppText.label,
                                     color: t.textMuted,
                                   ),
                                 ),
@@ -740,7 +740,7 @@ class _DuesPlanFormDialogState extends State<_DuesPlanFormDialog> {
               _frequency == DuesFrequency.weekly
                   ? 'Jatuh tempo setiap'
                   : 'Tanggal jatuh tempo',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: t.textPrimary),
+              style: TextStyle(fontSize: AppText.body, fontWeight: FontWeight.w600, color: t.textPrimary),
             ),
             const SizedBox(height: 6),
             Container(
@@ -773,7 +773,7 @@ class _DuesPlanFormDialogState extends State<_DuesPlanFormDialog> {
                                                 : day == 6
                                                     ? 'Sabtu (Hari ke-6)'
                                                     : 'Minggu (Hari ke-7)',
-                            style: TextStyle(fontSize: 13.5, color: t.textPrimary),
+                            style: TextStyle(fontSize: AppText.bodyLarge, color: t.textPrimary),
                           ),
                         )
                     else
@@ -782,7 +782,7 @@ class _DuesPlanFormDialogState extends State<_DuesPlanFormDialog> {
                           value: day,
                           child: Text(
                             'Tanggal $day setiap bulan',
-                            style: TextStyle(fontSize: 13.5, color: t.textPrimary),
+                            style: TextStyle(fontSize: AppText.bodyLarge, color: t.textPrimary),
                           ),
                         ),
                   ],
@@ -822,7 +822,7 @@ class _DuesPlanFormDialogState extends State<_DuesPlanFormDialog> {
                       const SizedBox(width: 10),
                       Text(
                         'Mulai: ${formatTanggalSingkat(dateToStr(_startDate))}',
-                        style: TextStyle(fontSize: 13, color: t.textPrimary),
+                        style: TextStyle(fontSize: AppText.bodyLarge, color: t.textPrimary),
                       ),
                     ],
                   ),
@@ -831,7 +831,7 @@ class _DuesPlanFormDialogState extends State<_DuesPlanFormDialog> {
             else
               Text(
                 'Mulai ${formatTanggalSingkat(plan.startDate)} · Perubahan berlaku untuk periode baru',
-                style: TextStyle(fontSize: 11.5, height: 1.4, color: t.textMuted),
+                style: TextStyle(fontSize: AppText.label, height: 1.4, color: t.textMuted),
               ),
           ],
         ),
@@ -881,7 +881,7 @@ class _PlanFrequencyPill extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              fontSize: 12.5,
+              fontSize: AppText.body,
               fontWeight: FontWeight.w700,
               color: selected ? t.accent : t.textMuted,
             ),
@@ -956,7 +956,7 @@ class _DuesSection extends StatelessWidget {
           if (plan == null)
             Text(
               'Belum ada rencana iuran. Atur nominal dan jadwal agar periode dan tagihan otomatis terhitung.',
-              style: TextStyle(fontSize: 12.5, height: 1.4, color: t.textMuted),
+              style: TextStyle(fontSize: AppText.body, height: 1.4, color: t.textMuted),
             )
           else
             Container(
@@ -989,7 +989,7 @@ class _DuesSection extends StatelessWidget {
                         Text(
                           '${formatRupiah(plan.amount)} · ${isWeekly ? 'Mingguan' : 'Bulanan'}',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: AppText.subtitle,
                             fontWeight: FontWeight.w700,
                             color: t.textPrimary,
                           ),
@@ -999,7 +999,7 @@ class _DuesSection extends StatelessWidget {
                           isWeekly
                               ? 'Jatuh tempo hari ke-${plan.dueDay} · Mulai ${formatTanggalSingkat(plan.startDate)}'
                               : 'Jatuh tempo tanggal ${plan.dueDay} · Mulai ${formatTanggalSingkat(plan.startDate)}',
-                          style: TextStyle(fontSize: 11.5, color: t.textMuted),
+                          style: TextStyle(fontSize: AppText.label, color: t.textMuted),
                         ),
                       ],
                     ),
@@ -1013,7 +1013,7 @@ class _DuesSection extends StatelessWidget {
               Expanded(
                 child: Text(
                   '${provider.periods.length} periode tercatat',
-                  style: TextStyle(fontSize: 11.5, color: t.textMuted),
+                  style: TextStyle(fontSize: AppText.label, color: t.textMuted),
                 ),
               ),
             ],
@@ -1110,7 +1110,7 @@ class _ShareSection extends StatelessWidget {
         children: [
           Text(
             'Bagikan ringkasan iuran periode berjalan: status pembayaran anggota, saldo kas, dan tunggakan.',
-            style: TextStyle(fontSize: 12.5, height: 1.4, color: t.textMuted),
+            style: TextStyle(fontSize: AppText.body, height: 1.4, color: t.textMuted),
           ),
           const SizedBox(height: 12),
           ElevatedButton.icon(
@@ -1140,7 +1140,7 @@ class _AuditSection extends StatelessWidget {
           Text(
             'Catatan otomatis perubahan data kas: transaksi, tagihan, '
             'anggota, dan jadwal iuran.',
-            style: TextStyle(fontSize: 12.5, height: 1.4, color: t.textMuted),
+            style: TextStyle(fontSize: AppText.body, height: 1.4, color: t.textMuted),
           ),
           const SizedBox(height: 12),
           OutlinedButton.icon(
@@ -1195,14 +1195,14 @@ class _BackupSection extends StatelessWidget {
                   Text(
                     'Backup & Restore Data',
                     style: TextStyle(
-                      fontSize: 13.5,
+                      fontSize: AppText.bodyLarge,
                       fontWeight: FontWeight.w600,
                       color: t.textPrimary,
                     ),
                   ),
                   Text(
                     'Cadangkan dan pulihkan seluruh data aplikasi',
-                    style: TextStyle(fontSize: 11.5, color: t.textMuted),
+                    style: TextStyle(fontSize: AppText.label, color: t.textMuted),
                   ),
                 ],
               ),

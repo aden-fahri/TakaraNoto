@@ -185,7 +185,7 @@ class _TransactionFormSheetState extends State<TransactionFormSheet> {
               Text(
                 _isEdit ? 'Ubah Transaksi' : 'Catat Transaksi',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: AppText.title,
                   fontWeight: FontWeight.w700,
                   color: t.textPrimary,
                 ),
@@ -237,7 +237,7 @@ class _TransactionFormSheetState extends State<TransactionFormSheet> {
                       Text(
                         'Iuran · ${member.name}',
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: AppText.bodyLarge,
                           fontWeight: FontWeight.w600,
                           color: t.textPrimary,
                         ),
@@ -318,7 +318,7 @@ class _TransactionFormSheetState extends State<TransactionFormSheet> {
                       const SizedBox(width: 10),
                       Text(
                         formatTanggalSingkat(dateToStr(_date)),
-                        style: TextStyle(fontSize: 13, color: t.textPrimary),
+                        style: TextStyle(fontSize: AppText.bodyLarge, color: t.textPrimary),
                       ),
                     ],
                   ),
@@ -410,7 +410,7 @@ class _TypePill extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: AppText.bodyLarge,
                 fontWeight: FontWeight.w700,
                 color: fg,
               ),

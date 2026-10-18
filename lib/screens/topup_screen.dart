@@ -108,7 +108,7 @@ class TopupScreen extends StatelessWidget {
                         Text(
                           'Dompet E-Wallet',
                           style: TextStyle(
-                            fontSize: 20,
+                            fontSize: AppText.headline,
                             fontWeight: FontWeight.w800,
                             color: tokens.headerFg,
                           ),
@@ -138,7 +138,7 @@ class TopupScreen extends StatelessWidget {
                               Text(
                                 'Saldo E-Wallet Saat Ini',
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: AppText.body,
                                   fontWeight: FontWeight.w500,
                                   color: tokens.headerMuted,
                                 ),
@@ -153,7 +153,7 @@ class TopupScreen extends StatelessWidget {
                                   children: [
                                     Icon(Icons.stars_rounded, size: 10, color: Color(0xFFFFB300)),
                                     SizedBox(width: 4),
-                                    Text('E-Money', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Color(0xFFFFB300))),
+                                    Text('E-Money', style: TextStyle(fontSize: AppText.micro, fontWeight: FontWeight.bold, color: Color(0xFFFFB300))),
                                   ],
                                 ),
                               ),
@@ -166,7 +166,7 @@ class TopupScreen extends StatelessWidget {
                             child: Text(
                               provider.formatCurrency(balance),
                               style: TextStyle(
-                                fontSize: 32,
+                                fontSize: AppText.stat,
                                 fontWeight: FontWeight.w800,
                                 color: tokens.headerFg,
                               ),
@@ -183,7 +183,7 @@ class TopupScreen extends StatelessWidget {
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                                     elevation: 2,
-                                    textStyle: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700),
+                                    textStyle: const TextStyle(fontSize: AppText.micro, fontWeight: FontWeight.w700),
                                   ),
                                   onPressed: () => _showTransferDialog(context, true),
                                   icon: const Icon(Icons.add_rounded, size: 14),
@@ -198,7 +198,7 @@ class TopupScreen extends StatelessWidget {
                                     side: BorderSide(color: tokens.headerBorder),
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                                    textStyle: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700),
+                                    textStyle: const TextStyle(fontSize: AppText.micro, fontWeight: FontWeight.w700),
                                   ),
                                   onPressed: () => _showTransferDialog(context, false),
                                   icon: const Icon(Icons.arrow_upward_rounded, size: 14),
@@ -213,7 +213,7 @@ class TopupScreen extends StatelessWidget {
                                     side: BorderSide(color: tokens.headerBorder),
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                                    textStyle: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700),
+                                    textStyle: const TextStyle(fontSize: AppText.micro, fontWeight: FontWeight.w700),
                                   ),
                                   onPressed: () => _showAddExpense(context),
                                   icon: const Icon(Icons.shopping_cart_rounded, size: 14),
@@ -253,13 +253,13 @@ class TopupScreen extends StatelessWidget {
                           const SizedBox(height: 16),
                           Text(
                             'Belum ada transaksi e-wallet',
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: tokens.textPrimary),
+                            style: TextStyle(fontSize: AppText.subtitle, fontWeight: FontWeight.w600, color: tokens.textPrimary),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             'Tekan "Isi Saldo" untuk menambah saldo dari dompet utama, atau gunakan kategori "Top Up" di Dashboard.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 12, color: tokens.textMuted, height: 1.6),
+                            style: TextStyle(fontSize: AppText.body, color: tokens.textMuted, height: 1.6),
                           ),
                         ],
                       ),
@@ -314,7 +314,7 @@ class TopupScreen extends StatelessWidget {
                                       Text(
                                         tx.displayName,
                                         style: TextStyle(
-                                          fontSize: 13,
+                                          fontSize: AppText.bodyLarge,
                                           fontWeight: FontWeight.w700,
                                           color: tokens.textPrimary,
                                         ),
@@ -325,13 +325,13 @@ class TopupScreen extends StatelessWidget {
                                           tx.note,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(fontSize: 11, color: tokens.textMuted),
+                                          style: TextStyle(fontSize: AppText.label, color: tokens.textMuted),
                                         ),
                                       ],
                                       const SizedBox(height: 2),
                                       Text(
                                         tx.date,
-                                        style: TextStyle(fontSize: 10, color: tokens.textMuted),
+                                        style: TextStyle(fontSize: AppText.micro, color: tokens.textMuted),
                                       ),
                                     ],
                                   ),
@@ -341,7 +341,7 @@ class TopupScreen extends StatelessWidget {
                                 Text(
                                   '$sign ${provider.formatCurrency(tx.amount)}',
                                   style: TextStyle(
-                                    fontSize: 13,
+                                    fontSize: AppText.bodyLarge,
                                     fontWeight: FontWeight.w800,
                                     color: txColor,
                                   ),
@@ -486,7 +486,7 @@ class _WalletTransferDialogState extends State<_WalletTransferDialog> {
                         _toTopup
                             ? 'Dana berpindah dari dompet utama ke E-Wallet, bukan pengeluaran.'
                             : 'Dana kembali ke dompet utama, bukan pemasukan.',
-                        style: const TextStyle(fontSize: 11, color: transferColor, fontWeight: FontWeight.w500),
+                        style: const TextStyle(fontSize: AppText.label, color: transferColor, fontWeight: FontWeight.w500),
                       ),
                     ),
                   ],
@@ -495,14 +495,14 @@ class _WalletTransferDialogState extends State<_WalletTransferDialog> {
               const SizedBox(height: 16),
               Text(
                 'Nominal (Rp)',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textMuted),
+                style: TextStyle(fontSize: AppText.body, fontWeight: FontWeight.w600, color: tokens.textMuted),
               ),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _amountCtrl,
                 keyboardType: TextInputType.number,
                 autofocus: true,
-                style: TextStyle(fontSize: 16, color: tokens.textPrimary, fontWeight: FontWeight.w700),
+                style: TextStyle(fontSize: AppText.title, color: tokens.textPrimary, fontWeight: FontWeight.w700),
                 onChanged: _onAmountChanged,
                 decoration: InputDecoration(
                   hintText: '0',
@@ -528,7 +528,7 @@ class _WalletTransferDialogState extends State<_WalletTransferDialog> {
               const SizedBox(height: 16),
               Text(
                 'Tanggal',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textMuted),
+                style: TextStyle(fontSize: AppText.body, fontWeight: FontWeight.w600, color: tokens.textMuted),
               ),
               const SizedBox(height: 6),
               GestureDetector(
@@ -546,7 +546,7 @@ class _WalletTransferDialogState extends State<_WalletTransferDialog> {
                       const SizedBox(width: 8),
                       Text(
                         DateFormat('dd MMM yyyy', 'id').format(_date),
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: tokens.textPrimary),
+                        style: TextStyle(fontSize: AppText.bodyLarge, fontWeight: FontWeight.w600, color: tokens.textPrimary),
                       ),
                     ],
                   ),
@@ -555,12 +555,12 @@ class _WalletTransferDialogState extends State<_WalletTransferDialog> {
               const SizedBox(height: 16),
               Text(
                 'Catatan (Opsional)',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textMuted),
+                style: TextStyle(fontSize: AppText.body, fontWeight: FontWeight.w600, color: tokens.textMuted),
               ),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _noteCtrl,
-                style: TextStyle(fontSize: 14, color: tokens.textPrimary),
+                style: TextStyle(fontSize: AppText.subtitle, color: tokens.textPrimary),
                 decoration: InputDecoration(
                   hintText: _toTopup ? 'Misal: Top up untuk bayar online' : 'Misal: Sisa saldo ditarik',
                   fillColor: tokens.softSurface.withValues(alpha: 0.3),

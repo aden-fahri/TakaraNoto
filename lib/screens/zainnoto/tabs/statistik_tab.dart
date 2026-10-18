@@ -33,7 +33,7 @@ class StatistikTab extends StatelessWidget {
             Text(
               'Belum Ada Grup',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: AppText.title,
                 fontWeight: FontWeight.w700,
                 color: t.textPrimary,
               ),
@@ -41,7 +41,7 @@ class StatistikTab extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               'Pilih atau buat grup di tab Beranda untuk melihat statistik.',
-              style: TextStyle(fontSize: 12.5, color: t.textMuted),
+              style: TextStyle(fontSize: AppText.body, color: t.textMuted),
             ),
           ],
         ),
@@ -178,7 +178,7 @@ class _Banner extends StatelessWidget {
                   Text(
                     'Statistik & Laporan',
                     style: TextStyle(
-                      fontSize: 20,
+                      fontSize: AppText.headline,
                       fontWeight: FontWeight.w800,
                       color: t.headerFg,
                     ),
@@ -188,7 +188,7 @@ class _Banner extends StatelessWidget {
                     groupName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12, color: t.headerMuted),
+                    style: TextStyle(fontSize: AppText.body, color: t.headerMuted),
                   ),
                 ],
               ),
@@ -229,7 +229,7 @@ class _FinancialCard extends StatelessWidget {
           Text(
             'Saldo Bersih Kas',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: AppText.body,
               fontWeight: FontWeight.w500,
               color: t.textMuted,
             ),
@@ -241,7 +241,7 @@ class _FinancialCard extends StatelessWidget {
             child: Text(
               formatRupiah(balance),
               style: TextStyle(
-                fontSize: 28,
+                fontSize: AppText.displayLarge,
                 fontWeight: FontWeight.w800,
                 color: balance >= 0 ? t.textPrimary : t.expense,
               ),
@@ -310,7 +310,7 @@ class _MetricItem extends StatelessWidget {
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 10.5, color: t.textMuted),
+                  style: TextStyle(fontSize: AppText.micro, color: t.textMuted),
                 ),
               ),
             ],
@@ -321,7 +321,7 @@ class _MetricItem extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 13.5,
+              fontSize: AppText.bodyLarge,
               fontWeight: FontWeight.w700,
               color: color,
             ),
@@ -370,7 +370,7 @@ class _ComplianceCard extends StatelessWidget {
                   Text(
                     'Kepatuhan Kas',
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: AppText.subtitle,
                       fontWeight: FontWeight.w700,
                       color: t.textPrimary,
                     ),
@@ -387,7 +387,7 @@ class _ComplianceCard extends StatelessWidget {
                 child: Text(
                   '$activeRate% Tertib',
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: AppText.label,
                     fontWeight: FontWeight.w700,
                     color: activeRate >= 80 ? t.income : t.warning,
                   ),
@@ -411,14 +411,14 @@ class _ComplianceCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Tertib: ${totalMembers - overdueCount} dari $totalMembers anggota',
-                  style: TextStyle(fontSize: 11.5, color: t.textMuted),
+                  style: TextStyle(fontSize: AppText.label, color: t.textMuted),
                 ),
               ),
               if (overdueTotal > 0)
                 Text(
                   'Tunggakan: ${formatRupiah(overdueTotal)}',
                   style: TextStyle(
-                    fontSize: 11.5,
+                    fontSize: AppText.label,
                     fontWeight: FontWeight.w700,
                     color: t.expense,
                   ),
@@ -462,7 +462,7 @@ class _ExpenseBreakdownCard extends StatelessWidget {
           Text(
             'Alokasi Pengeluaran Kas',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: AppText.subtitle,
               fontWeight: FontWeight.w700,
               color: t.textPrimary,
             ),
@@ -474,7 +474,7 @@ class _ExpenseBreakdownCard extends StatelessWidget {
               child: Center(
                 child: Text(
                   'Belum ada transaksi pengeluaran.',
-                  style: TextStyle(fontSize: 12.5, color: t.textMuted),
+                  style: TextStyle(fontSize: AppText.body, color: t.textMuted),
                 ),
               ),
             )
@@ -489,14 +489,14 @@ class _ExpenseBreakdownCard extends StatelessWidget {
                   children: [
                     Text(
                       'Total',
-                      style: TextStyle(fontSize: 10, color: t.textMuted),
+                      style: TextStyle(fontSize: AppText.micro, color: t.textMuted),
                     ),
                     FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Text(
                         formatRupiah(totalExpense),
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: AppText.body,
                           fontWeight: FontWeight.w800,
                           color: t.textPrimary,
                         ),
@@ -531,7 +531,7 @@ class _ExpenseBreakdownCard extends StatelessWidget {
                         child: Text(
                           entry.key,
                           style: TextStyle(
-                            fontSize: 12.5,
+                            fontSize: AppText.body,
                             color: t.textPrimary,
                             fontWeight: FontWeight.w500,
                           ),
@@ -540,7 +540,7 @@ class _ExpenseBreakdownCard extends StatelessWidget {
                       Text(
                         '$pct% · ${formatRupiah(entry.value)}',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: AppText.body,
                           fontWeight: FontWeight.w700,
                           color: t.textPrimary,
                         ),
@@ -599,14 +599,14 @@ class _MemberContributionCard extends StatelessWidget {
               Text(
                 'Kontribusi Anggota',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: AppText.subtitle,
                   fontWeight: FontWeight.w700,
                   color: t.textPrimary,
                 ),
               ),
               Text(
                 '${members.length} Orang',
-                style: TextStyle(fontSize: 11.5, color: t.textMuted),
+                style: TextStyle(fontSize: AppText.label, color: t.textMuted),
               ),
             ],
           ),
@@ -617,7 +617,7 @@ class _MemberContributionCard extends StatelessWidget {
               child: Center(
                 child: Text(
                   'Belum ada anggota terdaftar.',
-                  style: TextStyle(fontSize: 12.5, color: t.textMuted),
+                  style: TextStyle(fontSize: AppText.body, color: t.textMuted),
                 ),
               ),
             )
@@ -640,7 +640,7 @@ class _MemberContributionCard extends StatelessWidget {
                       child: Text(
                         '#${idx + 1}',
                         style: TextStyle(
-                          fontSize: 11.5,
+                          fontSize: AppText.label,
                           fontWeight: FontWeight.w700,
                           color: isTop ? t.accent : t.textMuted,
                         ),
@@ -659,7 +659,7 @@ class _MemberContributionCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: AppText.bodyLarge,
                           fontWeight: FontWeight.w600,
                           color: t.textPrimary,
                         ),
@@ -668,7 +668,7 @@ class _MemberContributionCard extends StatelessWidget {
                     Text(
                       formatRupiah(paid),
                       style: TextStyle(
-                        fontSize: 12.5,
+                        fontSize: AppText.body,
                         fontWeight: FontWeight.w700,
                         color: paid > 0 ? t.income : t.textMuted,
                       ),

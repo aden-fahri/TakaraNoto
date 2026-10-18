@@ -15,10 +15,14 @@ class AppTheme {
   static const double buttonRadius = 12;
 
   // ─── Theme Builder ──────────────────────────────────────────────────────────
-  static ThemeData getTheme(Color seed, Color background) {
+  static ThemeData getTheme(
+    Color seed,
+    Color background, {
+    bool dark = false,
+  }) {
     final base = ColorScheme.fromSeed(
       seedColor: seed,
-      brightness: Brightness.light,
+      brightness: dark ? Brightness.dark : Brightness.light,
     );
     // Use the exact chosen color as the primary (not the M3 tonal variant),
     // so the banner/buttons match what the user picked.
@@ -26,49 +30,57 @@ class AppTheme {
             Brightness.dark
         ? Colors.white
         : const Color(0xFF0F172A);
+    final surface = dark ? const Color(0xFF1E293B) : Colors.white;
+    final onSurface = dark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
+    final outline = dark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
     final scheme = base.copyWith(
       primary: seed,
       onPrimary: onPrimary,
-      surface: Colors.white,
-      onSurface: const Color(0xFF0F172A),
-      outline: const Color(0xFFE2E8F0),
-      outlineVariant: const Color(0xFFE2E8F0),
+      surface: surface,
+      onSurface: onSurface,
+      outline: outline,
+      outlineVariant: outline,
     );
-    final tokens = AppTokens.fromScheme(scheme, pageBg: background);
+    // In dark mode the page background is derived from the user's pick:
+    // a subtle tint of their chosen hue over a near-black base.
+    final pageBg = dark
+        ? Color.lerp(background, const Color(0xFF0B1120), 0.88)!
+        : background;
+    final tokens = AppTokens.fromScheme(scheme, pageBg: pageBg);
 
     final textTheme = GoogleFonts.poppinsTextTheme().copyWith(
       displayLarge: GoogleFonts.poppins(
-        fontSize: 36,
+        fontSize: AppText.hero,
         fontWeight: FontWeight.w800,
         color: tokens.textPrimary,
       ),
       titleLarge: GoogleFonts.poppins(
-        fontSize: 20,
+        fontSize: AppText.headline,
         fontWeight: FontWeight.w700,
         color: tokens.textPrimary,
       ),
       titleMedium: GoogleFonts.poppins(
-        fontSize: 16,
+        fontSize: AppText.title,
         fontWeight: FontWeight.w600,
         color: tokens.textPrimary,
       ),
       bodyLarge: GoogleFonts.poppins(
-        fontSize: 14,
+        fontSize: AppText.subtitle,
         fontWeight: FontWeight.w400,
         color: tokens.textPrimary,
       ),
       bodyMedium: GoogleFonts.poppins(
-        fontSize: 13,
+        fontSize: AppText.bodyLarge,
         fontWeight: FontWeight.w400,
         color: tokens.textMuted,
       ),
       labelMedium: GoogleFonts.poppins(
-        fontSize: 12,
+        fontSize: AppText.body,
         fontWeight: FontWeight.w500,
         color: tokens.textMuted,
       ),
       labelSmall: GoogleFonts.poppins(
-        fontSize: 11,
+        fontSize: AppText.label,
         fontWeight: FontWeight.w500,
         color: tokens.textMuted,
       ),
@@ -89,7 +101,7 @@ class AppTheme {
         systemOverlayStyle: SystemUiOverlayStyle.light,
         iconTheme: IconThemeData(color: tokens.headerFg),
         titleTextStyle: GoogleFonts.poppins(
-          fontSize: 20,
+          fontSize: AppText.headline,
           fontWeight: FontWeight.w700,
           color: tokens.headerFg,
         ),
@@ -115,7 +127,7 @@ class AppTheme {
         border: InputBorder.none,
         hintStyle: GoogleFonts.poppins(
           color: tokens.textMuted,
-          fontSize: 14,
+          fontSize: AppText.subtitle,
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -128,13 +140,13 @@ class AppTheme {
           ),
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
           textStyle:
-              GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600),
+              GoogleFonts.poppins(fontSize: AppText.subtitle, fontWeight: FontWeight.w600),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: tokens.headerBg,
         contentTextStyle:
-            GoogleFonts.poppins(color: tokens.headerFg, fontSize: 13),
+            GoogleFonts.poppins(color: tokens.headerFg, fontSize: AppText.bodyLarge),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
@@ -142,12 +154,12 @@ class AppTheme {
         backgroundColor: tokens.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         titleTextStyle: GoogleFonts.poppins(
-          fontSize: 16,
+          fontSize: AppText.title,
           fontWeight: FontWeight.w700,
           color: tokens.textPrimary,
         ),
         contentTextStyle: GoogleFonts.poppins(
-          fontSize: 13,
+          fontSize: AppText.bodyLarge,
           color: tokens.textMuted,
         ),
       ),

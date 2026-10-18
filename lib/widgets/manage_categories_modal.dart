@@ -277,7 +277,7 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
             const SizedBox(height: 12),
             Text(
               'Belum ada kategori ${_type == 'expense' ? 'pengeluaran' : 'pemasukan'}.',
-              style: TextStyle(fontSize: 13, color: tokens.textMuted),
+              style: TextStyle(fontSize: AppText.bodyLarge, color: tokens.textMuted),
             ),
           ],
         ),
@@ -324,12 +324,12 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
                   children: [
                     Text(
                       cat.name,
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: AppText.subtitle),
                     ),
                     if (isDefault)
                       Text(
                         'Bawaan Sistem',
-                        style: TextStyle(fontSize: 10, color: tokens.textMuted),
+                        style: TextStyle(fontSize: AppText.micro, color: tokens.textMuted),
                       ),
                   ],
                 ),
@@ -358,13 +358,13 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
         // Name Field
         Text(
           'Nama Kategori',
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textMuted),
+          style: TextStyle(fontSize: AppText.body, fontWeight: FontWeight.w600, color: tokens.textMuted),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: _nameCtrl,
           autofocus: true,
-          style: const TextStyle(fontSize: 14),
+          style: const TextStyle(fontSize: AppText.subtitle),
           decoration: InputDecoration(
             hintText: 'Misal: Kosan, Liburan, Freelance...',
             fillColor: tokens.softSurface,
@@ -381,7 +381,7 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
         // Color Picker
         Text(
           'Pilih Warna',
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textMuted),
+          style: TextStyle(fontSize: AppText.body, fontWeight: FontWeight.w600, color: tokens.textMuted),
         ),
         const SizedBox(height: 10),
         SizedBox(
@@ -426,7 +426,7 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
         // Icon Picker
         Text(
           'Pilih Ikon',
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textMuted),
+          style: TextStyle(fontSize: AppText.body, fontWeight: FontWeight.w600, color: tokens.textMuted),
         ),
         const SizedBox(height: 10),
         GridView.builder(
@@ -524,7 +524,7 @@ class _TabBtn extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: AppText.bodyLarge,
               fontWeight: FontWeight.w700,
               color: isActive ? activeColor : tokens.textMuted,
             ),

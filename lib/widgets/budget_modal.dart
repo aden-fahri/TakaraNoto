@@ -285,7 +285,7 @@ class _BudgetModalState extends State<BudgetModal> {
                                 Text(
                                   widget.category.name,
                                   style: TextStyle(
-                                    fontSize: 15,
+                                    fontSize: AppText.subtitle,
                                     fontWeight: FontWeight.w700,
                                     color: tokens.textPrimary,
                                   ),
@@ -294,7 +294,7 @@ class _BudgetModalState extends State<BudgetModal> {
                                 Text(
                                   'Batas pengeluaran ${_budgetType == 'goal' ? 'bulanan' : 'harian'}',
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: AppText.body,
                                     color: tokens.textMuted,
                                   ),
                                 ),
@@ -337,7 +337,7 @@ class _BudgetModalState extends State<BudgetModal> {
                       Text(
                         'Disalin dari bulan lalu — sesuaikan bila perlu.',
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: AppText.label,
                           color: tokens.textMuted,
                         ),
                       ),
@@ -348,7 +348,7 @@ class _BudgetModalState extends State<BudgetModal> {
                     Text(
                       'Batas Anggaran ${_budgetType == 'goal' ? 'Bulanan' : 'Harian'} (Rp)',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: AppText.body,
                         fontWeight: FontWeight.w600,
                         color: tokens.textMuted,
                       ),
@@ -371,7 +371,7 @@ class _BudgetModalState extends State<BudgetModal> {
                           Text(
                             'Rp',
                             style: TextStyle(
-                              fontSize: 28,
+                              fontSize: AppText.displayLarge,
                               fontWeight: FontWeight.w700,
                               color: tokens.textMuted,
                             ),
@@ -383,7 +383,7 @@ class _BudgetModalState extends State<BudgetModal> {
                               keyboardType: TextInputType.number,
                               autofocus: true,
                               style: TextStyle(
-                                fontSize: 36,
+                                fontSize: AppText.hero,
                                 fontWeight: FontWeight.w800,
                                 color: tokens.textPrimary,
                               ),
@@ -391,7 +391,7 @@ class _BudgetModalState extends State<BudgetModal> {
                                 border: InputBorder.none,
                                 hintText: '0',
                                 hintStyle: TextStyle(
-                                  fontSize: 36,
+                                  fontSize: AppText.hero,
                                   fontWeight: FontWeight.w800,
                                   color: tokens.textMuted.withValues(alpha: 0.4),
                                 ),
@@ -407,7 +407,7 @@ class _BudgetModalState extends State<BudgetModal> {
                       Text(
                         _monthlyHint!,
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: AppText.label,
                           color: tokens.textMuted,
                         ),
                       ),
@@ -428,7 +428,7 @@ class _BudgetModalState extends State<BudgetModal> {
                         icon: const Icon(Icons.check_rounded, size: 20),
                         label: const Text(
                           'Simpan Anggaran',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                          style: TextStyle(fontSize: AppText.subtitle, fontWeight: FontWeight.w700),
                         ),
                       ),
                     ),
@@ -485,7 +485,7 @@ class _PeriodBtn extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               label,
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: fg),
+              style: TextStyle(fontSize: AppText.bodyLarge, fontWeight: FontWeight.w700, color: fg),
             ),
           ],
         ),

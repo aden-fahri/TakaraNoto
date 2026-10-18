@@ -342,7 +342,7 @@ class _SplashScreenState extends State<SplashScreen>
                             RichText(
                               text: TextSpan(
                                 style: const TextStyle(
-                                  fontSize: 34,
+                                  fontSize: AppText.stat,
                                   fontWeight: FontWeight.w900,
                                   fontFamily: 'Poppins',
                                   letterSpacing: 0.5,
@@ -382,7 +382,7 @@ class _SplashScreenState extends State<SplashScreen>
                     'v1.0',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: AppText.body,
                       fontWeight: FontWeight.w600,
                       color: t.textMuted.withValues(alpha: 0.4),
                       letterSpacing: 1,

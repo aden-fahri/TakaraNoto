@@ -40,7 +40,7 @@ class BerandaTab extends StatelessWidget {
               icon: const Icon(Icons.add_shopping_cart_rounded, size: 20),
               label: const Text(
                 'Catat Belanja / Kas Keluar',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: AppText.bodyLarge),
               ),
               elevation: 4,
             )
@@ -194,7 +194,7 @@ class _Banner extends StatelessWidget {
                         Text(
                           'Mode Kelompok · Kas Bersama',
                           style: TextStyle(
-                            fontSize: 11.5,
+                            fontSize: AppText.label,
                             fontWeight: FontWeight.w500,
                             color: t.headerMuted,
                           ),
@@ -204,7 +204,7 @@ class _Banner extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 20,
+                            fontSize: AppText.headline,
                             fontWeight: FontWeight.w800,
                             color: t.headerFg,
                           ),
@@ -309,7 +309,7 @@ class _ModernGroupWalletCard extends StatelessWidget {
                     Text(
                       'DOMPET KAS KELOMPOK',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: AppText.label,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 1.1,
                         color: t.textPrimary,
@@ -327,7 +327,7 @@ class _ModernGroupWalletCard extends StatelessWidget {
                         child: Text(
                           period.label,
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: AppText.micro,
                             fontWeight: FontWeight.w600,
                             color: t.textMuted,
                           ),
@@ -342,7 +342,7 @@ class _ModernGroupWalletCard extends StatelessWidget {
                 Text(
                   'Saldo Kas Bersama',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: AppText.body,
                     fontWeight: FontWeight.w500,
                     color: t.textMuted,
                   ),
@@ -354,7 +354,7 @@ class _ModernGroupWalletCard extends StatelessWidget {
                   child: Text(
                     formatRupiah(balance),
                     style: TextStyle(
-                      fontSize: 32,
+                      fontSize: AppText.stat,
                       fontWeight: FontWeight.w900,
                       letterSpacing: -0.5,
                       color: balance >= 0 ? t.textPrimary : t.expense,
@@ -385,7 +385,7 @@ class _ModernGroupWalletCard extends StatelessWidget {
                           Text(
                             'Masuk: ${formatRupiah(totalIn)}',
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: AppText.label,
                               fontWeight: FontWeight.w700,
                               color: t.income,
                             ),
@@ -413,7 +413,7 @@ class _ModernGroupWalletCard extends StatelessWidget {
                           Text(
                             'Keluar: ${formatRupiah(totalOut)}',
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: AppText.label,
                               fontWeight: FontWeight.w700,
                               color: t.expense,
                             ),
@@ -471,7 +471,7 @@ class _ActivityCard extends StatelessWidget {
             Text(
               'Iuran Periode Ini',
               style: TextStyle(
-                fontSize: 11.5,
+                fontSize: AppText.label,
                 fontWeight: FontWeight.w600,
                 color: t.textMuted,
               ),
@@ -480,7 +480,7 @@ class _ActivityCard extends StatelessWidget {
             Text(
               total == 0 ? '—' : '$paid / $total lunas',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: AppText.title,
                 fontWeight: FontWeight.w800,
                 color: t.textPrimary,
               ),
@@ -490,7 +490,7 @@ class _ActivityCard extends StatelessWidget {
               provider.currentPeriod?.label ?? 'Belum ada periode',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 11, color: t.textMuted),
+              style: TextStyle(fontSize: AppText.label, color: t.textMuted),
             ),
             const SizedBox(height: 10),
             ClipRRect(
@@ -557,7 +557,7 @@ class _OverdueCard extends StatelessWidget {
                     child: Text(
                       '$overdueCount orang',
                       style: TextStyle(
-                        fontSize: 10.5,
+                        fontSize: AppText.micro,
                         fontWeight: FontWeight.w700,
                         color: t.expense,
                       ),
@@ -569,7 +569,7 @@ class _OverdueCard extends StatelessWidget {
             Text(
               'Tunggakan',
               style: TextStyle(
-                fontSize: 11.5,
+                fontSize: AppText.label,
                 fontWeight: FontWeight.w600,
                 color: t.textMuted,
               ),
@@ -581,7 +581,7 @@ class _OverdueCard extends StatelessWidget {
               child: Text(
                 formatRupiah(overdueTotal),
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: AppText.title,
                   fontWeight: FontWeight.w800,
                   color: hasOverdue ? t.expense : t.income,
                 ),
@@ -593,7 +593,7 @@ class _OverdueCard extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: AppText.label,
                 color: hasOverdue ? t.expense : t.textMuted,
                 fontWeight: hasOverdue ? FontWeight.w600 : FontWeight.normal,
               ),
@@ -718,7 +718,7 @@ class _QuickAction extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: AppText.label,
                 fontWeight: FontWeight.w600,
                 color: t.textPrimary,
               ),
@@ -755,7 +755,7 @@ class _ErrorCard extends StatelessWidget {
           Expanded(
             child: Text(
               message,
-              style: TextStyle(fontSize: 12.5, color: t.expense),
+              style: TextStyle(fontSize: AppText.body, color: t.expense),
             ),
           ),
           TextButton(
@@ -805,7 +805,7 @@ class _EmptyGroups extends StatelessWidget {
             Text(
               'Belum Ada Grup Kas',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: AppText.title,
                 fontWeight: FontWeight.w800,
                 color: t.textPrimary,
               ),
@@ -814,7 +814,7 @@ class _EmptyGroups extends StatelessWidget {
             Text(
               'Buat grup kas pertamamu untuk mulai mencatat iuran anggota dan belanja bersama secara rapi dan transparan.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, height: 1.5, color: t.textMuted),
+              style: TextStyle(fontSize: AppText.bodyLarge, height: 1.5, color: t.textMuted),
             ),
             if (error != null) ...[
               const SizedBox(height: 18),
@@ -841,7 +841,7 @@ class _EmptyGroups extends StatelessWidget {
                           child: Text(
                             'Gagal memuat data',
                             style: TextStyle(
-                              fontSize: 12.5,
+                              fontSize: AppText.body,
                               fontWeight: FontWeight.w700,
                               color: t.expense,
                             ),
@@ -852,7 +852,7 @@ class _EmptyGroups extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(
                       '$error',
-                      style: TextStyle(fontSize: 11.5, color: t.expense),
+                      style: TextStyle(fontSize: AppText.label, color: t.expense),
                     ),
                     const SizedBox(height: 4),
                     Align(
@@ -972,14 +972,14 @@ class _OverdueListSheet extends StatelessWidget {
                       Text(
                         'Daftar Penunggak Kas',
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: AppText.title,
                           fontWeight: FontWeight.w700,
                           color: t.textPrimary,
                         ),
                       ),
                       Text(
                         '${overdueList.length} anggota belum melunasi kas',
-                        style: TextStyle(fontSize: 12, color: t.textMuted),
+                        style: TextStyle(fontSize: AppText.body, color: t.textMuted),
                       ),
                     ],
                   ),
@@ -1042,7 +1042,7 @@ class _OverdueListSheet extends StatelessWidget {
                                 Text(
                                   item.memberName,
                                   style: TextStyle(
-                                    fontSize: 13.5,
+                                    fontSize: AppText.bodyLarge,
                                     fontWeight: FontWeight.w700,
                                     color: t.textPrimary,
                                   ),
@@ -1050,7 +1050,7 @@ class _OverdueListSheet extends StatelessWidget {
                                 const SizedBox(height: 2),
                                 Text(
                                   'Nunggak ${item.unpaidPeriodsCount} periode (sejak ${formatTanggalSingkat(dateToStr(item.oldestDueDate))})',
-                                  style: TextStyle(fontSize: 11, color: t.textMuted),
+                                  style: TextStyle(fontSize: AppText.label, color: t.textMuted),
                                 ),
                               ],
                             ),
@@ -1058,7 +1058,7 @@ class _OverdueListSheet extends StatelessWidget {
                           Text(
                             formatRupiah(item.totalOverdueAmount),
                             style: TextStyle(
-                              fontSize: 13.5,
+                              fontSize: AppText.bodyLarge,
                               fontWeight: FontWeight.w800,
                               color: t.expense,
                             ),

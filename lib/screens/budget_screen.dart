@@ -111,7 +111,7 @@ class BudgetScreen extends StatelessWidget {
                           children: [
                             Text(
                               'Anggaran',
-                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: tokens.headerFg),
+                              style: TextStyle(fontSize: AppText.headline, fontWeight: FontWeight.w800, color: tokens.headerFg),
                             ),
                             const SizedBox(height: 6),
                             Row(
@@ -125,7 +125,7 @@ class BudgetScreen extends StatelessWidget {
                                   child: Text(
                                     _monthName(currentMonth),
                                     style: TextStyle(
-                                      fontSize: 12, fontWeight: FontWeight.w600,
+                                      fontSize: AppText.body, fontWeight: FontWeight.w600,
                                       color: tokens.headerMuted,
                                     ),
                                   ),
@@ -149,7 +149,7 @@ class BudgetScreen extends StatelessWidget {
                             children: [
                               Icon(Icons.pie_chart_rounded, size: 14, color: tokens.headerMuted),
                               SizedBox(width: 6),
-                              Text('Total Bulan Ini', style: TextStyle(fontSize: 12, color: tokens.headerMuted, fontWeight: FontWeight.w600)),
+                              Text('Total Bulan Ini', style: TextStyle(fontSize: AppText.body, color: tokens.headerMuted, fontWeight: FontWeight.w600)),
                             ],
                           ),
                         ),
@@ -189,7 +189,7 @@ class BudgetScreen extends StatelessWidget {
                 const SizedBox(height: 24),
                 Text(
                   'Per Kategori',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: tokens.textPrimary),
+                  style: TextStyle(fontSize: AppText.title, fontWeight: FontWeight.w600, color: tokens.textPrimary),
                 ),
                 const SizedBox(height: 12),
 
@@ -282,11 +282,11 @@ class _OverallCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Total Anggaran',
-                    style: TextStyle(color: tokens.headerMuted, fontSize: 11, fontWeight: FontWeight.w500)),
+                    style: TextStyle(color: tokens.headerMuted, fontSize: AppText.label, fontWeight: FontWeight.w500)),
                 const SizedBox(height: 6),
                 Text(
                   provider.formatCurrency(totalLimit),
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: tokens.headerFg),
+                  style: TextStyle(fontSize: AppText.headline, fontWeight: FontWeight.w800, color: tokens.headerFg),
                 ),
                 const SizedBox(height: 14),
                 // Progress bar
@@ -307,12 +307,12 @@ class _OverallCard extends StatelessWidget {
                 Row(
                   children: [
                     Text('${(usagePct * 100).round()}% terpakai',
-                        style: TextStyle(color: tokens.headerMuted, fontSize: 11)),
+                        style: TextStyle(color: tokens.headerMuted, fontSize: AppText.label)),
                     const Spacer(),
                     Text(
                       'Sisa ${provider.formatCurrency(totalRemaining)}',
                       style: TextStyle(
-                        fontSize: 11, fontWeight: FontWeight.w700,
+                        fontSize: AppText.label, fontWeight: FontWeight.w700,
                         color: totalRemaining >= 0 ? tokens.incomeOnHeader : tokens.expenseOnHeader,
                       ),
                     ),
@@ -326,7 +326,7 @@ class _OverallCard extends StatelessWidget {
             items: donutItems, size: 80, strokeWidth: 10,
             centerWidget: Text(
               '${(usagePct * 100).round()}%',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: tokens.headerFg),
+              style: TextStyle(fontSize: AppText.bodyLarge, fontWeight: FontWeight.w800, color: tokens.headerFg),
             ),
           ),
         ],
@@ -369,11 +369,11 @@ class _NoBudgetBanner extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Belum ada anggaran',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: tokens.textPrimary)),
+                      style: TextStyle(fontSize: AppText.subtitle, fontWeight: FontWeight.w600, color: tokens.textPrimary)),
                   SizedBox(height: 3),
                   Text(
                     'Tekan tombol di bawah untuk mulai mengatur batas pengeluaran.',
-                    style: TextStyle(fontSize: 12, color: tokens.textMuted, height: 1.5),
+                    style: TextStyle(fontSize: AppText.body, color: tokens.textMuted, height: 1.5),
                   ),
                 ],
               ),
@@ -436,12 +436,12 @@ class _BudgetTile extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(cat.name,
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: tokens.textPrimary)),
+                              style: TextStyle(fontSize: AppText.subtitle, fontWeight: FontWeight.w600, color: tokens.textPrimary)),
                           Text(
                             hasBudget
                                 ? 'Sisa: ${provider.formatCurrency(remaining)}'
                                 : 'Belum diatur',
-                            style: TextStyle(fontSize: 11, color: tokens.textMuted),
+                            style: TextStyle(fontSize: AppText.label, color: tokens.textMuted),
                           ),
                         ],
                       ),
@@ -451,12 +451,12 @@ class _BudgetTile extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(provider.formatCurrency(limit),
-                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: tokens.textPrimary)),
+                              style: TextStyle(fontSize: AppText.bodyLarge, fontWeight: FontWeight.w700, color: tokens.textPrimary)),
                           Text(
                             budget.budgetType == 'daily_limit'
                                 ? 'Harian ${provider.formatCurrency(budget.limitAmount)}'
                                 : 'Batas bulanan',
-                            style: TextStyle(fontSize: 10, color: tokens.textMuted),
+                            style: TextStyle(fontSize: AppText.micro, color: tokens.textMuted),
                           ),
                         ],
                       ),
@@ -471,7 +471,7 @@ class _BudgetTile extends StatelessWidget {
                       ),
                       child: Text(
                         hasBudget ? 'Ubah' : 'Atur',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tokens.textPrimary),
+                        style: TextStyle(fontSize: AppText.body, fontWeight: FontWeight.w600, color: tokens.textPrimary),
                       ),
                     ),
                   ],
@@ -500,7 +500,7 @@ class _BudgetTile extends StatelessWidget {
                       const SizedBox(width: 10),
                       Text(
                         '${(pct * 100).round()}%',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: barColor),
+                        style: TextStyle(fontSize: AppText.label, fontWeight: FontWeight.w700, color: barColor),
                       ),
                     ],
                   ),

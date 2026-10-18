@@ -281,7 +281,7 @@ Pola error: catch → `_error = 'Gagal …: $error'`, `notifyListeners()`, kemba
 - **Mode gate**: `AppModeGate` (`lib/main.dart`) memilih `ZainNotoShellScreen` atau `MainNavigationScreen`; `ZainNotoProvider` di-provide di root.
 - **Backup/Restore** (`lib/services/backup_service.dart`): export menyertakan key `'zainnoto'` (9 tabel, urutan parents-first, **nama tabel tetap tanpa prefix** agar kompatibel dengan backup lama); restore memakai satu koneksi `DatabaseHelper` dan memetakan nama lama ke tabel `zn_*` lewat `zainnotoTablePrefix`, menghapus children-first lalu insert dengan `ConflictAlgorithm.replace`, didahului backup pengaman. Validasi memastikan kedua map ada. Tidak didukung di web.
 - **Web**: `main.dart` men-set `databaseFactoryFfiWeb` (sqlite3 wasm + IndexedDB) agar `finflow.db` (termasuk tabel `zn_*`) jalan & persisten di browser.
-- **Tema**: seluruh layar memakai token `context.tokens` (`accent/onAccent`, `income`, `expense`, `warning`, `header*`, `card`, `border`, dst.) sehingga mengikuti theme yang dipilih di TakaraNoto.
+- **Tema**: seluruh layar memakai token `context.tokens` (`accent/onAccent`, `income`, `expense`, `warning`, `header*`, `card`, `border`, dst.) sehingga mengikuti theme yang dipilih di TakaraNoto — termasuk **mode gelap** (D6a; toggle di Pengaturan Tema). Ukuran teks memakai skala `AppText.*` (D3), dan font Poppins dibundel offline (D6b).
 
 ---
 

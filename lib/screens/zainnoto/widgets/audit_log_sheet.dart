@@ -125,12 +125,12 @@ class _AuditLogSheetState extends State<_AuditLogSheet> {
                 children: [
                   Text(
                     formatWaktuLengkap(entry.createdAt),
-                    style: TextStyle(fontSize: 11.5, color: t.textMuted),
+                    style: TextStyle(fontSize: AppText.label, color: t.textMuted),
                   ),
                   const SizedBox(height: 2),
                   SelectableText(
                     'ID: ${entry.entityId}',
-                    style: TextStyle(fontSize: 11, color: t.textMuted),
+                    style: TextStyle(fontSize: AppText.label, color: t.textMuted),
                   ),
                   if (entry.oldJson != null) ...[
                     const SizedBox(height: 12),
@@ -209,14 +209,14 @@ class _AuditLogSheetState extends State<_AuditLogSheet> {
                               Text(
                                 'Riwayat Perubahan',
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: AppText.title,
                                   fontWeight: FontWeight.w800,
                                   color: t.textPrimary,
                                 ),
                               ),
                               Text(
                                 'Catatan otomatis perubahan data kas',
-                                style: TextStyle(fontSize: 12, color: t.textMuted),
+                                style: TextStyle(fontSize: AppText.body, color: t.textMuted),
                               ),
                             ],
                           ),
@@ -239,7 +239,7 @@ class _AuditLogSheetState extends State<_AuditLogSheet> {
                               selected: _entityFilter == filter.value,
                               onSelected: (_) => _setFilter(filter.value),
                               labelStyle: TextStyle(
-                                fontSize: 12,
+                                fontSize: AppText.body,
                                 fontWeight: FontWeight.w600,
                                 color: _entityFilter == filter.value
                                     ? t.onAccent
@@ -359,7 +359,7 @@ class _AuditEntryTile extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: AppText.bodyLarge,
                         fontWeight: FontWeight.w600,
                         color: t.textPrimary,
                       ),
@@ -367,7 +367,7 @@ class _AuditEntryTile extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       formatWaktuLengkap(entry.createdAt),
-                      style: TextStyle(fontSize: 11, color: t.textMuted),
+                      style: TextStyle(fontSize: AppText.label, color: t.textMuted),
                     ),
                   ],
                 ),
@@ -401,7 +401,7 @@ class _JsonBlock extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: AppText.body,
             fontWeight: FontWeight.w700,
             color: t.textMuted,
           ),
@@ -417,7 +417,7 @@ class _JsonBlock extends StatelessWidget {
           child: SelectableText(
             _prettyJson(json),
             style: TextStyle(
-              fontSize: 11,
+              fontSize: AppText.label,
               fontFamily: 'monospace',
               height: 1.4,
               color: t.textPrimary,
