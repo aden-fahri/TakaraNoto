@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
-import '../db/zainnoto_database.dart';
 import '../models/derived.dart';
 import '../models/entities.dart';
 import '../repositories/zainnoto_repository.dart';
@@ -14,8 +13,7 @@ import '../utils/dates.dart';
 /// after every write so derived statuses stay in sync.
 class ZainNotoProvider extends ChangeNotifier {
   ZainNotoProvider({ZainNotoRepository? repository, Uuid? uuid})
-      : _repository =
-            repository ?? ZainNotoRepository(ZainNotoDatabase.instance),
+      : _repository = repository ?? ZainNotoRepository(),
         _uuid = uuid ?? const Uuid();
 
   final ZainNotoRepository _repository;

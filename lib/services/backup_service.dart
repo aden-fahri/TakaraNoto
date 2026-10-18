@@ -9,7 +9,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 
 import 'database_helper.dart';
-import '../zainnoto/db/zainnoto_database.dart';
 
 /// Thrown when a backup file is invalid or cannot be restored.
 class BackupException implements Exception {
@@ -69,27 +68,31 @@ class RestoreResult {
       zainnotoCounts.values.fold(0, (sum, count) => sum + count);
 }
 
-/// Exports and imports the whole app data as a single JSON file:
-/// personal mode (`finflow.db`), group mode (`zainnoto.db`) and preferences
-/// (theme colors, etc.).
+/// Exports and imports the whole app data as a single JSON file: personal
+/// mode tables, group mode tables (`zn_*`, keyed by legacy names), and
+/// preferences (theme colors, etc.).
 ///
-/// The database openers and temp directory are injectable so the service can
+/// Sejak merger Fase 3 semua tabel hidup di satu database (`finflow.db`),
+/// tetapi struktur file backup tidak berubah supaya backup lama tetap bisa
+/// direstore.
+///
+/// The database opener and temp directory are injectable so the service can
 /// be unit-tested with in-memory databases.
 class BackupService {
   BackupService({
-    Future<Database> Function()? openFinflow,
-    Future<Database> Function()? openZainnoto,
+    Future<Database> Function()? openDatabase,
     Future<Directory> Function()? tempDirectory,
-  })  : _openFinflow = openFinflow ?? (() => DatabaseHelper.instance.database),
-        _openZainnoto = openZainnoto ?? (() => ZainNotoDatabase.instance.open()),
+  })  : _openDatabase = openDatabase ?? (() => DatabaseHelper.instance.database),
         _tempDirectory = tempDirectory ?? getTemporaryDirectory;
 
-  final Future<Database> Function() _openFinflow;
-  final Future<Database> Function() _openZainnoto;
+  final Future<Database> Function() _openDatabase;
   final Future<Directory> Function() _tempDirectory;
 
   static const String appMarker = 'takaranoto';
   static const int backupVersion = 1;
+
+  /// Prefix tabel ZainNoto di database bersama (Fase 3).
+  static const String zainnotoTablePrefix = 'zn_';
 
   /// Personal-mode tables, parents first (insert order).
   static const List<String> finflowTables = [
@@ -99,7 +102,8 @@ class BackupService {
     'savings_goals',
   ];
 
-  /// Group-mode tables, parents first (insert order).
+  /// Group-mode tables, parents first (insert order). Keys stay unprefixed so
+  /// the backup format remains backward-compatible.
   static const List<String> zainnotoTables = [
     'groups',
     'members',
@@ -116,12 +120,13 @@ class BackupService {
 
   /// Collects the whole app data into a JSON-encodable payload.
   Future<Map<String, Object?>> collect() async {
+    final db = await _openDatabase();
     return <String, Object?>{
       'app': appMarker,
       'version': backupVersion,
       'exportedAt': DateTime.now().toUtc().toIso8601String(),
-      'finflow': await _dumpTables(await _openFinflow(), finflowTables),
-      'zainnoto': await _dumpTables(await _openZainnoto(), zainnotoTables),
+      'finflow': await _dumpTables(db, finflowTables),
+      'zainnoto': await _dumpZainnotoTables(db),
       'prefs': await _dumpPrefs(),
     };
   }
@@ -153,6 +158,16 @@ class BackupService {
     final dump = <String, List<Map<String, Object?>>>{};
     for (final table in tables) {
       dump[table] = await db.query(table);
+    }
+    return dump;
+  }
+
+  Future<Map<String, List<Map<String, Object?>>>> _dumpZainnotoTables(
+    Database db,
+  ) async {
+    final dump = <String, List<Map<String, Object?>>>{};
+    for (final table in zainnotoTables) {
+      dump[table] = await db.query('$zainnotoTablePrefix$table');
     }
     return dump;
   }
@@ -225,15 +240,19 @@ class BackupService {
       prefix: 'pra-restore',
     );
 
+    // Satu database untuk semua tabel (Fase 3), tetapi restore tetap per grup
+    // tabel agar foreign key aman dan hitungan hasil tetap sama.
+    final db = await _openDatabase();
     final finflowCounts = await _restoreTables(
-      await _openFinflow(),
+      db,
       finflowTables,
       data['finflow'] as Map,
     );
     final zainnotoCounts = await _restoreTables(
-      await _openZainnoto(),
+      db,
       zainnotoTables,
       data['zainnoto'] as Map,
+      prefix: zainnotoTablePrefix,
     );
     await _restorePrefs(data['prefs']);
 
@@ -257,12 +276,13 @@ class BackupService {
   Future<Map<String, int>> _restoreTables(
     Database db,
     List<String> tables,
-    Map data,
-  ) async {
+    Map data, {
+    String prefix = '',
+  }) async {
     final counts = <String, int>{};
     await db.transaction((txn) async {
       for (final table in tables.reversed) {
-        await txn.delete(table);
+        await txn.delete('$prefix$table');
       }
       for (final table in tables) {
         final rows = data[table];
@@ -274,7 +294,7 @@ class BackupService {
         for (final row in rows) {
           if (row is! Map) continue;
           await txn.insert(
-            table,
+            '$prefix$table',
             Map<String, Object?>.from(row),
             conflictAlgorithm: ConflictAlgorithm.replace,
           );

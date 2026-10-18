@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:finflow_flutter/services/backup_service.dart';
-import 'package:finflow_flutter/zainnoto/db/zainnoto_database.dart';
+import 'package:finflow_flutter/zainnoto/db/zainnoto_schema.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -13,7 +13,9 @@ void main() {
 
   final nowIso = DateTime.utc(2026, 1, 7).toIso8601String();
 
-  Future<Database> openFinflowLike() {
+  /// Database gabungan tiruan: tabel Pribadi minimal + tabel `zn_*` asli
+  /// (schema Fase 3), persis seperti `finflow.db` setelah v8.
+  Future<Database> openMergedLike() {
     return databaseFactoryFfi.openDatabase(
       inMemoryDatabasePath,
       options: OpenDatabaseOptions(
@@ -40,13 +42,14 @@ void main() {
             'id INTEGER PRIMARY KEY AUTOINCREMENT, '
             'name TEXT NOT NULL, target REAL NOT NULL)',
           );
+          await createZainNotoSchema(db);
         },
       ),
     );
   }
 
-  Future<Database> seedFinflow() async {
-    final db = await openFinflowLike();
+  Future<Database> seedAll() async {
+    final db = await openMergedLike();
     await db.insert('categories', {'name': 'Makanan'});
     await db.insert('transactions', {
       'category_id': 1,
@@ -55,15 +58,8 @@ void main() {
     });
     await db.insert('budgets', {'category_id': 1, 'limit_amount': 500000.0});
     await db.insert('savings_goals', {'name': 'Liburan', 'target': 1000000.0});
-    return db;
-  }
 
-  Future<Database> seedZainnoto(ZainNotoDatabase database) async {
-    final db = await database.open(
-      factory: databaseFactoryFfi,
-      path: inMemoryDatabasePath,
-    );
-    await db.insert('groups', {
+    await db.insert('zn_groups', {
       'id': 'g1',
       'name': 'Kas Futsal',
       'icon_index': 0,
@@ -71,7 +67,7 @@ void main() {
       'created_at': nowIso,
       'updated_at': nowIso,
     });
-    await db.insert('members', {
+    await db.insert('zn_members', {
       'id': 'm1',
       'group_id': 'g1',
       'name': 'Alice',
@@ -80,7 +76,7 @@ void main() {
       'created_at': nowIso,
       'updated_at': nowIso,
     });
-    await db.insert('dues_plans', {
+    await db.insert('zn_dues_plans', {
       'id': 'p1',
       'group_id': 'g1',
       'amount': 20000,
@@ -90,7 +86,7 @@ void main() {
       'created_at': nowIso,
       'updated_at': nowIso,
     });
-    await db.insert('periods', {
+    await db.insert('zn_periods', {
       'id': 'pe1',
       'group_id': 'g1',
       'dues_plan_id': 'p1',
@@ -102,7 +98,7 @@ void main() {
       'created_at': nowIso,
       'updated_at': nowIso,
     });
-    await db.insert('charges', {
+    await db.insert('zn_charges', {
       'id': 'c1',
       'member_id': 'm1',
       'period_id': 'pe1',
@@ -110,7 +106,7 @@ void main() {
       'created_at': nowIso,
       'updated_at': nowIso,
     });
-    await db.insert('transactions', {
+    await db.insert('zn_transactions', {
       'id': 't1',
       'group_id': 'g1',
       'member_id': 'm1',
@@ -121,21 +117,21 @@ void main() {
       'created_at': nowIso,
       'updated_at': nowIso,
     });
-    await db.insert('allocations', {
+    await db.insert('zn_allocations', {
       'id': 'a1',
       'transaction_id': 't1',
       'charge_id': 'c1',
       'amount_allocated': 20000,
       'created_at': nowIso,
     });
-    await db.insert('member_credits', {
+    await db.insert('zn_member_credits', {
       'id': 'cr1',
       'member_id': 'm1',
       'source_transaction_id': 't1',
       'amount_remaining': 5000,
       'created_at': nowIso,
     });
-    await db.insert('audit_log', {
+    await db.insert('zn_audit_log', {
       'entity': 'transactions',
       'entity_id': 't1',
       'action': 'create',
@@ -145,12 +141,10 @@ void main() {
   }
 
   BackupService buildService({
-    required Future<Database> Function() openFinflow,
-    required Future<Database> Function() openZainnoto,
+    required Future<Database> Function() openDatabase,
   }) {
     return BackupService(
-      openFinflow: openFinflow,
-      openZainnoto: openZainnoto,
+      openDatabase: openDatabase,
       tempDirectory: () async => Directory.systemTemp,
     );
   }
@@ -162,50 +156,31 @@ void main() {
     });
 
     // Source data.
-    final sourceFin = await seedFinflow();
-    final sourceZain = ZainNotoDatabase();
-    await seedZainnoto(sourceZain);
-    final source = buildService(
-      openFinflow: () async => sourceFin,
-      openZainnoto: () => sourceZain.open(
-        factory: databaseFactoryFfi,
-        path: inMemoryDatabasePath,
-      ),
-    );
+    final sourceDb = await seedAll();
+    final source = buildService(openDatabase: () async => sourceDb);
     final payload = await source.collect();
     expect(payload['app'], BackupService.appMarker);
 
-    // Restore into fresh databases.
-    final targetFin = await openFinflowLike();
-    final targetZain = ZainNotoDatabase();
-    final target = buildService(
-      openFinflow: () async => targetFin,
-      openZainnoto: () => targetZain.open(
-        factory: databaseFactoryFfi,
-        path: inMemoryDatabasePath,
-      ),
-    );
+    // Restore into a fresh merged database.
+    final targetDb = await openMergedLike();
+    final target = buildService(openDatabase: () async => targetDb);
     final result = await target.restoreFromJson(payload);
 
     expect(result.finflowRows, 4);
     expect(result.zainnotoRows, 9);
     expect(result.safetyBackupPath, isNotEmpty);
 
-    expect(await targetFin.query('categories'), hasLength(1));
-    expect(await targetFin.query('transactions'), hasLength(1));
-    expect(await targetFin.query('budgets'), hasLength(1));
-    expect(await targetFin.query('savings_goals'), hasLength(1));
+    expect(await targetDb.query('categories'), hasLength(1));
+    expect(await targetDb.query('transactions'), hasLength(1));
+    expect(await targetDb.query('budgets'), hasLength(1));
+    expect(await targetDb.query('savings_goals'), hasLength(1));
 
-    final zain = await targetZain.open(
-      factory: databaseFactoryFfi,
-      path: inMemoryDatabasePath,
-    );
-    expect(await zain.query('groups'), hasLength(1));
-    expect(await zain.query('members'), hasLength(1));
-    expect(await zain.query('charges'), hasLength(1));
-    expect(await zain.query('allocations'), hasLength(1));
-    expect(await zain.query('member_credits'), hasLength(1));
-    expect(await zain.query('audit_log'), hasLength(1));
+    expect(await targetDb.query('zn_groups'), hasLength(1));
+    expect(await targetDb.query('zn_members'), hasLength(1));
+    expect(await targetDb.query('zn_charges'), hasLength(1));
+    expect(await targetDb.query('zn_allocations'), hasLength(1));
+    expect(await targetDb.query('zn_member_credits'), hasLength(1));
+    expect(await targetDb.query('zn_audit_log'), hasLength(1));
 
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getInt('custom_primary_color'), 0xFF381932);
@@ -215,42 +190,26 @@ void main() {
   test('impor mengganti data lama, bukan menambah', () async {
     SharedPreferences.setMockInitialValues({});
 
-    final sourceFin = await seedFinflow();
-    final sourceZain = ZainNotoDatabase();
-    await seedZainnoto(sourceZain);
-    final source = buildService(
-      openFinflow: () async => sourceFin,
-      openZainnoto: () => sourceZain.open(
-        factory: databaseFactoryFfi,
-        path: inMemoryDatabasePath,
-      ),
-    );
+    final sourceDb = await seedAll();
+    final source = buildService(openDatabase: () async => sourceDb);
     final payload = await source.collect();
 
     // Target already has different data.
-    final targetFin = await openFinflowLike();
-    await targetFin.insert('categories', {'name': 'Data Lama'});
-    await targetFin.insert('categories', {'name': 'Data Lama 2'});
-    final targetZain = ZainNotoDatabase();
-    final target = buildService(
-      openFinflow: () async => targetFin,
-      openZainnoto: () => targetZain.open(
-        factory: databaseFactoryFfi,
-        path: inMemoryDatabasePath,
-      ),
-    );
+    final targetDb = await openMergedLike();
+    await targetDb.insert('categories', {'name': 'Data Lama'});
+    await targetDb.insert('categories', {'name': 'Data Lama 2'});
+    final target = buildService(openDatabase: () async => targetDb);
 
     await target.restoreFromJson(payload);
 
-    final categories = await targetFin.query('categories');
+    final categories = await targetDb.query('categories');
     expect(categories, hasLength(1));
     expect(categories.single['name'], 'Makanan');
   });
 
   test('menolak file yang bukan backup TakaraNoto', () {
     final service = buildService(
-      openFinflow: () async => throw UnimplementedError(),
-      openZainnoto: () async => throw UnimplementedError(),
+      openDatabase: () async => throw UnimplementedError(),
     );
 
     final validation = service.validate({'app': 'aplikasi-lain', 'version': 1});
@@ -260,8 +219,7 @@ void main() {
 
   test('menolak versi backup yang lebih baru', () {
     final service = buildService(
-      openFinflow: () async => throw UnimplementedError(),
-      openZainnoto: () async => throw UnimplementedError(),
+      openDatabase: () async => throw UnimplementedError(),
     );
 
     final validation = service.validate({
@@ -276,8 +234,7 @@ void main() {
 
   test('menolak struktur backup yang tidak lengkap', () {
     final service = buildService(
-      openFinflow: () async => throw UnimplementedError(),
-      openZainnoto: () async => throw UnimplementedError(),
+      openDatabase: () async => throw UnimplementedError(),
     );
 
     final validation = service.validate({

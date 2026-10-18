@@ -1,13 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import 'package:finflow_flutter/zainnoto/db/zainnoto_database.dart';
+import 'package:finflow_flutter/services/database_helper.dart';
 import 'package:finflow_flutter/zainnoto/models/entities.dart';
 import 'package:finflow_flutter/zainnoto/repositories/zainnoto_repository.dart';
 
 class TestContext {
   TestContext({
-    required this.database,
+    required this.db,
     required this.repo,
     required this.groupId,
     required this.aliceId,
@@ -15,7 +15,7 @@ class TestContext {
     required this.planId,
   });
 
-  final ZainNotoDatabase database;
+  final Database db;
   final ZainNotoRepository repo;
   final String groupId;
   final String aliceId;
@@ -23,19 +23,31 @@ class TestContext {
   final String planId;
 }
 
-/// Opens a fresh in-memory ZainNoto database and seeds one weekly plan
+/// Membuka database bersama in-memory (tabel Pribadi + `zn_*`) lewat
+/// [DatabaseHelper], dan mendaftarkan pembersihan otomatis lewat
+/// `addTearDown`.
+Future<Database> openTestDatabase() async {
+  sqfliteFfiInit();
+  databaseFactory = databaseFactoryFfi;
+  await DatabaseHelper.closeForTesting();
+  DatabaseHelper.debugDatabasePath = inMemoryDatabasePath;
+  addTearDown(() async {
+    await DatabaseHelper.closeForTesting();
+    DatabaseHelper.debugDatabasePath = null;
+  });
+  return DatabaseHelper.instance.database;
+}
+
+/// Opens a fresh in-memory shared database and seeds one weekly plan
 /// (default 20.000/minggu) with two members: Alice & Bob.
 Future<TestContext> seedWeekly({
   int amount = 20000,
   int dueDay = 7,
   String startDate = '2026-01-05',
 }) async {
-  sqfliteFfiInit();
-  final database = ZainNotoDatabase();
-  await database.open(factory: databaseFactoryFfi, path: inMemoryDatabasePath);
-  addTearDown(database.close);
+  final db = await openTestDatabase();
 
-  final repo = ZainNotoRepository(database);
+  final repo = ZainNotoRepository();
   final groupId = await repo.createGroup(name: 'Kas Futsal');
   final aliceId = await repo.addMember(
     groupId: groupId,
@@ -55,7 +67,7 @@ Future<TestContext> seedWeekly({
     startDate: startDate,
   );
   return TestContext(
-    database: database,
+    db: db,
     repo: repo,
     groupId: groupId,
     aliceId: aliceId,

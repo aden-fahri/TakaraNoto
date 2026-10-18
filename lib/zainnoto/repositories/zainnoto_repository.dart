@@ -4,7 +4,7 @@ import 'dart:math' as math;
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
-import '../db/zainnoto_database.dart';
+import '../../services/database_helper.dart';
 import '../logic/allocation.dart';
 import '../logic/dues_status.dart';
 import '../logic/period_generator.dart';
@@ -16,15 +16,20 @@ import '../utils/dates.dart';
 ///
 /// All multi-step writes (record / edit / delete payment, period generation)
 /// run inside a single `db.transaction`, so a failure leaves no partial state.
-/// Every insert/update/delete of user data is mirrored into `audit_log`.
+/// Every insert/update/delete of user data is mirrored into `zn_audit_log`.
+///
+/// Sejak Fase 3, tabel ZainNoto (`zn_*`) hidup di database yang sama dengan
+/// mode Pribadi (`finflow.db`) sehingga koneksi dibagi lewat [DatabaseHelper].
 class ZainNotoRepository {
-  ZainNotoRepository(this._database, {Uuid? uuid})
-      : _uuid = uuid ?? const Uuid();
+  ZainNotoRepository({Uuid? uuid, Future<Database> Function()? openDatabase})
+      : _uuid = uuid ?? const Uuid(),
+        _openDatabase =
+            openDatabase ?? (() => DatabaseHelper.instance.database);
 
-  final ZainNotoDatabase _database;
   final Uuid _uuid;
+  final Future<Database> Function() _openDatabase;
 
-  Future<Database> get _db => _database.open();
+  Future<Database> get _db => _openDatabase();
 
   String _newId() => _uuid.v4();
 
@@ -49,7 +54,7 @@ class ZainNotoRepository {
       'updated_at': now,
     };
     await db.transaction((txn) async {
-      await txn.insert('groups', row);
+      await txn.insert('zn_groups', row);
       await _audit(txn,
           entity: 'group', entityId: id, action: 'insert', newMap: row);
     });
@@ -59,7 +64,7 @@ class ZainNotoRepository {
   Future<List<Group>> getGroups() async {
     final db = await _db;
     final rows = await db.query(
-      'groups',
+      'zn_groups',
       where: 'deleted_at IS NULL',
       orderBy: 'created_at ASC',
     );
@@ -75,7 +80,7 @@ class ZainNotoRepository {
   }) async {
     final db = await _db;
     await db.transaction((txn) async {
-      final old = await _single(txn, 'groups', id);
+      final old = await _single(txn, 'zn_groups', id);
       if (old == null) throw StateError('Grup tidak ditemukan');
       final now = nowIso();
       final updated = <String, Object?>{
@@ -85,7 +90,7 @@ class ZainNotoRepository {
         'color_hex': colorHex ?? old['color_hex'],
         'updated_at': now,
       };
-      await txn.update('groups', updated, where: 'id = ?', whereArgs: [id]);
+      await txn.update('zn_groups', updated, where: 'id = ?', whereArgs: [id]);
       await _audit(txn,
           entity: 'group',
           entityId: id,
@@ -98,11 +103,11 @@ class ZainNotoRepository {
   Future<void> softDeleteGroup(String id) async {
     final db = await _db;
     await db.transaction((txn) async {
-      final old = await _single(txn, 'groups', id);
+      final old = await _single(txn, 'zn_groups', id);
       if (old == null) return;
       final now = nowIso();
       await txn.update(
-        'groups',
+        'zn_groups',
         {'deleted_at': now, 'updated_at': now},
         where: 'id = ?',
         whereArgs: [id],
@@ -134,20 +139,20 @@ class ZainNotoRepository {
       'updated_at': now,
     };
     await db.transaction((txn) async {
-      await txn.insert('members', row);
+      await txn.insert('zn_members', row);
       await _audit(txn,
           entity: 'member', entityId: id, action: 'insert', newMap: row);
 
       // Backfill charges only for periods that end on/after the join date, so
       // new members never owe periods that ended before they joined.
       final periods = await txn.query(
-        'periods',
+        'zn_periods',
         where: 'group_id = ? AND deleted_at IS NULL AND end_date >= ?',
         whereArgs: [groupId, joinedAt],
       );
       for (final p in periods) {
         await txn.insert(
-          'charges',
+          'zn_charges',
           {
             'id': _newId(),
             'member_id': id,
@@ -170,7 +175,7 @@ class ZainNotoRepository {
   }) async {
     final db = await _db;
     final rows = await db.query(
-      'members',
+      'zn_members',
       where: includeInactive
           ? 'group_id = ? AND deleted_at IS NULL'
           : 'group_id = ? AND deleted_at IS NULL AND status = ?',
@@ -190,7 +195,7 @@ class ZainNotoRepository {
   }) async {
     final db = await _db;
     await db.transaction((txn) async {
-      final old = await _single(txn, 'members', id);
+      final old = await _single(txn, 'zn_members', id);
       if (old == null) throw StateError('Anggota tidak ditemukan');
       final now = nowIso();
       final updated = <String, Object?>{
@@ -199,7 +204,7 @@ class ZainNotoRepository {
         'status': status?.dbValue ?? old['status'],
         'updated_at': now,
       };
-      await txn.update('members', updated, where: 'id = ?', whereArgs: [id]);
+      await txn.update('zn_members', updated, where: 'id = ?', whereArgs: [id]);
       await _audit(txn,
           entity: 'member',
           entityId: id,
@@ -212,11 +217,11 @@ class ZainNotoRepository {
   Future<void> softDeleteMember(String id) async {
     final db = await _db;
     await db.transaction((txn) async {
-      final old = await _single(txn, 'members', id);
+      final old = await _single(txn, 'zn_members', id);
       if (old == null) return;
       final now = nowIso();
       await txn.update(
-        'members',
+        'zn_members',
         {'deleted_at': now, 'updated_at': now},
         where: 'id = ?',
         whereArgs: [id],
@@ -266,7 +271,7 @@ class ZainNotoRepository {
         // Only one active plan per group: the UI always edits the existing
         // plan, so an insert here means a double tap or a caller bug.
         final existing = await txn.query(
-          'dues_plans',
+          'zn_dues_plans',
           columns: ['id'],
           where: 'group_id = ? AND deleted_at IS NULL',
           whereArgs: [groupId],
@@ -287,12 +292,12 @@ class ZainNotoRepository {
           'created_at': now,
           'updated_at': now,
         };
-        await txn.insert('dues_plans', row);
+        await txn.insert('zn_dues_plans', row);
         await _audit(txn,
             entity: 'dues_plan', entityId: newId, action: 'insert', newMap: row);
         return newId;
       }
-      final old = await _single(txn, 'dues_plans', id);
+      final old = await _single(txn, 'zn_dues_plans', id);
       if (old == null) throw StateError('Rencana iuran tidak ditemukan');
       final updated = <String, Object?>{
         'amount': amount,
@@ -301,7 +306,7 @@ class ZainNotoRepository {
         'start_date': normalizedStart,
         'updated_at': now,
       };
-      await txn.update('dues_plans', updated, where: 'id = ?', whereArgs: [id]);
+      await txn.update('zn_dues_plans', updated, where: 'id = ?', whereArgs: [id]);
       await _audit(txn,
           entity: 'dues_plan',
           entityId: id,
@@ -333,7 +338,7 @@ class ZainNotoRepository {
   Future<List<DuesPlan>> getDuesPlans(String groupId) async {
     final db = await _db;
     final rows = await db.query(
-      'dues_plans',
+      'zn_dues_plans',
       where: 'group_id = ? AND deleted_at IS NULL',
       whereArgs: [groupId],
       orderBy: 'created_at ASC',
@@ -354,14 +359,14 @@ class ZainNotoRepository {
     final target = dateOnly(upTo ?? DateTime.now());
     return db.transaction((txn) async {
       final planRows = await txn.query(
-        'dues_plans',
+        'zn_dues_plans',
         where: 'group_id = ? AND deleted_at IS NULL',
         whereArgs: [groupId],
       );
       if (planRows.isEmpty) return 0;
 
       final memberRows = await txn.query(
-        'members',
+        'zn_members',
         where: 'group_id = ? AND deleted_at IS NULL',
         whereArgs: [groupId],
       );
@@ -380,7 +385,7 @@ class ZainNotoRepository {
       final planIds = [for (final row in planRows) row['id'] as String];
       final planPlaceholders = List.filled(planIds.length, '?').join(', ');
       final periodRows = await txn.query(
-        'periods',
+        'zn_periods',
         where: 'dues_plan_id IN ($planPlaceholders)',
         whereArgs: planIds,
       );
@@ -394,7 +399,7 @@ class ZainNotoRepository {
         final periodPlaceholders =
             List.filled(periodIds.length, '?').join(', ');
         final chargeRows = await txn.query(
-          'charges',
+          'zn_charges',
           columns: ['id', 'period_id', 'member_id', 'deleted_at'],
           where: 'period_id IN ($periodPlaceholders)',
           whereArgs: periodIds,
@@ -425,7 +430,7 @@ class ZainNotoRepository {
             // (the unique index keeps deleted periods in place).
             periodId = existingPeriod['id'] as String;
             await txn.update(
-              'periods',
+              'zn_periods',
               {
                 'label': draft.label,
                 'end_date': dateToStr(draft.endDate),
@@ -439,7 +444,7 @@ class ZainNotoRepository {
             );
           } else {
             periodId = _newId();
-            await txn.insert('periods', {
+            await txn.insert('zn_periods', {
               'id': periodId,
               'group_id': groupId,
               'dues_plan_id': plan.id,
@@ -462,7 +467,7 @@ class ZainNotoRepository {
             if (existingCharge != null) {
               if (existingCharge['deleted_at'] == null) continue;
               await txn.update(
-                'charges',
+                'zn_charges',
                 {
                   'amount_due': draft.amountSnapshot,
                   'deleted_at': null,
@@ -472,7 +477,7 @@ class ZainNotoRepository {
                 whereArgs: [existingCharge['id']],
               );
             } else {
-              await txn.insert('charges', {
+              await txn.insert('zn_charges', {
                 'id': _newId(),
                 'member_id': member.id,
                 'period_id': periodId,
@@ -502,7 +507,7 @@ class ZainNotoRepository {
   Future<List<Period>> getPeriods(String groupId) async {
     final db = await _db;
     final rows = await db.query(
-      'periods',
+      'zn_periods',
       where: 'group_id = ? AND deleted_at IS NULL',
       whereArgs: [groupId],
       orderBy: 'start_date ASC',
@@ -514,7 +519,7 @@ class ZainNotoRepository {
     final db = await _db;
     final day = dateToStr(dateOnly(asOf ?? DateTime.now()));
     final rows = await db.query(
-      'periods',
+      'zn_periods',
       where: 'group_id = ? AND deleted_at IS NULL AND start_date <= ?',
       whereArgs: [groupId, day],
       orderBy: 'start_date DESC',
@@ -533,11 +538,11 @@ class ZainNotoRepository {
              m.id AS member_id,
              m.name AS member_name,
              COALESCE(SUM(CASE WHEN t.id IS NULL THEN 0 ELSE a.amount_allocated END), 0) AS paid
-      FROM charges c
-      JOIN members m ON m.id = c.member_id
-      JOIN periods p ON p.id = c.period_id
-      LEFT JOIN allocations a ON a.charge_id = c.id
-      LEFT JOIN transactions t ON t.id = a.transaction_id AND t.is_deleted = 0
+      FROM zn_charges c
+      JOIN zn_members m ON m.id = c.member_id
+      JOIN zn_periods p ON p.id = c.period_id
+      LEFT JOIN zn_allocations a ON a.charge_id = c.id
+      LEFT JOIN zn_transactions t ON t.id = a.transaction_id AND t.is_deleted = 0
       WHERE c.period_id = ? AND c.deleted_at IS NULL AND m.deleted_at IS NULL
       GROUP BY c.id
       ORDER BY m.name COLLATE NOCASE ASC
@@ -558,7 +563,7 @@ class ZainNotoRepository {
   Future<void> setChargeWaived(String chargeId, {required bool waived}) async {
     final db = await _db;
     await db.transaction((txn) async {
-      final old = await _single(txn, 'charges', chargeId);
+      final old = await _single(txn, 'zn_charges', chargeId);
       if (old == null) throw StateError('Tagihan tidak ditemukan');
       final now = nowIso();
       final updated = <String, Object?>{
@@ -566,7 +571,7 @@ class ZainNotoRepository {
         'updated_at': now,
       };
       await txn
-          .update('charges', updated, where: 'id = ?', whereArgs: [chargeId]);
+          .update('zn_charges', updated, where: 'id = ?', whereArgs: [chargeId]);
       await _audit(txn,
           entity: 'charge',
           entityId: chargeId,
@@ -598,7 +603,7 @@ class ZainNotoRepository {
     return db.transaction((txn) async {
       if (idempotencyKey != null) {
         final existing = await txn.query(
-          'transactions',
+          'zn_transactions',
           columns: ['id'],
           where: 'client_ref = ?',
           whereArgs: [idempotencyKey],
@@ -623,7 +628,7 @@ class ZainNotoRepository {
         'created_at': now,
         'updated_at': now,
       };
-      await txn.insert('transactions', row);
+      await txn.insert('zn_transactions', row);
       await _allocateForMember(
         txn,
         transactionId: id,
@@ -660,7 +665,7 @@ class ZainNotoRepository {
     return db.transaction((txn) async {
       if (idempotencyKey != null) {
         final existing = await txn.query(
-          'transactions',
+          'zn_transactions',
           columns: ['id'],
           where: 'client_ref = ?',
           whereArgs: [idempotencyKey],
@@ -685,7 +690,7 @@ class ZainNotoRepository {
         'created_at': now,
         'updated_at': now,
       };
-      await txn.insert('transactions', row);
+      await txn.insert('zn_transactions', row);
       await _audit(txn,
           entity: 'transaction', entityId: id, action: 'insert', newMap: row);
       return id;
@@ -706,7 +711,7 @@ class ZainNotoRepository {
     final db = await _db;
     await db.transaction((txn) async {
       final rows = await txn.query(
-        'transactions',
+        'zn_transactions',
         where: 'id = ?',
         whereArgs: [id],
         limit: 1,
@@ -732,12 +737,12 @@ class ZainNotoRepository {
         'member_id': newMemberId,
         'updated_at': now,
       };
-      await txn.update('transactions', updated, where: 'id = ?', whereArgs: [id]);
+      await txn.update('zn_transactions', updated, where: 'id = ?', whereArgs: [id]);
 
       if (old.type == TxType.dues) {
-        await txn.delete('allocations',
+        await txn.delete('zn_allocations',
             where: 'transaction_id = ?', whereArgs: [id]);
-        await txn.delete('member_credits',
+        await txn.delete('zn_member_credits',
             where: 'source_transaction_id = ?', whereArgs: [id]);
         if (newMemberId != null) {
           await _allocateForMember(
@@ -766,7 +771,7 @@ class ZainNotoRepository {
     final db = await _db;
     await db.transaction((txn) async {
       final rows = await txn.query(
-        'transactions',
+        'zn_transactions',
         where: 'id = ?',
         whereArgs: [id],
         limit: 1,
@@ -777,14 +782,14 @@ class ZainNotoRepository {
 
       final now = nowIso();
       await txn.update(
-        'transactions',
+        'zn_transactions',
         {'is_deleted': 1, 'deleted_at': now, 'updated_at': now},
         where: 'id = ?',
         whereArgs: [id],
       );
-      await txn.delete('allocations',
+      await txn.delete('zn_allocations',
           where: 'transaction_id = ?', whereArgs: [id]);
-      await txn.delete('member_credits',
+      await txn.delete('zn_member_credits',
           where: 'source_transaction_id = ?', whereArgs: [id]);
       await _audit(txn,
           entity: 'transaction', entityId: id, action: 'delete', oldMap: old.toMap());
@@ -805,7 +810,7 @@ class ZainNotoRepository {
       args.add(type.dbValue);
     }
     final rows = await db.query(
-      'transactions',
+      'zn_transactions',
       where: where.toString(),
       whereArgs: args,
       orderBy: 'date DESC, created_at DESC',
@@ -816,7 +821,7 @@ class ZainNotoRepository {
   Future<List<Allocation>> getAllocations(String transactionId) async {
     final db = await _db;
     final rows = await db.query(
-      'allocations',
+      'zn_allocations',
       where: 'transaction_id = ?',
       whereArgs: [transactionId],
       orderBy: 'created_at ASC',
@@ -832,9 +837,9 @@ class ZainNotoRepository {
     final rows = await db.rawQuery('''
       SELECT a.id, a.transaction_id, a.charge_id, a.amount_allocated,
              a.created_at, p.label AS period_label
-      FROM allocations a
-      JOIN charges c ON c.id = a.charge_id
-      JOIN periods p ON p.id = c.period_id
+      FROM zn_allocations a
+      JOIN zn_charges c ON c.id = a.charge_id
+      JOIN zn_periods p ON p.id = c.period_id
       WHERE a.transaction_id = ?
       ORDER BY a.created_at ASC
     ''', [transactionId]);
@@ -844,7 +849,7 @@ class ZainNotoRepository {
   Future<List<MemberCredit>> getMemberCredits(String memberId) async {
     final db = await _db;
     final rows = await db.query(
-      'member_credits',
+      'zn_member_credits',
       where: 'member_id = ?',
       whereArgs: [memberId],
       orderBy: 'created_at ASC',
@@ -869,7 +874,7 @@ class ZainNotoRepository {
       args.add(entityId);
     }
     final rows = await db.query(
-      'audit_log',
+      'zn_audit_log',
       where: where.toString(),
       whereArgs: args,
       orderBy: 'id ASC',
@@ -891,7 +896,7 @@ class ZainNotoRepository {
 
     final balanceRows = await db.rawQuery('''
       SELECT COALESCE(SUM(CASE WHEN type = 'expense' THEN -amount ELSE amount END), 0) AS balance
-      FROM transactions
+      FROM zn_transactions
       WHERE group_id = ? AND is_deleted = 0
     ''', [groupId]);
     final balance = ((balanceRows.first['balance'] as num?) ?? 0).toInt();
@@ -905,10 +910,10 @@ class ZainNotoRepository {
                c.member_id,
                c.amount_due,
                COALESCE(SUM(CASE WHEN t.id IS NULL THEN 0 ELSE a.amount_allocated END), 0) AS paid
-        FROM charges c
-        JOIN periods p ON p.id = c.period_id
-        LEFT JOIN allocations a ON a.charge_id = c.id
-        LEFT JOIN transactions t ON t.id = a.transaction_id AND t.is_deleted = 0
+        FROM zn_charges c
+        JOIN zn_periods p ON p.id = c.period_id
+        LEFT JOIN zn_allocations a ON a.charge_id = c.id
+        LEFT JOIN zn_transactions t ON t.id = a.transaction_id AND t.is_deleted = 0
         WHERE c.deleted_at IS NULL
           AND c.waived = 0
           AND p.deleted_at IS NULL
@@ -916,7 +921,7 @@ class ZainNotoRepository {
           AND p.due_date < ?
         GROUP BY c.id
       ) sub
-      JOIN members m ON m.id = sub.member_id AND m.deleted_at IS NULL
+      JOIN zn_members m ON m.id = sub.member_id AND m.deleted_at IS NULL
       WHERE sub.paid < sub.amount_due
       GROUP BY sub.member_id
     ''', [groupId, day]);
@@ -969,10 +974,10 @@ class ZainNotoRepository {
                c.member_id,
                p.due_date,
                (c.amount_due - COALESCE(SUM(CASE WHEN t.id IS NULL THEN 0 ELSE a.amount_allocated END), 0)) AS remaining
-        FROM charges c
-        JOIN periods p ON p.id = c.period_id
-        LEFT JOIN allocations a ON a.charge_id = c.id
-        LEFT JOIN transactions t ON t.id = a.transaction_id AND t.is_deleted = 0
+        FROM zn_charges c
+        JOIN zn_periods p ON p.id = c.period_id
+        LEFT JOIN zn_allocations a ON a.charge_id = c.id
+        LEFT JOIN zn_transactions t ON t.id = a.transaction_id AND t.is_deleted = 0
         WHERE c.deleted_at IS NULL
           AND c.waived = 0
           AND p.deleted_at IS NULL
@@ -981,7 +986,7 @@ class ZainNotoRepository {
         GROUP BY c.id
         HAVING remaining > 0
       ) sub
-      JOIN members m ON m.id = sub.member_id
+      JOIN zn_members m ON m.id = sub.member_id
       WHERE m.deleted_at IS NULL
       GROUP BY m.id
       ORDER BY total_overdue DESC, unpaid_count DESC
@@ -1015,7 +1020,7 @@ class ZainNotoRepository {
     Map<String, Object?>? oldMap,
     Map<String, Object?>? newMap,
   }) async {
-    await txn.insert('audit_log', {
+    await txn.insert('zn_audit_log', {
       'entity': entity,
       'entity_id': entityId,
       'action': action,
@@ -1035,19 +1040,19 @@ class ZainNotoRepository {
     required String now,
   }) async {
     const paidPeriods = '''
-      SELECT DISTINCT c.period_id FROM charges c
-      JOIN allocations a ON a.charge_id = c.id
+      SELECT DISTINCT c.period_id FROM zn_charges c
+      JOIN zn_allocations a ON a.charge_id = c.id
     ''';
     await txn.rawUpdate('''
-      UPDATE charges SET deleted_at = ?, updated_at = ?
+      UPDATE zn_charges SET deleted_at = ?, updated_at = ?
       WHERE deleted_at IS NULL AND period_id IN (
-        SELECT id FROM periods
+        SELECT id FROM zn_periods
         WHERE dues_plan_id = ? AND deleted_at IS NULL
           AND id NOT IN ($paidPeriods)
       )
     ''', [now, now, planId]);
     final deletedPeriods = await txn.rawUpdate('''
-      UPDATE periods SET deleted_at = ?, updated_at = ?
+      UPDATE zn_periods SET deleted_at = ?, updated_at = ?
       WHERE dues_plan_id = ? AND deleted_at IS NULL
         AND id NOT IN ($paidPeriods)
     ''', [now, now, planId]);
@@ -1064,10 +1069,10 @@ class ZainNotoRepository {
              c.amount_due,
              p.due_date,
              COALESCE(SUM(CASE WHEN t.id IS NULL THEN 0 ELSE a.amount_allocated END), 0) AS paid
-      FROM charges c
-      JOIN periods p ON p.id = c.period_id
-      LEFT JOIN allocations a ON a.charge_id = c.id
-      LEFT JOIN transactions t ON t.id = a.transaction_id AND t.is_deleted = 0
+      FROM zn_charges c
+      JOIN zn_periods p ON p.id = c.period_id
+      LEFT JOIN zn_allocations a ON a.charge_id = c.id
+      LEFT JOIN zn_transactions t ON t.id = a.transaction_id AND t.is_deleted = 0
       WHERE c.member_id = ?
         AND c.deleted_at IS NULL
         AND c.waived = 0
@@ -1103,7 +1108,7 @@ class ZainNotoRepository {
     final result = allocateFifo(amount: amount, debts: debts);
     final now = nowIso();
     for (final draft in result.allocations) {
-      await txn.insert('allocations', {
+      await txn.insert('zn_allocations', {
         'id': _newId(),
         'transaction_id': transactionId,
         'charge_id': draft.chargeId,
@@ -1112,7 +1117,7 @@ class ZainNotoRepository {
       });
     }
     if (result.leftover > 0) {
-      await txn.insert('member_credits', {
+      await txn.insert('zn_member_credits', {
         'id': _newId(),
         'member_id': memberId,
         'source_transaction_id': transactionId,
@@ -1132,7 +1137,7 @@ class ZainNotoRepository {
     required String groupId,
   }) async {
     final credits = await txn.query(
-      'member_credits',
+      'zn_member_credits',
       where: 'member_id = ? AND amount_remaining > 0',
       whereArgs: [memberId],
       orderBy: 'created_at ASC',
@@ -1167,7 +1172,7 @@ class ZainNotoRepository {
         final chargeLeft = remaining[chargeId] ?? 0;
         if (chargeLeft <= 0) continue;
         final take = math.min(creditLeft, chargeLeft);
-        await txn.insert('allocations', {
+        await txn.insert('zn_allocations', {
           'id': _newId(),
           'transaction_id': creditRow['source_transaction_id'],
           'charge_id': chargeId,
@@ -1178,11 +1183,11 @@ class ZainNotoRepository {
         remaining[chargeId] = chargeLeft - take;
       }
       if (creditLeft <= 0) {
-        await txn.delete('member_credits',
+        await txn.delete('zn_member_credits',
             where: 'id = ?', whereArgs: [creditRow['id']]);
       } else {
         await txn.update(
-          'member_credits',
+          'zn_member_credits',
           {'amount_remaining': creditLeft},
           where: 'id = ?',
           whereArgs: [creditRow['id']],

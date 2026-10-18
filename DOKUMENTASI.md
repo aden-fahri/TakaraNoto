@@ -15,10 +15,10 @@ TakaraNoto adalah aplikasi pencatatan keuangan berbasis **Flutter** dengan **dua
 | Mode | Nama shell | Isi | Database |
 |---|---|---|---|
 | **Pribadi** | TakaraNoto | Keuangan pribadi: transaksi, anggaran, tabungan, E-Wallet, statistik, riwayat | `finflow.db` |
-| **Kelompok** | ZainNoto | Kas kelompok: iuran anggota, tunggakan, periode, pembayaran FIFO, kredit, rekap WhatsApp | `zainnoto.db` |
+| **Kelompok** | ZainNoto | Kas kelompok: iuran anggota, tunggakan, periode, pembayaran FIFO, kredit, rekap WhatsApp | tabel `zn_*` di `finflow.db` |
 
 - Perpindahan mode lewat tombol `ModeSwitchButton` (menampilkan mode tujuan: `ZainNoto →` / `TakaraNoto →`), diproses `AppModeGate`. Mode **tidak dipersist** — aplikasi selalu terbuka di mode Pribadi.
-- Kedua mode memakai provider, database, dan seluruh alur datanya masing-masing — terpisah total. Jembatan antar-mode hanya lewat **Backup & Restore**.
+- Kedua mode memakai provider dan alur datanya masing-masing — state terpisah total, namun sejak **merger Fase 3** keduanya berbagi satu file DB (`finflow.db`) dengan tabel ZainNoto berprefix `zn_`. Jembatan antar-mode utama tetap **Backup & Restore**.
 
 ---
 
@@ -28,7 +28,7 @@ TakaraNoto adalah aplikasi pencatatan keuangan berbasis **Flutter** dengan **dua
 |---|---|
 | Bahasa & framework | **Dart 3 / Flutter** (Material 3), widget murni tanpa codegen |
 | State management | **`provider` ^6.1.5** (`ChangeNotifierProvider` + `context.watch/read`) |
-| Database | **SQLite** via **`sqflite` ^2.4.2** — dua file DB terpisah (`finflow.db` v7, `zainnoto.db` v1) |
+| Database | **SQLite** via **`sqflite` ^2.4.2** — satu file DB (`finflow.db` v8, sejak merger Fase 3) berisi tabel Pribadi + 9 tabel ZainNoto berprefix `zn_` |
 | Web | **`sqflite_common_ffi_web` ^1.1.1** (sqlite3 wasm + **IndexedDB**) — set di `main.dart`; aset `web/sqlite3.wasm` + `web/sqflite_sw.js` ikut di-commit |
 | Penyimpanan preferensi | **`shared_preferences` ^2.5.0** (warna tema) |
 | Lokalisasi & format | **`intl` ^0.20.2** (`initializeDateFormatting('id')`, `NumberFormat` locale `id_ID`) |
@@ -93,7 +93,7 @@ lib/
 
 ## 5. Mode Pribadi — Data & Logic
 
-### 5.1 Skema `finflow.db` (versi 7)
+### 5.1 Skema `finflow.db` (versi 8)
 
 | Tabel | Isi |
 |---|---|
@@ -101,10 +101,12 @@ lib/
 | `transactions` | `category_id` FK CASCADE, `amount REAL`, `type`, `date`, `note`, `savings_goal_id` FK SET NULL, `wallet_type` (`main`/`topup`), `is_transfer`, `transfer_group` |
 | `budgets` | `category_id` FK CASCADE, `limit_amount`, `month_year`, `budget_type` (`goal`/`daily_limit`), **`UNIQUE(category_id, month_year)`** |
 | `savings_goals` | `title`, `target_amount`, `created_at` |
+| `zn_*` (9 tabel) | Tabel mode Kelompok: `zn_groups`, `zn_members`, `zn_dues_plans`, `zn_periods`, `zn_charges`, `zn_transactions`, `zn_allocations`, `zn_member_credits`, `zn_audit_log` — dibuat oleh migrasi **v8** (lihat `ZAINNOTO.md` §3) |
 
 - **Tidak ada tabel dompet** — dompet **virtual** lewat kolom `wallet_type`; saldo selalu dihitung (derived).
 - Migrasi v3–v6: recreate tabel, tambah `wallet_type`, lalu v6 menambah `is_transfer`/`transfer_group` dan **mengubah baris "Top Up" lama menjadi pasangan transfer**.
 - Migrasi **v7**: tambah `categories.is_savings` (di-set 1 untuk `Tabungan` & `Tarik Tabungan`) dan **bangun ulang `budgets`** dengan UNIQUE komposit `(category_id, month_year)` — sebelumnya `category_id` UNIQUE global sehingga anggaran bulan kedua untuk kategori yang sama selalu gagal (`UNIQUE constraint failed`).
+- Migrasi **v8 (merger Fase 3)**: `finflow.db` kini juga memuat seluruh tabel ZainNoto berprefix `zn_` (`createZainNotoSchema`, semua `IF NOT EXISTS`); data lama dari `zainnoto.db` sengaja tidak dimigrasikan (tidak ada data riil) dan file `zainnoto.db` lama menjadi yatim di disk. Format file backup **tidak berubah**: ekspor tetap memakai kunci `zainnoto` dengan nama tabel lama sehingga backup lama tetap bisa direstore ke tabel `zn_*`.
 - **Tanpa soft delete** di mode ini; hapus bersifat permanen (kategori → cascade transaksi+anggaran).
 
 ### 5.2 Konvensi tanda & aturan hitung (inti logic)
@@ -201,7 +203,7 @@ Pembahasan lengkap ada di **[`ZAINNOTO.md`](ZAINNOTO.md)**. Ringkas:
 
 - **Fitur**: grup kas + anggota, rencana iuran (mingguan/bulanan), periode & tagihan otomatis, pembayaran 1-tap/parsial dengan **alokasi FIFO**, kelebihan bayar menjadi **kredit** (terpakai otomatis), bebas iuran, tunggakan, rekap WhatsApp, statistik kontribusi, pengaturan grup.
 - **Logic kunci**: status tagihan **selalu turunan** (unpaid/partial/paid/waived, tidak disimpan); periode idempoten; `client_ref` = kunci idempotensi anti double-transaction; edit/hapus pembayaran = realokasi/revert penuh (tanpa void+replace); saldo murni dari transaksi.
-- **Data**: DB SQLite terpisah `zainnoto.db` (9 tabel) + `ZainNotoProvider` + audit log (tanpa UI).
+- **Data**: tabel `zn_*` (9 tabel) di `finflow.db` yang sama + `ZainNotoProvider` + audit log (dengan UI sejak B6c).
 - **UI**: shell 4 tab (Beranda, Iuran checklist/matriks, Transaksi, Statistik) + `GroupManagementSheet`.
 
 ---
@@ -219,7 +221,7 @@ Pembahasan lengkap ada di **[`ZAINNOTO.md`](ZAINNOTO.md)**. Ringkas:
 
 - Folder platform lengkap: `android/`, `ios/`, `web/`, `windows/`, `linux/`, `macos/`.
 - **Web**: sqlite3 wasm + IndexedDB (data **persisten**, berbeda dari yang tertulis di README lama); metadata tampilan: Android label `TakaraNoto`, iOS masih `Finflow Flutter` (belum di-rebrand), bundle `com.finflow.finflow_flutter`.
-- **Penyimpanan**: file `finflow.db` & `zainnoto.db` di dokumen aplikasi (native) / IndexedDB (web).
+- **Penyimpanan**: satu file `finflow.db` (Pribadi + `zn_*`) di dokumen aplikasi (native) / IndexedDB (web). File `zainnoto.db` lama (pra-merger) tidak dibaca lagi.
 - **Aset**: hanya `assets/images/logo.png`.
 
 ```bash
@@ -236,7 +238,7 @@ flutter build web
 
 | File | Cakupan |
 |---|---|
-| `test/database_helper_test.dart` | **Regresi A1–A5** (saldo dompet vs isi E-Wallet, belanja E-Wallet masuk statistik/anggaran, setor/tarik tabungan terpisah dari income/expense, hapus goal tidak mengubah laporan, anggaran lintas bulan) + **migrasi v6→v7** (data awet, UNIQUE komposit aktif, flag `is_savings` terisi) |
+| `test/database_helper_test.dart` | **Regresi A1–A5** (saldo dompet vs isi E-Wallet, belanja E-Wallet masuk statistik/anggaran, setor/tarik tabungan terpisah dari income/expense, hapus goal tidak mengubah laporan, anggaran lintas bulan) + **migrasi v6→v7** (data awet, UNIQUE komposit aktif, flag `is_savings` terisi) + **migrasi v7→v8** (tabel `zn_*` terbentuk, data Pribadi awet) |
 | `test/finance_calc_test.dart` | `daysInMonth` (termasuk kabisat & fallback), `monthlyBudgetLimit`, agregasi income/expense/net (mengecualikan transfer & kategori savings), `displayName` transfer (4 kasus), `Category.isSpecial` |
 | `test/backup_service_test.dart` | Round-trip backup penuh (finflow + zainnoto + prefs), impor mengganti (bukan menambah), tolak marker salah/versi lebih baru/struktur tidak lengkap |
 | `test/notched_card_test.dart` | Geometri notch `buildNotchedCardPath` + render widget |
@@ -244,7 +246,7 @@ flutter build web
 | `test/ui_polish_test.dart` | `MaxWidthBody` membatasi lebar di layar lebar & penuh di layar sempit; `PillNavBar` punya label semantik per tab |
 | `test/zainnoto/*` (11 file) | Alokasi FIFO, status iuran, generator periode, constraint skema, operasi pembayaran anti double-transaction, aturan tagihan (`dues_rules_test.dart`: B1 tagihan mulai `joined_at`, B2 ganti frekuensi, B3 anggota terhapus, B4 idempotensi `recordTransaction`, B5 plan tunggal + validasi), fitur B6 (`b6_features_test.dart`: warna/ikon grup, audit log, nomor WhatsApp), group flow, smoke shell |
 
-Total **75 test** — semuanya lulus.
+Total **76 test** — semuanya lulus.
 
 ---
 
@@ -281,6 +283,12 @@ Total **75 test** — semuanya lulus.
 1. **Pemilih warna & ikon grup.** Dialog buat/ubah grup kini punya palette 10 warna, 12 pilihan ikon (indeks 0 = inisial nama), dan preview avatar langsung; `GroupAvatar` menampilkan ikon pilihan di switcher, banner, dan info grup.
 2. **Aksi WhatsApp.** Nomor HP anggota bisa ditekan (atau tombol chat) untuk membuka `wa.me`; di sheet "Daftar Penunggak Kas" tiap anggota bisa **"Tagih via WhatsApp"** dengan pesan berisi nominal, jumlah periode, dan tanggal menunggak tertua. Nomor dinormalisasi ke awalan 62 (`utils/whatsapp.dart`, dependensi baru `url_launcher`).
 3. **Layar riwayat aktivitas.** Sheet `audit_log_sheet.dart` membaca `getAuditLog` (200 entri terakhir, terbaru dulu) dengan filter per entitas dan dialog detail JSON lama/baru; dibuka dari section "Riwayat Aktivitas" di `GroupManagementSheet`.
+
+**Merger database (Fase 3):**
+
+1. **Satu koneksi, satu file.** `zainnoto_database.dart` dihapus; `DatabaseHelper` naik ke **versi 8** dan membuat 9 tabel ZainNoto berprefix `zn_` (`db/zainnoto_schema.dart`, semua `IF NOT EXISTS`) di `finflow.db`. `ZainNotoRepository` kini memakai koneksi `DatabaseHelper` (bisa di-override lewat parameter `openDatabase` untuk test), dan semua SQL-nya di-rename ke `zn_*`.
+2. **Tanpa migrasi data lama.** Data `zainnoto.db` sengaja ditinggalkan (tidak ada data riil); upgrade v7→v8 hanya membuat tabel baru — diuji lewat tes "migrasi v7 -> v8" (tabel `zn_*` terbentuk, data Pribadi awet).
+3. **Backup kompatibel.** `BackupService` memakai satu koneksi; format file **tidak berubah** (kunci `finflow` + `zainnoto`, nama tabel lama) — saat restore, tabel `zainnoto` dipetakan ke `zn_*` via `zainnotoTablePrefix`, jadi backup lama tetap valid.
 
 **Quirk & perilaku yang perlu diketahui:**
 

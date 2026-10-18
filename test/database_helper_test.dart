@@ -327,4 +327,120 @@ void main() {
     expect(octTotals['expense'], 0);
     expect(await DatabaseHelper.instance.getNetSaved('2026-10'), 300000);
   });
+
+  test('migrasi v7 -> v8: tabel zn_ terbuat & data Pribadi awet', () async {
+    final tempDir = await Directory.systemTemp.createTemp('finflow_mig8');
+    addTearDown(() async {
+      await DatabaseHelper.closeForTesting();
+      await tempDir.delete(recursive: true);
+    });
+    final dbPath = p.join(tempDir.path, 'finflow.db');
+
+    final legacy = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(
+        version: 7,
+        onCreate: (db, version) async {
+          await db.execute('''
+            CREATE TABLE categories (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              name TEXT UNIQUE NOT NULL,
+              icon TEXT NOT NULL,
+              color TEXT NOT NULL,
+              type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
+              is_savings INTEGER NOT NULL DEFAULT 0
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE transactions (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              category_id INTEGER NOT NULL,
+              amount REAL NOT NULL,
+              type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
+              date TEXT NOT NULL,
+              note TEXT,
+              savings_goal_id INTEGER,
+              wallet_type TEXT DEFAULT 'main',
+              is_transfer INTEGER NOT NULL DEFAULT 0,
+              transfer_group INTEGER
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE savings_goals (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              title TEXT NOT NULL,
+              target_amount REAL NOT NULL,
+              created_at TEXT NOT NULL
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE budgets (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              category_id INTEGER NOT NULL,
+              limit_amount REAL NOT NULL,
+              month_year TEXT NOT NULL,
+              budget_type TEXT NOT NULL CHECK(budget_type IN ('daily_limit', 'goal')),
+              UNIQUE(category_id, month_year)
+            )
+          ''');
+          await db.insert('categories', {
+            'name': 'Gaji',
+            'icon': 'banknote',
+            'color': '#2ecc71',
+            'type': 'income',
+          });
+          await db.insert('transactions', {
+            'category_id': 1,
+            'amount': 500000,
+            'type': 'income',
+            'date': '2026-10-05',
+            'note': 'gaji',
+            'savings_goal_id': null,
+            'wallet_type': 'main',
+            'is_transfer': 0,
+            'transfer_group': null,
+          });
+        },
+      ),
+    );
+    await legacy.close();
+
+    DatabaseHelper.resetForTesting();
+    DatabaseHelper.debugDatabasePath = dbPath;
+
+    // Membuka lewat DatabaseHelper memicu upgrade ke v8 (merger ZainNoto).
+    final totals = await DatabaseHelper.instance.getMonthlyTotals('2026-10');
+    expect(totals['income'], 500000);
+
+    final db = await DatabaseHelper.instance.database;
+    final znTables = await db.query(
+      'sqlite_master',
+      where: "type = 'table' AND name LIKE 'zn_%'",
+    );
+    expect(
+      znTables.map((row) => row['name']),
+      containsAll([
+        'zn_groups',
+        'zn_members',
+        'zn_dues_plans',
+        'zn_periods',
+        'zn_charges',
+        'zn_transactions',
+        'zn_allocations',
+        'zn_member_credits',
+        'zn_audit_log',
+      ]),
+    );
+
+    // Tabel baru bisa langsung dipakai (FK aktif, insert lolos).
+    await db.insert('zn_groups', {
+      'id': 'g1',
+      'name': 'Kas',
+      'icon_index': 0,
+      'color_hex': '#059669',
+      'created_at': 'now',
+      'updated_at': 'now',
+    });
+    expect(await db.query('zn_groups'), hasLength(1));
+  });
 }

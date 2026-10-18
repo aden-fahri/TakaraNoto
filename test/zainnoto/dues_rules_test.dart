@@ -1,13 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import 'package:finflow_flutter/zainnoto/db/zainnoto_database.dart';
 import 'package:finflow_flutter/zainnoto/logic/dues_status.dart';
 import 'package:finflow_flutter/zainnoto/models/entities.dart';
 import 'package:finflow_flutter/zainnoto/repositories/zainnoto_repository.dart';
 
+import 'helpers.dart';
+
 typedef DuesTestContext = ({
-  ZainNotoDatabase database,
+  Database db,
   ZainNotoRepository repo,
   String groupId,
   String planId,
@@ -18,12 +19,9 @@ Future<DuesTestContext> seedMonthly({
   int amount = 100000,
   int dueDay = 10,
 }) async {
-  sqfliteFfiInit();
-  final database = ZainNotoDatabase();
-  await database.open(factory: databaseFactoryFfi, path: inMemoryDatabasePath);
-  addTearDown(database.close);
+  final db = await openTestDatabase();
 
-  final repo = ZainNotoRepository(database);
+  final repo = ZainNotoRepository();
   final groupId = await repo.createGroup(name: 'Kas RT');
   final planId = await repo.upsertDuesPlan(
     groupId: groupId,
@@ -32,13 +30,12 @@ Future<DuesTestContext> seedMonthly({
     dueDay: dueDay,
     startDate: startDate,
   );
-  return (database: database, repo: repo, groupId: groupId, planId: planId);
+  return (db: db, repo: repo, groupId: groupId, planId: planId);
 }
 
 Future<int> activeChargeCount(DuesTestContext ctx, String memberId) async {
-  final db = await ctx.database.open();
-  final rows = await db.query(
-    'charges',
+  final rows = await ctx.db.query(
+    'zn_charges',
     where: 'member_id = ? AND deleted_at IS NULL',
     whereArgs: [memberId],
   );
@@ -73,9 +70,9 @@ void main() {
     expect(await activeChargeCount(ctx, oldMember), 3);
     expect(await activeChargeCount(ctx, newMember), 2);
 
-    final db = await ctx.database.open();
+    final db = ctx.db;
     final rows = await db.query(
-      'charges',
+      'zn_charges',
       where: 'member_id = ? AND deleted_at IS NULL',
       whereArgs: [newMember],
       orderBy: 'created_at ASC',
@@ -154,9 +151,9 @@ void main() {
     expect(active.length, 13);
     expect(await activeChargeCount(ctx, member), 13);
 
-    final db = await ctx.database.open();
+    final db = ctx.db;
     final softDeleted = await db.query(
-      'periods',
+      'zn_periods',
       where: 'deleted_at IS NOT NULL',
     );
     expect(softDeleted.length, 2);
@@ -219,8 +216,8 @@ void main() {
     );
     expect(second, first);
 
-    final db = await ctx.database.open();
-    final rows = await db.query('transactions');
+    final db = ctx.db;
+    final rows = await db.query('zn_transactions');
     expect(rows.length, 1);
   });
 

@@ -11,12 +11,12 @@ Aplikasi memiliki **dua mode** yang dikelola `AppModeController` (`lib/providers
 | Mode | Label | Shell | Penjelajah data |
 |---|---|---|---|
 | `AppMode.personal` | Pribadi | `MainNavigationScreen` (TakaraNoto) | Keuangan pribadi (`finflow.db`) |
-| `AppMode.group` | Kelompok | `ZainNotoShellScreen` (ZainNoto) | Kas kelompok (`zainnoto.db`) |
+| `AppMode.group` | Kelompok | `ZainNotoShellScreen` (ZainNoto) | Kas kelompok (tabel `zn_*` di `finflow.db`) |
 
 - Pemilihan mode dilakukan lewat tombol `ModeSwitchButton` (ringkas, menampilkan **mode tujuan**: `ZainNoto →` saat di TakaraNoto, `TakaraNoto →` saat di ZainNoto).
 - `AppModeGate` di `lib/main.dart` me-render shell sesuai mode aktif.
 - Mode **tidak dipersist** — aplikasi selalu terbuka di mode Pribadi.
-- ZainNoto memakai **database SQLite terpisah** (`zainnoto.db`) dan **provider terpisah** (`ZainNotoProvider`), sehingga tidak tercampur dengan data keuangan pribadi. Satu-satunya jembatan antar mode adalah lewat backup/restore.
+- Sejak **merger Fase 3**, ZainNoto memakai **database yang sama** dengan mode Pribadi (`finflow.db`, skema v8) dengan semua tabelnya diberi prefix `zn_`, dan tetap memakai **provider terpisah** (`ZainNotoProvider`) sehingga state UI tidak tercampur. Satu koneksi DB dibagi lewat `DatabaseHelper`; format file backup tidak berubah (kunci `zainnoto` tetap ada) sehingga backup lama tetap bisa direstore.
 - Seluruh teks UI berbahasa Indonesia; semua uang disimpan sebagai **integer rupiah**; tanggal `YYYY-MM-DD`; timestamp ISO-8601 UTC.
 
 ---
@@ -27,7 +27,7 @@ Aplikasi memiliki **dua mode** yang dikelola `AppModeController` (`lib/providers
 
 | File | Peran |
 |---|---|
-| `db/zainnoto_database.dart` | Singleton SQLite `zainnoto.db` (schema v1); `PRAGMA foreign_keys = ON`; mendukung DB in-memory untuk test; web memakai sqlite3-wasm |
+| `db/zainnoto_schema.dart` | Schema tabel ZainNoto `zn_*` (9 tabel + index, `IF NOT EXISTS`) yang dibuat di `finflow.db` oleh `DatabaseHelper` (v8); `PRAGMA foreign_keys = ON` tetap aktif |
 | `logic/allocation.dart` | Alokator FIFO murni (`DebtItem`, `AllocationDraft`, `AllocationResult`, `allocateFifo`) |
 | `logic/dues_status.dart` | Status turunan `ChargeStatus {unpaid, partial, paid, waived}` + `deriveChargeStatus` — status **tidak pernah disimpan** |
 | `logic/period_generator.dart` | Perencana periode murni & idempoten (`planPeriods`) untuk mingguan/bulanan |
@@ -83,17 +83,17 @@ Aplikasi memiliki **dua mode** yang dikelola `AppModeController` (`lib/providers
 | `MemberCredit` | memberId, sourceTransactionId, amountRemaining | Sisa kelebihan bayar (harus > 0) |
 | `AuditEntry` | entity, entityId, action, oldJson?, newJson?, createdAt | Log append-only |
 
-Semua ID = UUID v4 (`repository.dart`), kecuali `audit_log` memakai auto-increment integer.
+Semua ID = UUID v4 (`repository.dart`), kecuali `zn_audit_log` memakai auto-increment integer.
 
 ### 3.3 Tabel & Constraint
 
-- Tabel: `groups`, `members`, `dues_plans`, `periods`, `charges`, `transactions`, `allocations`, `member_credits`, `audit_log`.
-- FK: semua anak → induk `ON DELETE CASCADE`; `transactions.member_id → members SET NULL`.
+- Tabel (semua berprefix `zn_` di database bersama): `zn_groups`, `zn_members`, `zn_dues_plans`, `zn_periods`, `zn_charges`, `zn_transactions`, `zn_allocations`, `zn_member_credits`, `zn_audit_log`.
+- FK: semua anak → induk `ON DELETE CASCADE`; `zn_transactions.member_id → zn_members SET NULL`.
 - **Unique index penting**:
-  - `uq_period (dues_plan_id, start_date)` — periode tidak ganda
-  - `uq_charge (period_id, member_id)` — tagihan tidak ganda
-  - `uq_tx_client_ref (client_ref) WHERE client_ref IS NOT NULL` — anti double-transaction di level DB
-  - `uq_alloc (transaction_id, charge_id)` — alokasi tidak ganda
+  - `uq_zn_period (dues_plan_id, start_date)` — periode tidak ganda
+  - `uq_zn_charge (period_id, member_id)` — tagihan tidak ganda
+  - `uq_zn_tx_client_ref (client_ref) WHERE client_ref IS NOT NULL` — anti double-transaction di level DB
+  - `uq_zn_alloc (transaction_id, charge_id)` — alokasi tidak ganda
 - **Check constraint**: `amount >= 0` (plans/charges), `amount > 0` (transactions/allocations/credits), status anggota & frekuensi & tipe divalidasi enum.
 - **Soft delete**: `deleted_at` pada groups/members/dues_plans/periods/charges; `is_deleted` + `deleted_at` pada transactions. Tabel allocations/credits/audit_log dihapus keras.
 - Index tambahan untuk lookup umum (per grup, per anggota, per tanggal, per entitas audit).
@@ -279,8 +279,8 @@ Pola error: catch → `_error = 'Gagal …: $error'`, `notifyListeners()`, kemba
 ## 7. Integrasi
 
 - **Mode gate**: `AppModeGate` (`lib/main.dart`) memilih `ZainNotoShellScreen` atau `MainNavigationScreen`; `ZainNotoProvider` di-provide di root.
-- **Backup/Restore** (`lib/services/backup_service.dart`): export menyertakan key `'zainnoto'` (9 tabel, urutan parents-first); restore menghapus children-first lalu insert dengan `ConflictAlgorithm.replace`, didahului backup pengaman. Validasi memastikan kedua map ada. Tidak didukung di web.
-- **Web**: `main.dart` men-set `databaseFactoryFfiWeb` (sqlite3 wasm + IndexedDB) agar `zainnoto.db` jalan & persisten di browser.
+- **Backup/Restore** (`lib/services/backup_service.dart`): export menyertakan key `'zainnoto'` (9 tabel, urutan parents-first, **nama tabel tetap tanpa prefix** agar kompatibel dengan backup lama); restore memakai satu koneksi `DatabaseHelper` dan memetakan nama lama ke tabel `zn_*` lewat `zainnotoTablePrefix`, menghapus children-first lalu insert dengan `ConflictAlgorithm.replace`, didahului backup pengaman. Validasi memastikan kedua map ada. Tidak didukung di web.
+- **Web**: `main.dart` men-set `databaseFactoryFfiWeb` (sqlite3 wasm + IndexedDB) agar `finflow.db` (termasuk tabel `zn_*`) jalan & persisten di browser.
 - **Tema**: seluruh layar memakai token `context.tokens` (`accent/onAccent`, `income`, `expense`, `warning`, `header*`, `card`, `border`, dst.) sehingga mengikuti theme yang dipilih di TakaraNoto.
 
 ---
@@ -289,7 +289,7 @@ Pola error: catch → `_error = 'Gagal …: $error'`, `notifyListeners()`, kemba
 
 | File (`test/zainnoto/`) | Cakupan |
 |---|---|
-| `helpers.dart` | Seed DB in-memory: grup "Kas Futsal", anggota Alice/Bob, plan mingguan Rp20.000 |
+| `helpers.dart` | `openTestDatabase()` (sqfliteFfi + `DatabaseHelper` in-memory, tabel `zn_*` ikut dibuat) & seed grup "Kas Futsal", anggota Alice/Bob, plan mingguan Rp20.000 |
 | `allocation_test.dart` | FIFO tertua dulu, leftover, lewati tagihan lunas, amount ≤ 0 |
 | `dues_status_test.dart` | Derivasi status: 0 → unpaid, sebagian → partial, ≥ due → paid, waived prioritas |
 | `group_flow_test.dart` | `loadGroups` pada DB kosong, `createGroup` sukses & auto-select |
@@ -316,3 +316,4 @@ Di luar folder ini: `test/backup_service_test.dart` menguji round-trip backup te
 - **`tabs/lainnya_tab.dart` adalah kode mati** (1181 baris) — tidak diimport siapa pun; fungsinya sudah digantikan `GroupManagementSheet`. Kandidat penghapusan.
 - **Warna/ikon grup** disimpan di skema (`colorHex`, `iconIndex`) dan dipilih dari dialog buat/ubah grup (preview avatar langsung, `groupIconOptions` indeks 0 = inisial nama).
 - **Semua operasi multi-langkah dibungkus transaksi DB**; pengaman berlapis: idempotency key + partial unique index, FIFO tie-break by id, leftover never dropped.
+- **Database dibagi dengan mode Pribadi (merger Fase 3)** — semua tabel ZainNoto berprefix `zn_` di `finflow.db` (skema v8, dibuat `createZainNotoSchema`); `zainnoto.db` lama tidak dibaca lagi dan backup lama tetap bisa direstore.

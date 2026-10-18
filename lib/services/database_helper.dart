@@ -7,6 +7,7 @@ import '../models/category.dart';
 import '../models/transaction.dart';
 import '../models/savings_goal.dart';
 import '../models/budget.dart';
+import '../zainnoto/db/zainnoto_schema.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -55,7 +56,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 7, // Upgrade to version 7
+      version: 8, // v8: tabel ZainNoto (prefix zn_) ikut di finflow.db
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
       onConfigure: _onConfigure,
@@ -196,6 +197,13 @@ class DatabaseHelper {
         await db.execute('ALTER TABLE budgets_v7 RENAME TO budgets');
       }
     }
+    if (oldVersion < 8) {
+      // Merger Fase 3: tabel ZainNoto kini hidup di database yang sama dengan
+      // prefix zn_. Data lama dari zainnoto.db sengaja tidak dimigrasikan
+      // (tidak ada data riil); backup lama tetap bisa direstore karena format
+      // backup tidak berubah.
+      await createZainNotoSchema(db);
+    }
   }
 
   Future _onConfigure(Database db) async {
@@ -259,6 +267,9 @@ class DatabaseHelper {
 
     // Seed default categories
     await _seedDefaultCategories(db);
+
+    // v8: tabel ZainNoto (prefix zn_) hidup di database yang sama.
+    await createZainNotoSchema(db);
   }
 
   Future _seedDefaultCategories(Database db) async {

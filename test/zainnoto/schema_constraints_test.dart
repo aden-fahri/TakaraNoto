@@ -8,21 +8,21 @@ void main() {
     final ctx = await seedWeekly();
     await ctx.repo
         .generatePeriods(groupId: ctx.groupId, upTo: DateTime(2026, 1, 5));
-    final db = await ctx.database.open();
-    final charge = (await db.query('charges', limit: 1)).single;
+    final db = ctx.db;
+    final charge = (await db.query('zn_charges', limit: 1)).single;
 
     await expectLater(
-      db.insert('charges', {...charge, 'id': 'dup-charge'}),
+      db.insert('zn_charges', {...charge, 'id': 'dup-charge'}),
       throwsA(isA<DatabaseException>()),
     );
   });
 
   test('foreign key mencegah anggota dengan grup tidak dikenal', () async {
     final ctx = await seedWeekly();
-    final db = await ctx.database.open();
+    final db = ctx.db;
 
     await expectLater(
-      db.insert('members', {
+      db.insert('zn_members', {
         'id': 'member-x',
         'group_id': 'group-tidak-ada',
         'name': 'X',
@@ -37,10 +37,10 @@ void main() {
 
   test('check constraint menolak nominal nol', () async {
     final ctx = await seedWeekly();
-    final db = await ctx.database.open();
+    final db = ctx.db;
 
     await expectLater(
-      db.insert('transactions', {
+      db.insert('zn_transactions', {
         'id': 'tx-x',
         'group_id': ctx.groupId,
         'type': 'expense',
@@ -66,10 +66,10 @@ void main() {
       date: '2026-01-05',
     );
     final allocations = await ctx.repo.getAllocations(txId);
-    final db = await ctx.database.open();
+    final db = ctx.db;
 
     await expectLater(
-      db.insert('allocations', {
+      db.insert('zn_allocations', {
         'id': 'alloc-x',
         'transaction_id': txId,
         'charge_id': allocations.single.chargeId,
