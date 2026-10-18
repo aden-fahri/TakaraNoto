@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
@@ -11,6 +11,26 @@ import '../models/budget.dart';
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
+
+  /// Test hook: overrides the resolved database path. Tests set this to
+  /// `inMemoryDatabasePath` (or a temp file) so `path_provider` is not needed.
+  @visibleForTesting
+  static String? debugDatabasePath;
+
+  /// Test hook: drops the cached connection so the next access reopens the
+  /// database (with [debugDatabasePath], typically a fresh in-memory one).
+  @visibleForTesting
+  static void resetForTesting() {
+    _database = null;
+  }
+
+  /// Test hook: closes the cached connection and drops it. Use this between
+  /// tests so in-memory databases and temp files are released.
+  @visibleForTesting
+  static Future<void> closeForTesting() async {
+    await _database?.close();
+    _database = null;
+  }
 
   DatabaseHelper._init();
 
@@ -26,6 +46,8 @@ class DatabaseHelper {
     final String path;
     if (kIsWeb) {
       path = filePath;
+    } else if (debugDatabasePath != null) {
+      path = debugDatabasePath!;
     } else {
       final dbPath = await getApplicationDocumentsDirectory();
       path = join(dbPath.path, filePath);
@@ -33,7 +55,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 6, // Upgrade to version 6
+      version: 7, // Upgrade to version 7
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
       onConfigure: _onConfigure,
@@ -140,6 +162,40 @@ class DatabaseHelper {
         }
       }
     }
+    if (oldVersion < 7) {
+      // Savings flows are classified by a category flag instead of the goal
+      // link, so deleting a goal no longer reclassifies old transactions.
+      if (!await _columnExists(db, 'categories', 'is_savings')) {
+        await db.execute(
+            'ALTER TABLE categories ADD COLUMN is_savings INTEGER NOT NULL DEFAULT 0');
+      }
+      await db.execute(
+          "UPDATE categories SET is_savings = 1 WHERE name IN ('Tabungan', 'Tarik Tabungan')");
+
+      // Rebuild budgets so the unique constraint covers (category, month)
+      // instead of the category alone, which blocked a second month.
+      final budgetsTable = await db.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'budgets'");
+      if (budgetsTable.isNotEmpty) {
+        await db.execute('''
+          CREATE TABLE budgets_v7 (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            category_id INTEGER NOT NULL,
+            limit_amount REAL NOT NULL,
+            month_year TEXT NOT NULL,
+            budget_type TEXT NOT NULL CHECK(budget_type IN ('daily_limit', 'goal')),
+            UNIQUE(category_id, month_year),
+            FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE CASCADE
+          )
+        ''');
+        await db.execute('''
+          INSERT OR IGNORE INTO budgets_v7 (id, category_id, limit_amount, month_year, budget_type)
+          SELECT id, category_id, limit_amount, month_year, budget_type FROM budgets
+        ''');
+        await db.execute('DROP TABLE budgets');
+        await db.execute('ALTER TABLE budgets_v7 RENAME TO budgets');
+      }
+    }
   }
 
   Future _onConfigure(Database db) async {
@@ -155,7 +211,8 @@ class DatabaseHelper {
         name TEXT UNIQUE NOT NULL,
         icon TEXT NOT NULL,
         color TEXT NOT NULL,
-        type TEXT NOT NULL CHECK(type IN ('income', 'expense'))
+        type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
+        is_savings INTEGER NOT NULL DEFAULT 0
       )
     ''');
 
@@ -173,10 +230,11 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE budgets (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        category_id INTEGER UNIQUE NOT NULL,
+        category_id INTEGER NOT NULL,
         limit_amount REAL NOT NULL,
         month_year TEXT NOT NULL,
         budget_type TEXT NOT NULL CHECK(budget_type IN ('daily_limit', 'goal')),
+        UNIQUE(category_id, month_year),
         FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE CASCADE
       )
     ''');
@@ -204,15 +262,15 @@ class DatabaseHelper {
   }
 
   Future _seedDefaultCategories(Database db) async {
-    final List<Map<String, String>> defaultCategories = [
+    final List<Map<String, Object>> defaultCategories = [
       {'name': 'Makanan & Minuman', 'icon': 'fast_food', 'color': '#ff7f50', 'type': 'expense'},
       {'name': 'Transportasi', 'icon': 'car', 'color': '#3498db', 'type': 'expense'},
       {'name': 'Belanja', 'icon': 'cart', 'color': '#9b59b6', 'type': 'expense'},
       {'name': 'Hiburan', 'icon': 'gamepad_2', 'color': '#e74c3c', 'type': 'expense'},
       {'name': 'Kesehatan', 'icon': 'heart_pulse', 'color': '#2ecc71', 'type': 'expense'},
       {'name': 'Tagihan & Utilitas', 'icon': 'receipt', 'color': '#f1c40f', 'type': 'expense'},
-      {'name': 'Tabungan', 'icon': 'trending_up', 'color': '#1abc9c', 'type': 'expense'}, // Special category
-      {'name': 'Tarik Tabungan', 'icon': 'download', 'color': '#f39c12', 'type': 'income'},
+      {'name': 'Tabungan', 'icon': 'trending_up', 'color': '#1abc9c', 'type': 'expense', 'is_savings': 1}, // Special category
+      {'name': 'Tarik Tabungan', 'icon': 'download', 'color': '#f39c12', 'type': 'income', 'is_savings': 1},
       {'name': 'Gaji', 'icon': 'banknote', 'color': '#2ecc71', 'type': 'income'},
       {'name': 'Investasi', 'icon': 'trending_up', 'color': '#1abc9c', 'type': 'income'},
       {'name': 'Saku & Hibah', 'icon': 'gift', 'color': '#fd79a8', 'type': 'income'},
@@ -251,15 +309,18 @@ class DatabaseHelper {
 
   // --- Transactions CRUD ---
 
-  Future<List<FinanceTransaction>> getTransactions({String walletType = 'main'}) async {
+  Future<List<FinanceTransaction>> getTransactions({String? walletType}) async {
     final db = await instance.database;
+    final where = walletType == null ? '' : 'WHERE t.wallet_type = ?';
+    final args = walletType == null ? const <Object?>[] : <Object?>[walletType];
     final result = await db.rawQuery('''
-      SELECT t.*, c.name as category_name, c.icon as category_icon, c.color as category_color 
+      SELECT t.*, c.name as category_name, c.icon as category_icon, c.color as category_color,
+             c.is_savings as category_is_savings
       FROM transactions t
       LEFT JOIN categories c ON t.category_id = c.id
-      WHERE t.wallet_type = ?
+      $where
       ORDER BY t.date DESC, t.id DESC
-    ''', [walletType]);
+    ''', args);
     return result.map((json) => FinanceTransaction.fromMap(json)).toList();
   }
 
@@ -381,13 +442,13 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getCategorySpending(String monthYear) async {
     final db = await instance.database;
     return await db.rawQuery('''
-      SELECT c.name as category_name, c.color, 
-             SUM(CASE WHEN t.type = 'expense' THEN t.amount WHEN (t.type = 'income' AND t.savings_goal_id IS NOT NULL) THEN -t.amount ELSE 0 END) as amount
+      SELECT c.name as category_name, c.color, SUM(t.amount) as amount
       FROM transactions t
       INNER JOIN categories c ON t.category_id = c.id
-      WHERE (t.type = 'expense' OR (t.type = 'income' AND t.savings_goal_id IS NOT NULL)) AND substr(t.date, 1, 7) = ? AND t.wallet_type = 'main' AND t.is_transfer = 0
+      WHERE t.type = 'expense' AND t.is_transfer = 0 AND c.is_savings = 0
+        AND substr(t.date, 1, 7) = ?
       GROUP BY t.category_id
-      HAVING amount > 0
+      HAVING SUM(t.amount) > 0
       ORDER BY amount DESC
     ''', [monthYear]);
   }
@@ -396,10 +457,11 @@ class DatabaseHelper {
     final db = await instance.database;
     final result = await db.rawQuery('''
       SELECT 
-        COALESCE(SUM(CASE WHEN (type = 'income' AND savings_goal_id IS NULL) THEN amount ELSE 0 END), 0) as income,
-        COALESCE(SUM(CASE WHEN type = 'expense' THEN amount WHEN (type = 'income' AND savings_goal_id IS NOT NULL) THEN -amount ELSE 0 END), 0) as expense
-      FROM transactions
-      WHERE substr(date, 1, 7) = ? AND wallet_type = 'main' AND is_transfer = 0
+        COALESCE(SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END), 0) as income,
+        COALESCE(SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END), 0) as expense
+      FROM transactions t
+      INNER JOIN categories c ON c.id = t.category_id
+      WHERE substr(t.date, 1, 7) = ? AND t.is_transfer = 0 AND c.is_savings = 0
     ''', [monthYear]);
 
     if (result.isNotEmpty) {
@@ -418,10 +480,10 @@ class DatabaseHelper {
       SELECT c.name as category_name, c.color, SUM(t.amount) as amount
       FROM transactions t
       INNER JOIN categories c ON t.category_id = c.id
-      WHERE t.type = 'income' AND t.savings_goal_id IS NULL AND t.is_transfer = 0
-        AND t.wallet_type = 'main' AND substr(t.date, 1, 7) = ?
+      WHERE t.type = 'income' AND t.is_transfer = 0 AND c.is_savings = 0
+        AND substr(t.date, 1, 7) = ?
       GROUP BY t.category_id
-      HAVING amount > 0
+      HAVING SUM(t.amount) > 0
       ORDER BY amount DESC
     ''', [monthYear]);
   }
@@ -432,15 +494,14 @@ class DatabaseHelper {
     final db = await instance.database;
     final result = await db.rawQuery('''
       SELECT b.*, c.name as category_name, c.color as category_color, c.icon as category_icon,
-             COALESCE(SUM(CASE WHEN t.type = 'expense' THEN t.amount WHEN (t.type = 'income' AND t.savings_goal_id IS NOT NULL) THEN -t.amount ELSE 0 END), 0) as total_spent
+             COALESCE(SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END), 0) as total_spent
       FROM budgets b
       INNER JOIN categories c ON b.category_id = c.id
       LEFT JOIN transactions t ON t.category_id = b.category_id 
-        AND (t.type = 'expense' OR (t.type = 'income' AND t.savings_goal_id IS NOT NULL))
+        AND t.type = 'expense'
         AND substr(t.date, 1, 7) = b.month_year
-        AND t.wallet_type = 'main'
         AND t.is_transfer = 0
-      WHERE b.month_year = ?
+      WHERE b.month_year = ? AND c.is_savings = 0
       GROUP BY b.id
     ''', [monthYear]);
     return result.map((json) => Budget.fromMap(json)).toList();
@@ -499,11 +560,12 @@ class DatabaseHelper {
     final db = await instance.database;
     final result = await db.rawQuery('''
       SELECT 
-        substr(date, 1, 7) as month,
-        COALESCE(SUM(CASE WHEN (type = 'income' AND savings_goal_id IS NULL) THEN amount ELSE 0 END), 0) as income,
-        COALESCE(SUM(CASE WHEN type = 'expense' THEN amount WHEN (type = 'income' AND savings_goal_id IS NOT NULL) THEN -amount ELSE 0 END), 0) as expense
-      FROM transactions
-      WHERE wallet_type = 'main' AND is_transfer = 0
+        substr(t.date, 1, 7) as month,
+        COALESCE(SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END), 0) as income,
+        COALESCE(SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END), 0) as expense
+      FROM transactions t
+      INNER JOIN categories c ON c.id = t.category_id
+      WHERE t.is_transfer = 0 AND c.is_savings = 0
       GROUP BY month
       ORDER BY month DESC
     ''');
@@ -520,23 +582,32 @@ class DatabaseHelper {
     }).toList();
   }
 
-  /// Calculates the cumulative net balance from beginning of time up to end of [monthYear]
+  /// Cumulative balance of the main wallet up to (and including) [monthYear].
+  ///
+  /// Every row counts here — including transfer legs and savings flows —
+  /// because all of them moved money in or out of the wallet. Statistics use
+  /// different rules (transfers and savings categories are excluded there).
   Future<double> getCumulativeBalanceUpTo(String monthYear) async {
     final db = await instance.database;
     final result = await db.rawQuery('''
-      SELECT 
-        COALESCE(SUM(CASE WHEN (type = 'income' AND savings_goal_id IS NULL) THEN amount ELSE 0 END), 0) as income,
-        COALESCE(SUM(CASE WHEN type = 'expense' THEN amount WHEN (type = 'income' AND savings_goal_id IS NOT NULL) THEN -amount ELSE 0 END), 0) as expense
+      SELECT COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE -amount END), 0) as balance
       FROM transactions
-      WHERE substr(date, 1, 7) <= ? AND wallet_type = 'main' AND is_transfer = 0
+      WHERE substr(date, 1, 7) <= ? AND wallet_type = 'main'
     ''', [monthYear]);
+    return (result.first['balance'] as num).toDouble();
+  }
 
-    if (result.isNotEmpty) {
-      final row = result.first;
-      final inc = (row['income'] as num).toDouble();
-      final exp = (row['expense'] as num).toDouble();
-      return inc - exp;
-    }
-    return 0.0;
+  /// Net amount saved in [monthYear]: savings deposits minus withdrawals.
+  /// Savings flows are classified by the category flag, so this stays correct
+  /// even when a savings goal is deleted.
+  Future<double> getNetSaved(String monthYear) async {
+    final db = await instance.database;
+    final result = await db.rawQuery('''
+      SELECT COALESCE(SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE -t.amount END), 0) as net
+      FROM transactions t
+      INNER JOIN categories c ON c.id = t.category_id
+      WHERE substr(t.date, 1, 7) = ? AND t.is_transfer = 0 AND c.is_savings = 1
+    ''', [monthYear]);
+    return (result.first['net'] as num).toDouble();
   }
 }

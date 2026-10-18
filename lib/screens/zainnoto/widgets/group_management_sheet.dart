@@ -860,7 +860,9 @@ class _DuesSection extends StatelessWidget {
     messenger.showSnackBar(
       SnackBar(
         content: Text(
-          ok ? 'Rencana iuran disimpan' : 'Gagal menyimpan rencana iuran',
+          ok
+              ? 'Rencana iuran disimpan'
+              : (provider.error ?? 'Gagal menyimpan rencana iuran'),
         ),
       ),
     );

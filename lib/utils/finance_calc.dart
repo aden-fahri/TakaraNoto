@@ -24,20 +24,16 @@ double monthlyBudgetLimit(Budget budget, int days) {
 }
 
 /// Total income that counts towards statistics: excludes transfers and
-/// savings withdrawals (income linked to a savings goal).
+/// savings withdrawals (categories flagged with `is_savings`).
 double sumIncome(List<FinanceTransaction> txs) => txs
-    .where((t) => !t.isTransfer && t.type == 'income' && t.savingsGoalId == null)
+    .where((t) => !t.isTransfer && !t.categoryIsSavings && t.type == 'income')
     .fold(0.0, (sum, t) => sum + t.amount);
 
 /// Total expense that counts towards statistics: excludes transfers and
-/// subtracts savings withdrawals (they return money to the main wallet).
-double sumExpense(List<FinanceTransaction> txs) {
-  return txs.where((t) => !t.isTransfer).fold(0.0, (sum, t) {
-    if (t.type == 'expense') return sum + t.amount;
-    if (t.type == 'income' && t.savingsGoalId != null) return sum - t.amount;
-    return sum;
-  });
-}
+/// savings deposits. Savings flows are reported separately as net saved.
+double sumExpense(List<FinanceTransaction> txs) => txs
+    .where((t) => !t.isTransfer && !t.categoryIsSavings && t.type == 'expense')
+    .fold(0.0, (sum, t) => sum + t.amount);
 
 /// Net cash flow (income - expense) for a list of transactions.
 double netBalance(List<FinanceTransaction> txs) =>

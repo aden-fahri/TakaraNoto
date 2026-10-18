@@ -69,7 +69,9 @@ class BudgetScreen extends StatelessWidget {
     final provider = Provider.of<FinanceProvider>(context);
     final currentMonth = provider.currentMonth;
     final budgets = provider.budgets;
-    final expenseCats = provider.categories.where((c) => c.type == 'expense').toList();
+    final expenseCats = provider.categories
+        .where((c) => c.type == 'expense' && !c.isSpecial)
+        .toList();
 
     final days = daysInMonth(currentMonth);
     final totalLimit = budgets.fold(0.0, (s, b) => s + monthlyBudgetLimit(b, days));

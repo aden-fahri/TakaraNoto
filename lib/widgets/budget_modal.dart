@@ -24,6 +24,7 @@ class _BudgetModalState extends State<BudgetModal> {
   final _limitCtrl = TextEditingController();
   String _budgetType = 'goal';
   bool _prefilledFromPrevious = false;
+  bool _saving = false;
 
   @override
   void initState() {
@@ -80,12 +81,20 @@ class _BudgetModalState extends State<BudgetModal> {
     final clean = _limitCtrl.text.replaceAll('.', '');
     final val = double.tryParse(clean);
     if (val == null || val <= 0) return null;
-    final now = DateTime.now();
-    final days = DateTime(now.year, now.month + 1, 0).day;
+    final provider = Provider.of<FinanceProvider>(context, listen: false);
+    final parts = provider.currentMonth.split('-');
+    final year = parts.isNotEmpty
+        ? int.tryParse(parts[0]) ?? DateTime.now().year
+        : DateTime.now().year;
+    final month = parts.length > 1
+        ? int.tryParse(parts[1]) ?? DateTime.now().month
+        : DateTime.now().month;
+    final days = DateTime(year, month + 1, 0).day;
     return '≈ ${NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(val * days)}/bulan ($days hari)';
   }
 
-  void _save() {
+  Future<void> _save() async {
+    if (_saving) return;
     final clean = _limitCtrl.text.replaceAll('.', '');
     final limit = double.tryParse(clean);
     if (limit == null || limit <= 0) {
@@ -95,12 +104,24 @@ class _BudgetModalState extends State<BudgetModal> {
       return;
     }
     final provider = Provider.of<FinanceProvider>(context, listen: false);
-    provider.addOrUpdateBg(
-      categoryId: widget.category.id!,
-      limitAmount: limit,
-      monthYear: provider.currentMonth,
-      budgetType: _budgetType,
-    );
+    setState(() => _saving = true);
+    try {
+      await provider.addOrUpdateBg(
+        categoryId: widget.category.id!,
+        limitAmount: limit,
+        monthYear: provider.currentMonth,
+        budgetType: _budgetType,
+      );
+    } catch (_) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal menyimpan anggaran.')),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
     Navigator.pop(context);
   }
 
@@ -403,7 +424,7 @@ class _BudgetModalState extends State<BudgetModal> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.buttonRadius)),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
-                        onPressed: _save,
+                        onPressed: _saving ? null : _save,
                         icon: const Icon(Icons.check_rounded, size: 20),
                         label: const Text(
                           'Simpan Anggaran',

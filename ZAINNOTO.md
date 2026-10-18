@@ -111,19 +111,23 @@ Semua ID = UUID v4 (`repository.dart`), kecuali `audit_log` memakai auto-increme
 
 ### 4.2 Generate tagihan & idempotensi (`repository.generatePeriods`)
 
-Satu transaksi DB:
+Satu transaksi DB (prefetch batch, bukan query per periode):
 
-1. Ambil semua plan aktif grup.
-2. Untuk tiap plan → `planPeriods(...)`; **lewati** periode yang sudah ada di `(dues_plan_id, start_date)`.
-3. Insert periode (UUID + snapshot amount); lalu untuk setiap anggota **aktif** insert `charge` dengan `amount_due = amountSnapshot` (`ConflictAlgorithm.ignore`).
-4. Bila ada ≥ 1 periode baru → jalankan `_consumeCredits` untuk **semua** anggota non-deleted (termasuk nonaktif) — hook pemakaian kredit otomatis.
-5. Mengembalikan jumlah periode baru.
+1. Ambil semua plan aktif grup + semua anggota **aktif** (beserta `joined_at`) dalam 2 query.
+2. Prefetch semua periode plan & charge-nya (2 query) untuk lookup `(dues_plan_id, start_date)` dan `(period_id, member_id)`.
+3. Untuk tiap plan → `planPeriods(...)`:
+   - Periode **aktif** yang sudah ada → dilewati.
+   - Periode yang **soft-deleted** dengan `(dues_plan_id, start_date)` sama (sisa perubahan jadwal) → **diaktifkan ulang** dengan label/tanggal/snapshot baru.
+   - Selain itu → insert periode baru (UUID + snapshot amount).
+4. Untuk tiap anggota: **hanya ditagih bila `end_date >= joined_at`** (B1 — periode yang berakhir sebelum anggota bergabung tidak pernah muncul). Charge aktif dilewati; charge soft-deleted diaktifkan ulang (`amount_due` diperbarui, `waived` dipertahankan); sisanya insert baru.
+5. Bila ada ≥ 1 periode baru/revive → jalankan `_consumeCredits` untuk semua anggota non-deleted (termasuk nonaktif) — hook pemakaian kredit otomatis.
+6. Mengembalikan jumlah periode baru + revive.
 
 Dipanggil provider pada **setiap load/refresh grup** (`_loadGroupData`), sehingga periode sampai hari ini selalu ada dan pemanggilan berulang aman (3 lalu 0).
 
 ### 4.3 Backfill anggota baru (`repository.addMember`)
 
-Anggota baru langsung ditagih untuk **semua periode non-deleted yang sudah ada**, memakai `amount_snapshot` masing-masing periode (tarif historis), bukan tarif plan saat ini (`ConflictAlgorithm.ignore`).
+Anggota baru langsung ditagih untuk periode non-deleted yang **berakhir pada/setelah `joined_at`** (B1), memakai `amount_snapshot` masing-masing periode (tarif historis), bukan tarif plan saat ini. Periode yang berakhir sebelum anggota bergabung tidak dibuatkan tagihan.
 
 ### 4.4 Alokasi pembayaran FIFO (`logic/allocation.dart` + `repository._allocateForMember`)
 
@@ -143,7 +147,7 @@ Anggota baru langsung ditagih untuk **semua periode non-deleted yang sudah ada**
 
 ### 4.6 Anti double-transaction (`client_ref`)
 
-- `recordDuesPayment` menerima `idempotencyKey` (UI: UUID baru per tap). Bila key sudah ada → mengembalikan id transaksi **yang sudah ada** tanpa membuat row kedua.
+- `recordDuesPayment` **dan** `recordTransaction` menerima `idempotencyKey` (UI: UUID baru per aksi). Bila key sudah ada → mengembalikan id transaksi **yang sudah ada** tanpa membuat row kedua.
 - Level DB: partial unique index `uq_tx_client_ref` sebagai pengaman cadangan.
 - Semua penulisan multi-langkah dibungkus `db.transaction`.
 
@@ -171,13 +175,19 @@ Soft delete (`is_deleted = 1`), hapus alokasi per transaksi & kredit yang bersum
 ### 4.10 Ringkasan & tunggakan (`repository.getGroupSummary` dkk.)
 
 - **Saldo** = SUM seluruh transaksi hidup (`expense` negatif, lainnya positif). **Alokasi & kredit tidak pernah mengubah saldo** (kelebihan bayar dihitung sekali saat transaksi dicatat).
-- **Tunggakan**: per charge hidup non-waived dengan `due_date < hari ini` dan `paid < amount_due`; `overdueTotal` + `overdueMemberCount` per anggota. `getOverdueMembers` menambah `unpaid_count`, total, dan `oldest_due_date`, diurutkan total terbesar.
+- **Tunggakan**: per charge hidup non-waived dengan `due_date < hari ini` dan `paid < amount_due`; `overdueTotal` + `overdueMemberCount` per anggota (**anggota soft-deleted dikecualikan** via JOIN `members.deleted_at IS NULL`, konsisten dengan `getOverdueMembers`). `getOverdueMembers` menambah `unpaid_count`, total, dan `oldest_due_date`, diurutkan total terbesar.
 - **Periode berjalan** = periode terakhir dengan `start_date <= hari ini`. `currentPeriodPaidCount` menghitung baris berstatus `paid` (waived dikecualikan); `activityPct = round(paid/total*100)`.
-- `getPeriodRows` (dipakai checklist & matriks): join charges→members→periods, LEFT JOIN allocations & transaksi hidup; `paid` hanya menjumlah alokasi dari transaksi hidup; urut nama anggota (`COLLATE NOCASE`).
+- `getPeriodRows` (dipakai checklist & matriks): join charges→members→periods, LEFT JOIN allocations & transaksi hidup; `paid` hanya menjumlah alokasi dari transaksi hidup; **anggota soft-deleted tidak ditampilkan**; urut nama anggota (`COLLATE NOCASE`).
 
 ### 4.11 Audit log
 
 `_audit` menulis `entity` (group/member/dues_plan/charge/transaction), `entity_id`, `action` (insert/update/delete), `old_json`, `new_json`, timestamp — **di dalam transaksi DB yang sama** dengan mutasinya. Dibaca via `getAuditLog(...)`; **belum ada layar UI yang menampilkannya** (hanya test).
+
+### 4.12 Rencana iuran: validasi, plan tunggal & perubahan jadwal (`repository.upsertDuesPlan`)
+
+- **Validasi**: `amount >= 0`; `dueDay` 1–7 (mingguan) / 1–28 (bulanan); `start_date` harus parseable `YYYY-MM-DD`.
+- **Satu plan aktif per grup**: insert tanpa `id` ditolak (`StateError`) bila sudah ada plan aktif — UI selalu mengedit plan `first`, jadi insert kedua berarti dobel tap/bug.
+- **Perubahan jadwal** (frekuensi, `due_day`, atau `start_date` berubah): `_replaceUnpaidPeriods` men-soft-delete **semua periode aktif plan yang tidak punya alokasi sama sekali** beserta charge-nya (audit `periods` action `delete`, reason `schedule_change`). Periode yang sudah ada pembayaran **dipertahankan apa adanya**. Periode belum lunas akan dibangun ulang sesuai jadwal baru oleh `generatePeriods` berikutnya (revive, §4.2). Perubahan `amount` saja tidak menyentuh periode (nominal periode adalah snapshot).
 
 ---
 
@@ -202,12 +212,12 @@ Derived: `totalIncome`, `totalExpense`, `memberById(id)`.
 | `editTransaction({id, amount?, date?, note?, category?, memberId?})` | Edit transaksi (re-alokasi otomatis untuk dues) |
 | `deleteTransaction(id)` | Soft delete transaksi + revert alokasi/kredit |
 | `setChargeWaived(chargeId, {waived})` | Tandai/batalkan "Bebas Iuran" |
-| `addTransaction({type, amount, category?, note?, date?})` | Tambah transaksi kas masuk/keluar (dues tidak via sini) |
-| `addMember({name, phoneNumber?, joinedAt?})` | Tambah anggota + backfill tagihan periode lama |
+| `addTransaction({type, amount, category?, note?, date?})` | Tambah transaksi kas masuk/keluar (dues tidak via sini); idempotency key UUID per aksi |
+| `addMember({name, phoneNumber?, joinedAt?})` | Tambah anggota + backfill tagihan sejak periode bergabung |
 | `updateMember({id, name?, phoneNumber?, status?})` | Ubah data/status anggota |
 | `removeMember(id)` | Soft delete anggota (riwayat tetap) |
-| `saveDuesPlan({id?, amount, frequency, dueDay, startDate})` | Upsert rencana iuran |
-| `generatePeriodsNow()` | Sinkronkan periode sampai hari ini; mengembalikan jumlah periode baru |
+| `saveDuesPlan({id?, amount, frequency, dueDay, startDate})` | Upsert rencana iuran (validasi penuh; perubahan jadwal me-reset periode belum lunas) |
+| `generatePeriodsNow()` | Sinkronkan periode sampai hari ini; mengembalikan jumlah periode baru/revive |
 | `selectPeriod(period)` / `loadMatrix({maxPeriods: 12})` | Load baris checklist periode terpilih / matriks 12 periode terakhir |
 | `allocationDetailsFor(transactionId)` | Rincian alokasi per transaksi (untuk detail pembayaran) |
 
@@ -281,6 +291,7 @@ Pola error: catch → `_error = 'Gagal …: $error'`, `notifyListeners()`, kemba
 | `dues_status_test.dart` | Derivasi status: 0 → unpaid, sebagian → partial, ≥ due → paid, waived prioritas |
 | `group_flow_test.dart` | `loadGroups` pada DB kosong, `createGroup` sukses & auto-select |
 | `period_generator_test.dart` | Blok mingguan, dueDay, label; bulan kalender, clamp Februari, snapshot amount |
+| `dues_rules_test.dart` | B1 tagihan mulai `joined_at` (generate & backfill), B2 ganti frekuensi (periode lunas tetap, belum lunas diganti), B3 anggota terhapus keluar dari rekap/checklist, B4 idempotensi `recordTransaction`, B5 plan tunggal + validasi input |
 | `schema_constraints_test.dart` | Unique charge/allocation, FK, CHECK amount, idempotency `client_ref` |
 | `payment_ops_test.dart` | Anti double-transaction (edit/hapus/ganti anggota/dobel tap), generator idempoten, kredit otomatis, waived, audit, ringkasan |
 | `shell_smoke_test.dart` | Widget: shell tanpa grup & dengan data, semua tab aman dibuild |
@@ -292,6 +303,8 @@ Di luar folder ini: `test/backup_service_test.dart` menguji round-trip backup te
 ## 9. Catatan Penting
 
 - **Status selalu turunan** — `charges` tidak menyimpan status; kebenaran data dijamin oleh alokasi dari transaksi hidup.
+- **Tagihan dimulai dari periode bergabung** — anggota tidak pernah menunggak periode sebelum `joined_at`; periode yang berakhir sebelum tanggal bergabung tidak dibuatkan charge.
+- **Ganti jadwal bukan angka** — mengubah frekuensi/jatuh tempo/tanggal mulai me-reset periode yang belum dibayar sesuai jadwal baru; periode yang sudah ada pembayaran dipertahankan (jadwal lama & baru bisa sesaat tumpang tindih untuk periode tersebut).
 - **Saldo ≠ Σ sisa tagihan** — saldo murni dari transaksi; kredit/kelebihan bayar tersimpan sebagai `member_credits`, bukan saldo kedua.
 - **Anggota nonaktif** berhenti menerima tagihan baru, tetapi tagihan lama & kreditnya tetap dihitung (kredit tetap dikonsumsi otomatis).
 - **Edit-in-place**: mengedit pembayaran menghapus & mengalokasikan ulang seluruh nominalnya — tidak ada void+replace, sehingga konsisten dan idempoten.

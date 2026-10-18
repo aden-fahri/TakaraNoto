@@ -167,19 +167,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
       return inMonth && matchSearch && matchType && matchCategory;
     }).toList();
 
-    // Compute totals for this month/filter (transfers are excluded)
+    // Compute totals for this month/filter. Transfers and savings flows are
+    // excluded from income/expense; savings are reported separately (see the
+    // Stats screen's "Ditabung Bersih" row).
     final double monthIncome = filtered
-        .where((tx) => !tx.isTransfer && !(tx.type == 'income' && tx.savingsGoalId != null))
-        .fold(0.0, (acc, tx) => tx.type == 'income' ? acc + tx.amount : acc);
-    final double monthExpense = filtered.fold(0.0, (acc, tx) {
-      if (tx.isTransfer) return acc;
-      if (tx.type == 'expense') {
-        return acc + tx.amount;
-      } else if (tx.type == 'income' && tx.savingsGoalId != null) {
-        return acc - tx.amount;
-      }
-      return acc;
-    });
+        .where((tx) => !tx.isTransfer && !tx.categoryIsSavings && tx.type == 'income')
+        .fold(0.0, (acc, tx) => acc + tx.amount);
+    final double monthExpense = filtered
+        .where((tx) => !tx.isTransfer && !tx.categoryIsSavings && tx.type == 'expense')
+        .fold(0.0, (acc, tx) => acc + tx.amount);
 
     // Group by date
     final Map<String, List<FinanceTransaction>> grouped = {};

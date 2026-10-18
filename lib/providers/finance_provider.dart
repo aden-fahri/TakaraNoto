@@ -21,6 +21,7 @@ class FinanceProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _categorySpending = [];
   List<Map<String, dynamic>> _categoryIncome = [];
   double _cumulativeBalance = 0.0;
+  double _netSaved = 0.0;
 
   // Getters
   List<FinanceTransaction> get transactions => _transactions;
@@ -31,6 +32,7 @@ class FinanceProvider extends ChangeNotifier {
   Map<String, double> get monthlyTotals => _monthlyTotals;
   bool get isLoading => _isLoading;
   double get cumulativeBalance => _cumulativeBalance;
+  double get netSaved => _netSaved;
 
   double get topupBalance => _topupBalance;
   List<FinanceTransaction> get topupTransactions => _topupTransactions;
@@ -68,7 +70,7 @@ class FinanceProvider extends ChangeNotifier {
 
   Future<void> refreshAll() async {
     try {
-      _transactions = await DatabaseHelper.instance.getTransactions(walletType: 'main');
+      _transactions = await DatabaseHelper.instance.getTransactions();
       _categories = await DatabaseHelper.instance.getCategories();
       _savingsGoals = await DatabaseHelper.instance.getSavingsGoals();
       _budgets = await DatabaseHelper.instance.getBudgets(_currentMonth);
@@ -92,6 +94,7 @@ class FinanceProvider extends ChangeNotifier {
       _categorySpending = await DatabaseHelper.instance.getCategorySpending(_currentMonth);
       _categoryIncome = await DatabaseHelper.instance.getCategoryIncome(_currentMonth);
       _cumulativeBalance = await DatabaseHelper.instance.getCumulativeBalanceUpTo(_currentMonth);
+      _netSaved = await DatabaseHelper.instance.getNetSaved(_currentMonth);
       notifyListeners();
     } catch (e) {
       debugPrint('Error refreshing monthly details: $e');

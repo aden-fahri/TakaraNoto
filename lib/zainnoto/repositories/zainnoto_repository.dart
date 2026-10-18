@@ -138,11 +138,12 @@ class ZainNotoRepository {
       await _audit(txn,
           entity: 'member', entityId: id, action: 'insert', newMap: row);
 
-      // Backfill charges for all periods of the group so the new member immediately appears in dues checklist
+      // Backfill charges only for periods that end on/after the join date, so
+      // new members never owe periods that ended before they joined.
       final periods = await txn.query(
         'periods',
-        where: 'group_id = ? AND deleted_at IS NULL',
-        whereArgs: [groupId],
+        where: 'group_id = ? AND deleted_at IS NULL AND end_date >= ?',
+        whereArgs: [groupId, joinedAt],
       );
       for (final p in periods) {
         await txn.insert(
@@ -238,10 +239,43 @@ class ZainNotoRepository {
     if (amount < 0) {
       throw ArgumentError.value(amount, 'amount', 'Nominal tidak boleh negatif');
     }
+    final maxDueDay = frequency == DuesFrequency.weekly ? 7 : 28;
+    if (dueDay < 1 || dueDay > maxDueDay) {
+      throw ArgumentError.value(
+        dueDay,
+        'dueDay',
+        frequency == DuesFrequency.weekly
+            ? 'Jatuh tempo mingguan harus hari 1-7'
+            : 'Jatuh tempo bulanan harus tanggal 1-28',
+      );
+    }
+    final parsedStart = DateTime.tryParse(startDate);
+    if (parsedStart == null) {
+      throw ArgumentError.value(
+        startDate,
+        'startDate',
+        'Tanggal mulai tidak valid (format YYYY-MM-DD)',
+      );
+    }
+    final normalizedStart = dateToStr(dateOnly(parsedStart));
+
     final db = await _db;
     final now = nowIso();
     return db.transaction((txn) async {
       if (id == null) {
+        // Only one active plan per group: the UI always edits the existing
+        // plan, so an insert here means a double tap or a caller bug.
+        final existing = await txn.query(
+          'dues_plans',
+          columns: ['id'],
+          where: 'group_id = ? AND deleted_at IS NULL',
+          whereArgs: [groupId],
+          limit: 1,
+        );
+        if (existing.isNotEmpty) {
+          throw StateError(
+              'Grup ini sudah memiliki rencana iuran aktif. Ubah rencana yang ada.');
+        }
         final newId = _newId();
         final row = <String, Object?>{
           'id': newId,
@@ -249,7 +283,7 @@ class ZainNotoRepository {
           'amount': amount,
           'frequency': frequency.dbValue,
           'due_day': dueDay,
-          'start_date': startDate,
+          'start_date': normalizedStart,
           'created_at': now,
           'updated_at': now,
         };
@@ -264,7 +298,7 @@ class ZainNotoRepository {
         'amount': amount,
         'frequency': frequency.dbValue,
         'due_day': dueDay,
-        'start_date': startDate,
+        'start_date': normalizedStart,
         'updated_at': now,
       };
       await txn.update('dues_plans', updated, where: 'id = ?', whereArgs: [id]);
@@ -274,6 +308,24 @@ class ZainNotoRepository {
           action: 'update',
           oldMap: old,
           newMap: {...old, ...updated});
+
+      // A schedule change (frequency / due day / start date) invalidates the
+      // unpaid part of the old schedule; periods that already have payments
+      // are kept. The next generatePeriods call rebuilds the new schedule.
+      final scheduleChanged = old['frequency'] != frequency.dbValue ||
+          (old['due_day'] as num).toInt() != dueDay ||
+          old['start_date'] != normalizedStart;
+      if (scheduleChanged) {
+        final replaced =
+            await _replaceUnpaidPeriods(txn, planId: id, now: now);
+        if (replaced > 0) {
+          await _audit(txn,
+              entity: 'periods',
+              entityId: id,
+              action: 'delete',
+              newMap: {'reason': 'schedule_change', 'count': replaced});
+        }
+      }
       return id;
     });
   }
@@ -293,9 +345,10 @@ class ZainNotoRepository {
 
   /// Idempotently generates every period due up to [upTo] (default: today)
   /// for all active dues plans of the group, then creates charges for active
-  /// members and consumes any member credits.
+  /// members and consumes any member credits. Members are only charged for
+  /// periods that end on/after their join date.
   ///
-  /// Returns the number of newly created periods.
+  /// Returns the number of newly created (or reactivated) periods.
   Future<int> generatePeriods({required String groupId, DateTime? upTo}) async {
     final db = await _db;
     final target = dateOnly(upTo ?? DateTime.now());
@@ -305,6 +358,53 @@ class ZainNotoRepository {
         where: 'group_id = ? AND deleted_at IS NULL',
         whereArgs: [groupId],
       );
+      if (planRows.isEmpty) return 0;
+
+      final memberRows = await txn.query(
+        'members',
+        where: 'group_id = ? AND deleted_at IS NULL',
+        whereArgs: [groupId],
+      );
+      final members = <({String id, DateTime joinedAt})>[
+        for (final row in memberRows)
+          if (row['status'] == MemberStatus.active.dbValue)
+            (
+              id: row['id'] as String,
+              joinedAt: dateOnly(dateFromStr(row['joined_at'] as String)),
+            ),
+      ];
+      final creditMemberIds = [
+        for (final row in memberRows) row['id'] as String,
+      ];
+
+      final planIds = [for (final row in planRows) row['id'] as String];
+      final planPlaceholders = List.filled(planIds.length, '?').join(', ');
+      final periodRows = await txn.query(
+        'periods',
+        where: 'dues_plan_id IN ($planPlaceholders)',
+        whereArgs: planIds,
+      );
+      final periodByKey = <String, Map<String, Object?>>{
+        for (final row in periodRows)
+          '${row['dues_plan_id']}|${row['start_date']}': row,
+      };
+      final chargeByKey = <String, Map<String, Object?>>{};
+      if (periodRows.isNotEmpty) {
+        final periodIds = [for (final row in periodRows) row['id'] as String];
+        final periodPlaceholders =
+            List.filled(periodIds.length, '?').join(', ');
+        final chargeRows = await txn.query(
+          'charges',
+          columns: ['id', 'period_id', 'member_id', 'deleted_at'],
+          where: 'period_id IN ($periodPlaceholders)',
+          whereArgs: periodIds,
+        );
+        for (final row in chargeRows) {
+          chargeByKey['${row['period_id']}|${row['member_id']}'] = row;
+        }
+      }
+
+      final now = nowIso();
       var createdPeriods = 0;
       for (final planRow in planRows) {
         final plan = DuesPlan.fromMap(planRow);
@@ -316,68 +416,81 @@ class ZainNotoRepository {
           amount: plan.amount,
         );
         for (final draft in drafts) {
-          final existing = await txn.query(
-            'periods',
-            columns: ['id'],
-            where: 'dues_plan_id = ? AND start_date = ?',
-            whereArgs: [plan.id, dateToStr(draft.startDate)],
-            limit: 1,
-          );
-          if (existing.isNotEmpty) continue;
-
-          final periodId = _newId();
-          final now = nowIso();
-          await txn.insert('periods', {
-            'id': periodId,
-            'group_id': groupId,
-            'dues_plan_id': plan.id,
-            'label': draft.label,
-            'start_date': dateToStr(draft.startDate),
-            'end_date': dateToStr(draft.endDate),
-            'due_date': dateToStr(draft.dueDate),
-            'amount_snapshot': draft.amountSnapshot,
-            'created_at': now,
-            'updated_at': now,
-          });
-
-          final members = await txn.query(
-            'members',
-            where:
-                'group_id = ? AND deleted_at IS NULL AND status = ?',
-            whereArgs: [
-              groupId,
-              MemberStatus.active.dbValue,
-            ],
-          );
-          for (final member in members) {
-            await txn.insert(
-              'charges',
+          final key = '${plan.id}|${dateToStr(draft.startDate)}';
+          final existingPeriod = periodByKey[key];
+          final String periodId;
+          if (existingPeriod != null) {
+            if (existingPeriod['deleted_at'] == null) continue;
+            // Reactivate a period that was soft-deleted by a schedule change
+            // (the unique index keeps deleted periods in place).
+            periodId = existingPeriod['id'] as String;
+            await txn.update(
+              'periods',
               {
+                'label': draft.label,
+                'end_date': dateToStr(draft.endDate),
+                'due_date': dateToStr(draft.dueDate),
+                'amount_snapshot': draft.amountSnapshot,
+                'deleted_at': null,
+                'updated_at': now,
+              },
+              where: 'id = ?',
+              whereArgs: [periodId],
+            );
+          } else {
+            periodId = _newId();
+            await txn.insert('periods', {
+              'id': periodId,
+              'group_id': groupId,
+              'dues_plan_id': plan.id,
+              'label': draft.label,
+              'start_date': dateToStr(draft.startDate),
+              'end_date': dateToStr(draft.endDate),
+              'due_date': dateToStr(draft.dueDate),
+              'amount_snapshot': draft.amountSnapshot,
+              'created_at': now,
+              'updated_at': now,
+            });
+          }
+          createdPeriods++;
+
+          for (final member in members) {
+            // B1: periods that ended before the member joined are not charged.
+            if (draft.endDate.isBefore(member.joinedAt)) continue;
+            final chargeKey = '$periodId|${member.id}';
+            final existingCharge = chargeByKey[chargeKey];
+            if (existingCharge != null) {
+              if (existingCharge['deleted_at'] == null) continue;
+              await txn.update(
+                'charges',
+                {
+                  'amount_due': draft.amountSnapshot,
+                  'deleted_at': null,
+                  'updated_at': now,
+                },
+                where: 'id = ?',
+                whereArgs: [existingCharge['id']],
+              );
+            } else {
+              await txn.insert('charges', {
                 'id': _newId(),
-                'member_id': member['id'],
+                'member_id': member.id,
                 'period_id': periodId,
                 'amount_due': draft.amountSnapshot,
                 'waived': 0,
                 'created_at': now,
                 'updated_at': now,
-              },
-              conflictAlgorithm: ConflictAlgorithm.ignore,
-            );
+              });
+            }
           }
-          createdPeriods++;
         }
       }
 
       if (createdPeriods > 0) {
-        final members = await txn.query(
-          'members',
-          where: 'group_id = ? AND deleted_at IS NULL',
-          whereArgs: [groupId],
-        );
-        for (final member in members) {
+        for (final memberId in creditMemberIds) {
           await _consumeCredits(
             txn,
-            memberId: member['id'] as String,
+            memberId: memberId,
             groupId: groupId,
           );
         }
@@ -425,7 +538,7 @@ class ZainNotoRepository {
       JOIN periods p ON p.id = c.period_id
       LEFT JOIN allocations a ON a.charge_id = c.id
       LEFT JOIN transactions t ON t.id = a.transaction_id AND t.is_deleted = 0
-      WHERE c.period_id = ? AND c.deleted_at IS NULL
+      WHERE c.period_id = ? AND c.deleted_at IS NULL AND m.deleted_at IS NULL
       GROUP BY c.id
       ORDER BY m.name COLLATE NOCASE ASC
     ''', [periodId]);
@@ -525,6 +638,9 @@ class ZainNotoRepository {
   }
 
   /// Records a non-dues transaction (other income or expense).
+  ///
+  /// Pass [idempotencyKey] from the UI tap gesture to make double taps safe:
+  /// a repeated call with the same key returns the original transaction id.
   Future<String> recordTransaction({
     required String groupId,
     required TxType type,
@@ -532,6 +648,7 @@ class ZainNotoRepository {
     String? category,
     String? note,
     required String date,
+    String? idempotencyKey,
   }) async {
     if (type == TxType.dues) {
       throw ArgumentError('Gunakan recordDuesPayment untuk transaksi iuran');
@@ -540,27 +657,39 @@ class ZainNotoRepository {
       throw ArgumentError.value(amount, 'amount', 'Nominal harus lebih dari 0');
     }
     final db = await _db;
-    final id = _newId();
-    final now = nowIso();
-    final row = <String, Object?>{
-      'id': id,
-      'group_id': groupId,
-      'member_id': null,
-      'type': type.dbValue,
-      'amount': amount,
-      'category': category,
-      'note': note,
-      'date': date,
-      'is_deleted': 0,
-      'created_at': now,
-      'updated_at': now,
-    };
-    await db.transaction((txn) async {
+    return db.transaction((txn) async {
+      if (idempotencyKey != null) {
+        final existing = await txn.query(
+          'transactions',
+          columns: ['id'],
+          where: 'client_ref = ?',
+          whereArgs: [idempotencyKey],
+          limit: 1,
+        );
+        if (existing.isNotEmpty) return existing.first['id'] as String;
+      }
+
+      final id = _newId();
+      final now = nowIso();
+      final row = <String, Object?>{
+        'id': id,
+        'group_id': groupId,
+        'member_id': null,
+        'type': type.dbValue,
+        'amount': amount,
+        'category': category,
+        'note': note,
+        'date': date,
+        'is_deleted': 0,
+        'client_ref': idempotencyKey,
+        'created_at': now,
+        'updated_at': now,
+      };
       await txn.insert('transactions', row);
       await _audit(txn,
           entity: 'transaction', entityId: id, action: 'insert', newMap: row);
+      return id;
     });
-    return id;
   }
 
   /// Edit-in-place: the same row is updated, old allocations and credits are
@@ -787,6 +916,7 @@ class ZainNotoRepository {
           AND p.due_date < ?
         GROUP BY c.id
       ) sub
+      JOIN members m ON m.id = sub.member_id AND m.deleted_at IS NULL
       WHERE sub.paid < sub.amount_due
       GROUP BY sub.member_id
     ''', [groupId, day]);
@@ -893,6 +1023,35 @@ class ZainNotoRepository {
       'new_json': newMap == null ? null : jsonEncode(newMap),
       'created_at': nowIso(),
     });
+  }
+
+  /// Soft-deletes every active period of [planId] that has no allocation at
+  /// all (nothing paid), together with its charges. Used when the dues
+  /// schedule changes: paid history is preserved, unpaid periods get rebuilt
+  /// by the next [generatePeriods] call.
+  Future<int> _replaceUnpaidPeriods(
+    DatabaseExecutor txn, {
+    required String planId,
+    required String now,
+  }) async {
+    const paidPeriods = '''
+      SELECT DISTINCT c.period_id FROM charges c
+      JOIN allocations a ON a.charge_id = c.id
+    ''';
+    await txn.rawUpdate('''
+      UPDATE charges SET deleted_at = ?, updated_at = ?
+      WHERE deleted_at IS NULL AND period_id IN (
+        SELECT id FROM periods
+        WHERE dues_plan_id = ? AND deleted_at IS NULL
+          AND id NOT IN ($paidPeriods)
+      )
+    ''', [now, now, planId]);
+    final deletedPeriods = await txn.rawUpdate('''
+      UPDATE periods SET deleted_at = ?, updated_at = ?
+      WHERE dues_plan_id = ? AND deleted_at IS NULL
+        AND id NOT IN ($paidPeriods)
+    ''', [now, now, planId]);
+    return deletedPeriods;
   }
 
   Future<List<Map<String, Object?>>> _unpaidCharges(

@@ -27,6 +27,7 @@ class ZainNotoProvider extends ChangeNotifier {
   Group? _selectedGroup;
   bool _isLoading = false;
   bool _isRefreshing = false;
+  bool _refreshPending = false;
   String? _error;
 
   GroupSummary? _summary;
@@ -128,11 +129,20 @@ class ZainNotoProvider extends ChangeNotifier {
   Future<void> refreshGroup() async {
     final group = _selectedGroup;
     if (group == null) return;
+    // Coalesce concurrent refreshes: while one refresh is running, further
+    // requests just mark it dirty and are served by the running loop.
+    if (_isRefreshing) {
+      _refreshPending = true;
+      return;
+    }
     _isRefreshing = true;
     _error = null;
     notifyListeners();
     try {
-      await _loadGroupData(group.id);
+      do {
+        _refreshPending = false;
+        await _loadGroupData(group.id);
+      } while (_refreshPending);
     } catch (error) {
       _error = 'Gagal memuat data grup: $error';
     }
@@ -142,9 +152,27 @@ class ZainNotoProvider extends ChangeNotifier {
 
   Future<void> _loadGroupData(String groupId) async {
     await _repository.generatePeriods(groupId: groupId);
-    _summary = await _repository.getGroupSummary(groupId: groupId);
-    _currentPeriod = await _repository.getCurrentPeriod(groupId);
-    _periods = await _repository.getPeriods(groupId);
+
+    // All reads are independent, so start them together and await after.
+    final summaryFuture = _repository.getGroupSummary(groupId: groupId);
+    final currentFuture = _repository.getCurrentPeriod(groupId);
+    final periodsFuture = _repository.getPeriods(groupId);
+    final membersFuture = _repository.getMembers(groupId);
+    final allMembersFuture =
+        _repository.getMembers(groupId, includeInactive: true);
+    final transactionsFuture = _repository.getTransactions(groupId);
+    final plansFuture = _repository.getDuesPlans(groupId);
+    final overdueFuture = _repository.getOverdueMembers(groupId: groupId);
+
+    _summary = await summaryFuture;
+    _currentPeriod = await currentFuture;
+    _periods = await periodsFuture;
+    _members = await membersFuture;
+    _allMembers = await allMembersFuture;
+    _transactions = await transactionsFuture;
+    _duesPlans = await plansFuture;
+    _overdueMembers = await overdueFuture;
+
     final selectedId = _selectedPeriod?.id;
     Period? keepSelected;
     for (final period in _periods) {
@@ -158,12 +186,6 @@ class ZainNotoProvider extends ChangeNotifier {
     _periodRows =
         period == null ? const [] : await _repository.getPeriodRows(period.id);
     _matrixStale = true;
-    _members = await _repository.getMembers(groupId);
-    _allMembers =
-        await _repository.getMembers(groupId, includeInactive: true);
-    _transactions = await _repository.getTransactions(groupId);
-    _duesPlans = await _repository.getDuesPlans(groupId);
-    _overdueMembers = await _repository.getOverdueMembers(groupId: groupId);
   }
 
   void _clearGroupData() {
@@ -335,6 +357,7 @@ class ZainNotoProvider extends ChangeNotifier {
         category: category,
         note: note,
         date: date ?? dateToStr(DateTime.now()),
+        idempotencyKey: _uuid.v4(),
       );
       await refreshGroup();
       return id;
@@ -473,8 +496,11 @@ class ZainNotoProvider extends ChangeNotifier {
           ? _periods
           : _periods.sublist(_periods.length - maxPeriods);
       final loaded = <String, List<PeriodMemberRow>>{};
-      for (final period in recent) {
-        loaded[period.id] = await _repository.getPeriodRows(period.id);
+      final results = await Future.wait([
+        for (final period in recent) _repository.getPeriodRows(period.id),
+      ]);
+      for (var i = 0; i < recent.length; i++) {
+        loaded[recent[i].id] = results[i];
       }
       _matrixByPeriod = loaded;
       _matrixStale = false;

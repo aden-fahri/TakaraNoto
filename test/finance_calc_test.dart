@@ -9,7 +9,7 @@ FinanceTransaction tx({
   required double amount,
   required String type,
   bool isTransfer = false,
-  int? savingsGoalId,
+  bool categoryIsSavings = false,
   String walletType = 'main',
 }) {
   return FinanceTransaction(
@@ -19,7 +19,7 @@ FinanceTransaction tx({
     date: '2026-10-01',
     note: '',
     isTransfer: isTransfer,
-    savingsGoalId: savingsGoalId,
+    categoryIsSavings: categoryIsSavings,
     walletType: walletType,
   );
 }
@@ -62,24 +62,24 @@ void main() {
   });
 
   group('aggregations', () {
-    test('sumIncome excludes transfers and savings withdrawals', () {
+    test('sumIncome excludes transfers and savings categories', () {
       final txs = [
         tx(amount: 1000000, type: 'income'),
         tx(amount: 500000, type: 'income', isTransfer: true),
-        tx(amount: 200000, type: 'income', savingsGoalId: 3),
+        tx(amount: 200000, type: 'income', categoryIsSavings: true),
         tx(amount: 75000, type: 'expense'),
       ];
       expect(sumIncome(txs), 1000000);
     });
 
-    test('sumExpense excludes transfers and subtracts withdrawals', () {
+    test('sumExpense excludes transfers and savings categories', () {
       final txs = [
         tx(amount: 75000, type: 'expense'),
-        tx(amount: 100000, type: 'expense', savingsGoalId: 3),
-        tx(amount: 50000, type: 'income', savingsGoalId: 3),
+        tx(amount: 100000, type: 'expense', categoryIsSavings: true),
+        tx(amount: 50000, type: 'income', categoryIsSavings: true),
         tx(amount: 500000, type: 'expense', isTransfer: true),
       ];
-      expect(sumExpense(txs), 75000 + 100000 - 50000);
+      expect(sumExpense(txs), 75000);
     });
 
     test('netBalance combines income and expense', () {

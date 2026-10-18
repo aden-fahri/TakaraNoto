@@ -104,6 +104,8 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _runSequence() async {
+    final startedAt = DateTime.now();
+
     // Start blobs sliding in immediately
     _blobCtrl.forward();
 
@@ -113,8 +115,12 @@ class _SplashScreenState extends State<SplashScreen>
     await Future.delayed(const Duration(milliseconds: 600));
     _textCtrl.forward();
 
-    // Minimum splash duration (1.8 seconds)
-    await Future.delayed(const Duration(milliseconds: 1800));
+    // Minimum total splash duration (1.8 seconds from first paint)
+    const minimumSplash = Duration(milliseconds: 1800);
+    final elapsed = DateTime.now().difference(startedAt);
+    if (elapsed < minimumSplash) {
+      await Future.delayed(minimumSplash - elapsed);
+    }
 
     // Ensure provider data is fully loaded
     if (mounted) {

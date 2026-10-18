@@ -211,6 +211,7 @@ class _StatsScreenState extends State<StatsScreen> {
                   totalBudget: totalBudget,
                   usagePct: usagePct,
                   dailyAvg: dailyAvg,
+                  netSaved: provider.netSaved,
                   provider: provider,
                   onGoToBudget: widget.onGoToBudget,
                 ),
@@ -562,7 +563,7 @@ class _WeeklyExpenseCard extends StatelessWidget {
 
 // ─── Monthly Summary Card ─────────────────────────────────────────────────────
 class _SummaryCard extends StatelessWidget {
-  final double expense, totalBudget, usagePct, dailyAvg;
+  final double expense, totalBudget, usagePct, dailyAvg, netSaved;
   final FinanceProvider provider;
   final VoidCallback? onGoToBudget;
 
@@ -571,6 +572,7 @@ class _SummaryCard extends StatelessWidget {
     required this.totalBudget,
     required this.usagePct,
     required this.dailyAvg,
+    required this.netSaved,
     required this.provider,
     this.onGoToBudget,
   });
@@ -695,6 +697,26 @@ class _SummaryCard extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Icon(Icons.savings_rounded, size: 14, color: tokens.headerMuted),
+              const SizedBox(width: 6),
+              Text(
+                'Ditabung Bersih',
+                style: TextStyle(fontSize: 11, color: tokens.headerMuted),
+              ),
+              const Spacer(),
+              Text(
+                provider.formatCurrency(netSaved),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: netSaved >= 0 ? tokens.incomeOnHeader : tokens.expenseOnHeader,
                 ),
               ),
             ],

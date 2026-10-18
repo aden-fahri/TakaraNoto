@@ -14,6 +14,7 @@ class FinanceTransaction {
   final String? categoryName;
   final String? categoryIcon;
   final String? categoryColor;
+  final bool categoryIsSavings;
 
   FinanceTransaction({
     this.id,
@@ -29,6 +30,7 @@ class FinanceTransaction {
     this.categoryName,
     this.categoryIcon,
     this.categoryColor,
+    this.categoryIsSavings = false,
   });
 
   /// Human friendly label, especially for internal transfer rows.
@@ -70,6 +72,7 @@ class FinanceTransaction {
       categoryName: map['category_name'] as String?,
       categoryIcon: map['category_icon'] as String?,
       categoryColor: map['category_color'] as String?,
+      categoryIsSavings: (map['category_is_savings'] as int? ?? 0) == 1,
     );
   }
 }
