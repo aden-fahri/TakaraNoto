@@ -94,16 +94,16 @@ class FinanceProvider extends ChangeNotifier {
       if (token != _refreshToken || _currentMonth != month) {
         return; // stale result ignored
       }
-      _monthlyTotals = (summary['totals'] as Map<String, double>);
-      _savingsGoals = (summary['savingsGoals'] as List<SavingsGoal>);
-      _budgets = (summary['budgets'] as List<Budget>);
-      _topupBalance = (summary['topupBalance'] as double);
-      _topupTransactions = (summary['topupTransactions'] as List<FinanceTransaction>);
-      _monthlyNetHistory = (summary['monthlyNetHistory'] as List<Map<String, dynamic>>);
-      _categorySpending = (summary['categorySpending'] as List<Map<String, dynamic>>);
-      _categoryIncome = (summary['categoryIncome'] as List<Map<String, dynamic>>);
-      _cumulativeBalance = (summary['cumulativeBalance'] as double);
-      _netSaved = (summary['netSaved'] as double);
+      _monthlyTotals = summary.totals;
+      _savingsGoals = summary.savingsGoals.cast<SavingsGoal>();
+      _budgets = summary.budgets.cast<Budget>();
+      _topupBalance = summary.topupBalance;
+      _topupTransactions = summary.topupTransactions.cast<FinanceTransaction>();
+      _monthlyNetHistory = summary.monthlyNetHistory;
+      _categorySpending = summary.categorySpending;
+      _categoryIncome = summary.categoryIncome;
+      _cumulativeBalance = summary.cumulativeBalance;
+      _netSaved = summary.netSaved;
       _error = null;
       notifyListeners();
     } catch (e) {

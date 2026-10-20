@@ -7,6 +7,7 @@ import '../models/category.dart';
 import '../models/transaction.dart';
 import '../models/savings_goal.dart';
 import '../models/budget.dart';
+import '../models/monthly_summary.dart';
 import '../zainnoto/db/zainnoto_schema.dart';
 
 class DatabaseHelper {
@@ -691,7 +692,14 @@ class DatabaseHelper {
   static bool debugFailMonthlySummary = false;
 
   /// Single monthly summary (totals, category spending/income, cumulative, net saved, topup).
-  Future<Map<String, dynamic>> getMonthlySummary(String monthYear) async {
+  /// Catatan: query berurutan tanpa transaksi baca; risiko snapshot tidak konsisten
+  /// bila ada penulisan di antaranya diterima (sqflite helper methods tidak menerima txn).
+  static Completer<void>? debugMonthlySummaryGate;
+
+  Future<MonthlySummary> getMonthlySummary(String monthYear) async {
+    if (debugMonthlySummaryGate != null) {
+      await debugMonthlySummaryGate!.future;
+    }
     if (debugFailMonthlySummary) {
       throw StateError('simulated monthly summary failure');
     }
@@ -705,19 +713,19 @@ class DatabaseHelper {
     final categoryIncome = await getCategoryIncome(monthYear);
     final cumulativeBalance = await getCumulativeBalanceUpTo(monthYear);
     final netSaved = await getNetSaved(monthYear);
-    return {
-      'monthYear': monthYear,
-      'totals': totals,
-      'savingsGoals': savingsGoals,
-      'budgets': budgets,
-      'topupBalance': topupBalance,
-      'topupTransactions': topupTransactions,
-      'monthlyNetHistory': monthlyNetHistory,
-      'categorySpending': categorySpending,
-      'categoryIncome': categoryIncome,
-      'cumulativeBalance': cumulativeBalance,
-      'netSaved': netSaved,
-    };
+    return MonthlySummary(
+      monthYear: monthYear,
+      totals: totals,
+      savingsGoals: savingsGoals,
+      budgets: budgets,
+      topupBalance: topupBalance,
+      topupTransactions: topupTransactions,
+      monthlyNetHistory: monthlyNetHistory,
+      categorySpending: categorySpending,
+      categoryIncome: categoryIncome,
+      cumulativeBalance: cumulativeBalance,
+      netSaved: netSaved,
+    );
   }
 
   /// Net amount saved in [monthYear]: savings deposits minus withdrawals.
