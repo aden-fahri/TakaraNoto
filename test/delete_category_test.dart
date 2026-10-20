@@ -67,4 +67,113 @@ void main() {
     final txs = await dbh.getTransactions();
     expect(txs.length, 1);
   });
+
+  test('reassignCategory memindahkan transaksi dan anggaran', () async {
+    final dbh = DatabaseHelper.instance;
+    final fromId = await dbh.addCategory(Category(
+      name: 'From',
+      icon: 'cart',
+      color: '#9b59b6',
+      type: 'expense',
+    ));
+    final toId = await dbh.addCategory(Category(
+      name: 'To',
+      icon: 'cart',
+      color: '#9b59b6',
+      type: 'expense',
+    ));
+    await dbh.addTransaction(FinanceTransaction(
+      categoryId: fromId,
+      amount: 1000,
+      type: 'expense',
+      date: '2026-08-01',
+      note: 'x',
+    ));
+    await dbh.addOrUpdateBudget(Budget(
+      categoryId: fromId,
+      limitAmount: 5000,
+      monthYear: '2026-08',
+      budgetType: 'goal',
+    ));
+    await dbh.reassignCategory(fromId, toId);
+    final txs = await dbh.getTransactions();
+    expect(txs.first.categoryId, toId);
+    final budgets = await dbh.getBudgets('2026-08');
+    expect(budgets.any((b) => b.categoryId == toId), isTrue);
+    expect(budgets.any((b) => b.categoryId == fromId), isFalse);
+  });
+
+  test('reassignCategory menolak tipe atau savings berbeda', () async {
+    final dbh = DatabaseHelper.instance;
+    final fromId = await dbh.addCategory(Category(
+      name: 'From2',
+      icon: 'cart',
+      color: '#9b59b6',
+      type: 'expense',
+    ));
+    final toId = await dbh.addCategory(Category(
+      name: 'To2',
+      icon: 'cart',
+      color: '#9b59b6',
+      type: 'income',
+    ));
+    expect(() => dbh.reassignCategory(fromId, toId), throwsStateError);
+  });
+
+  test('reassignCategory menolak bentrok anggaran bulan sama', () async {
+    final dbh = DatabaseHelper.instance;
+    final fromId = await dbh.addCategory(Category(
+      name: 'From3',
+      icon: 'cart',
+      color: '#9b59b6',
+      type: 'expense',
+    ));
+    final toId = await dbh.addCategory(Category(
+      name: 'To3',
+      icon: 'cart',
+      color: '#9b59b6',
+      type: 'expense',
+    ));
+    await dbh.addOrUpdateBudget(Budget(
+      categoryId: fromId,
+      limitAmount: 5000,
+      monthYear: '2026-08',
+      budgetType: 'goal',
+    ));
+    await dbh.addOrUpdateBudget(Budget(
+      categoryId: toId,
+      limitAmount: 3000,
+      monthYear: '2026-08',
+      budgetType: 'goal',
+    ));
+    expect(() => dbh.reassignCategory(fromId, toId), throwsStateError);
+  });
+
+  test('setelah reassign deleteCategory berhasil', () async {
+    final dbh = DatabaseHelper.instance;
+    final fromId = await dbh.addCategory(Category(
+      name: 'From4',
+      icon: 'cart',
+      color: '#9b59b6',
+      type: 'expense',
+    ));
+    final toId = await dbh.addCategory(Category(
+      name: 'To4',
+      icon: 'cart',
+      color: '#9b59b6',
+      type: 'expense',
+    ));
+    await dbh.addTransaction(FinanceTransaction(
+      categoryId: fromId,
+      amount: 1000,
+      type: 'expense',
+      date: '2026-08-01',
+      note: 'x',
+    ));
+    await dbh.reassignCategory(fromId, toId);
+    await dbh.deleteCategory(fromId);
+    final cats = await dbh.getCategories();
+    expect(cats.any((c) => c.id == fromId), isFalse);
+  });
 }
+

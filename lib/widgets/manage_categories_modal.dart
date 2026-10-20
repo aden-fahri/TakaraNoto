@@ -102,35 +102,77 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
   void _deleteCategory(Category cat) async {
     final usage = await DatabaseHelper.instance.categoryUsage(cat.id!);
     if (!mounted) return;
+    final provider = Provider.of<FinanceProvider>(context, listen: false);
+    final candidates = provider.categories
+        .where((c) =>
+            c.id != cat.id &&
+            c.type == cat.type &&
+            c.isSpecial == false)
+        .toList();
+    Category? target = candidates.isNotEmpty ? candidates.first : null;
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Hapus Kategori'),
-        content: Text(
-            'Apakah Anda yakin ingin menghapus kategori "${cat.name}"?\n\n'
-            'Terdampak: ${usage.transactions} transaksi, ${usage.budgets} anggaran.\n'
-            'Kategori dengan transaksi/anggaran tidak dapat dihapus; pindahkan dulu.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          title: const Text('Hapus Kategori'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Terdampak: ${usage.transactions} transaksi, ${usage.budgets} anggaran.'),
+              const SizedBox(height: 8),
+              if (usage.transactions > 0 || usage.budgets > 0) ...[
+                const Text('Pindahkan ke:'),
+                const SizedBox(height: 4),
+                DropdownButton<Category>(
+                  value: target,
+                  items: candidates
+                      .map((c) => DropdownMenuItem(value: c, child: Text(c.name)))
+                      .toList(),
+                  onChanged: (v) => setState(() => target = v),
+                ),
+              ],
+            ],
           ),
-          TextButton(
-            onPressed: usage.transactions > 0 || usage.budgets > 0
-                ? null
-                : () {
-                    Provider.of<FinanceProvider>(context, listen: false)
-                        .deleteCat(cat.id!);
-                    Navigator.pop(ctx);
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Batal'),
+            ),
+            TextButton(
+              onPressed: () async {
+                try {
+                  if (usage.transactions > 0 || usage.budgets > 0) {
+                    if (target == null) return;
+                    await DatabaseHelper.instance
+                        .reassignCategory(cat.id!, target!.id!);
+                  }
+                  await provider.deleteCat(cat.id!);
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                          content:
-                              Text('Kategori "${cat.name}" telah dihapus.')),
+                          content: Text('Kategori "${cat.name}" telah dihapus.')),
                     );
-                  },
-            child: Text('Hapus', style: TextStyle(color: ctx.tokens.expense)),
-          ),
-        ],
+                  }
+                } catch (e) {
+                  if (ctx.mounted) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      SnackBar(content: Text(e.toString())),
+                    );
+                  }
+                }
+              },
+              child: Text(
+                usage.transactions > 0 || usage.budgets > 0
+                    ? 'Pindahkan dan hapus'
+                    : 'Hapus',
+                style: TextStyle(color: ctx.tokens.expense),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

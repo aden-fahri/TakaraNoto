@@ -335,6 +335,39 @@ class DatabaseHelper {
     return await db.delete('categories', where: 'id = ?', whereArgs: [id]);
   }
 
+  Future<void> reassignCategory(int fromId, int toId) async {
+    final db = await instance.database;
+    await db.transaction((txn) async {
+      final fromRows = await txn.query('categories', where: 'id = ?', whereArgs: [fromId], limit: 1);
+      final toRows = await txn.query('categories', where: 'id = ?', whereArgs: [toId], limit: 1);
+      if (fromRows.isEmpty || toRows.isEmpty) {
+        throw StateError('Kategori tidak ditemukan');
+      }
+      final from = fromRows.first;
+      final to = toRows.first;
+      if (from['type'] != to['type']) {
+        throw StateError('Tipe kategori harus sama');
+      }
+      final fromSavings = (from['is_savings'] as int? ?? 0);
+      final toSavings = (to['is_savings'] as int? ?? 0);
+      if (fromSavings != toSavings) {
+        throw StateError('Flag is_savings harus sama');
+      }
+      // budget conflict check
+      final fromBudgets = await txn.query('budgets', where: 'category_id = ?', whereArgs: [fromId]);
+      final toBudgetMonths = (await txn.query('budgets', where: 'category_id = ?', whereArgs: [toId]))
+          .map((r) => r['month_year'] as String)
+          .toSet();
+      for (final b in fromBudgets) {
+        if (toBudgetMonths.contains(b['month_year'])) {
+          throw StateError('Anggaran bulan ${b['month_year']} sudah ada di kategori tujuan');
+        }
+      }
+      await txn.update('transactions', {'category_id': toId}, where: 'category_id = ?', whereArgs: [fromId]);
+      await txn.update('budgets', {'category_id': toId}, where: 'category_id = ?', whereArgs: [fromId]);
+    });
+  }
+
   // --- Transactions CRUD ---
 
   Future<List<FinanceTransaction>> getTransactions({String? walletType}) async {
