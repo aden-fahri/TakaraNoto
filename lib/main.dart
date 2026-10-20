@@ -68,11 +68,13 @@ class MyApp extends StatelessWidget {
           theme: AppTheme.getTheme(
             themeController.seed,
             themeController.background,
+            palette: themeController.palette,
           ),
           darkTheme: AppTheme.getTheme(
             themeController.seed,
             themeController.background,
             dark: true,
+            palette: themeController.palette,
           ),
           themeMode:
               themeController.darkMode ? ThemeMode.dark : ThemeMode.light,

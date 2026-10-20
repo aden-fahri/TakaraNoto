@@ -1,17 +1,13 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 
-/// Data class for a bottom navigation item.
 class NavItem {
   final IconData icon;
   final String label;
   const NavItem({required this.icon, required this.label});
 }
 
-/// Custom pill-style bottom navigation bar shared by both app shells
-/// (Pribadi and Kelompok).
 class PillNavBar extends StatelessWidget {
   const PillNavBar({
     super.key,
@@ -25,112 +21,110 @@ class PillNavBar extends StatelessWidget {
   final int currentIndex;
   final List<NavItem> items;
   final ValueChanged<int> onTap;
-
-  /// Shows a small alert dot on [badgeIndex].
   final bool showBadge;
   final int badgeIndex;
 
   @override
   Widget build(BuildContext context) {
     final t = context.tokens;
-    final bgColor = t.card;
+    final bgColor = t.nav;
     final activeColor = t.accent;
     final inactiveColor = t.textMuted;
     final pillColor = t.softSurface;
 
     return Container(
-      color: bgColor,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            height: 0.5,
-            color: t.border,
-          ),
-          SafeArea(
-            top: false,
-            child: SizedBox(
-              height: 64,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: Row(
-                  children: List.generate(items.length, (i) {
-                    final isActive = i == currentIndex;
-                    final showDot = showBadge && i == badgeIndex;
+      decoration: BoxDecoration(
+        color: bgColor,
+        border: Border(top: BorderSide(color: t.border, width: 0.5)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 75.5,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: List.generate(items.length, (i) {
+                final isActive = i == currentIndex;
+                final showDot = showBadge && i == badgeIndex;
 
-                    return Expanded(
-                      child: Semantics(
-                        button: true,
-                        selected: isActive,
-                        label: items[i].label,
-                        child: GestureDetector(
-                          onTap: () => onTap(i),
-                          behavior: HitTestBehavior.opaque,
-                          child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 220),
-                          curve: Curves.easeInOut,
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          decoration: BoxDecoration(
-                            color: isActive ? pillColor : Colors.transparent,
-                            borderRadius:
-                                BorderRadius.circular(AppTheme.buttonRadius),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Stack(
-                                clipBehavior: Clip.none,
-                                children: [
-                                  AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 180),
-                                    child: Icon(
-                                      items[i].icon,
-                                      key: ValueKey(isActive),
-                                      size: isActive ? 26 : 24,
-                                      color: isActive
-                                          ? activeColor
-                                          : inactiveColor,
-                                    ),
-                                  ),
-                                  // Alert badge
-                                  if (showDot)
-                                    Positioned(
-                                      right: -4,
-                                      top: -3,
-                                      child: Container(
-                                        width: 8,
-                                        height: 8,
-                                        decoration: BoxDecoration(
-                                          color: t.expense,
-                                          shape: BoxShape.circle,
-                                        ),
+                return Expanded(
+                  child: Semantics(
+                    button: true,
+                    selected: isActive,
+                    label: items[i].label,
+                    child: GestureDetector(
+                      onTap: () => onTap(i),
+                      behavior: HitTestBehavior.opaque,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeInOut,
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: isActive ? pillColor : Colors.transparent,
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            if (isActive)
+                              Container(
+                                width: 28,
+                                height: 3,
+                                margin: const EdgeInsets.only(bottom: 6),
+                                decoration: BoxDecoration(
+                                  color: activeColor,
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              )
+                            else
+                              const SizedBox(height: 9),
+                            Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                Icon(
+                                  items[i].icon,
+                                  size: 22,
+                                  color: isActive ? activeColor : inactiveColor,
+                                ),
+                                if (showDot)
+                                  Positioned(
+                                    right: -4,
+                                    top: -3,
+                                    child: Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        color: t.expense,
+                                        shape: BoxShape.circle,
                                       ),
                                     ),
-                                ],
-                              ),
-                              if (isActive) ...[
-                                const SizedBox(height: 4),
-                                Container(
-                                  width: 4,
-                                  height: 4,
-                                  decoration: BoxDecoration(
-                                    color: activeColor,
-                                    shape: BoxShape.circle,
                                   ),
-                                ),
                               ],
-                            ],
-                          ),
+                            ),
+                            const SizedBox(height: 4),
+                            ExcludeSemantics(
+                              child: Text(
+                                items[i].label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: AppText.label,
+                                  fontWeight: FontWeight.w500,
+                                  color: isActive ? activeColor : inactiveColor,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                    );
-                  }),
-                ),
-              ),
+                  ),
+                );
+              }),
             ),
           ),
-        ],
+        ),
       ),
     );
   }

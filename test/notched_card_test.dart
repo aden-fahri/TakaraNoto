@@ -4,27 +4,31 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:finflow_flutter/widgets/notched_card.dart';
 
 void main() {
-  group('buildNotchedCardPath', () {
-    const rect = Rect.fromLTWH(0, 0, 300, 180);
+  group('buildNotchedCardPath (358×214, notch 30%×44)', () {
+    const rect = Rect.fromLTWH(0, 0, 358, 214);
 
-    test('memotong step di sudut kanan atas', () {
-      final path = buildNotchedCardPath(rect);
-
-      expect(path.contains(const Offset(299, 2)), isFalse);
-      expect(path.contains(const Offset(299, 40)), isTrue);
-      expect(path.contains(const Offset(230, 2)), isTrue);
-      expect(path.contains(const Offset(255, 2)), isFalse);
-      expect(path.contains(const Offset(255, 40)), isTrue);
-      expect(path.contains(const Offset(150, 90)), isTrue);
+    test('notchWidth ≈ 107.4 ± 1', () {
+      // notch left edge = 358 − 107.4 = 250.6; pada y=22 (lurus, bukan fillet)
+      // titik di dalam notch → di luar path
+      expect(pathOutsideAt(rect, 252, 22), isTrue, reason: 'x=252 > 250.6, dalam notch');
+      // titik di luar notch → di dalam path
+      expect(pathInsideAt(rect, 248, 22), isTrue, reason: 'x=248 < 250.6, di luar notch');
     });
 
-    test('mempertahankan sudut membulat lainnya', () {
-      final path = buildNotchedCardPath(rect);
+    test('memotong notch di sudut kanan atas', () {
+      expect(pathOutsideAt(rect, 300, 20), isTrue, reason: 'dalam notch');
+      expect(pathOutsideAt(rect, 357, 43), isTrue, reason: 'dalam notch');
+      expect(pathInsideAt(rect, 357, 50), isTrue, reason: 'di bawah notch');
+      expect(pathInsideAt(rect, 150, 90), isTrue, reason: 'jauh dari notch');
+      expect(pathInsideAt(rect, 200, 20), isTrue, reason: 'kiri notch');
+    });
 
-      expect(path.contains(const Offset(2, 2)), isFalse);
-      expect(path.contains(const Offset(298, 178)), isFalse);
-      expect(path.contains(const Offset(2, 178)), isFalse);
-      expect(path.contains(const Offset(12, 12)), isTrue);
+    test('mempertahankan sudut membulat radius 24', () {
+      expect(pathOutsideAt(rect, 2, 2), isTrue);
+      expect(pathOutsideAt(rect, 356, 212), isTrue);
+      expect(pathOutsideAt(rect, 2, 212), isTrue);
+      expect(pathInsideAt(rect, 12, 12), isTrue);
+      expect(pathInsideAt(rect, 346, 202), isTrue);
     });
 
     testWidgets('NotchedCard me-render child', (tester) async {
@@ -32,7 +36,7 @@ void main() {
         const MaterialApp(
           home: Center(
             child: SizedBox(
-              width: 300,
+              width: 358,
               child: NotchedCard(
                 color: Colors.white,
                 child: Padding(
@@ -44,9 +48,14 @@ void main() {
           ),
         ),
       );
-
       expect(find.text('isi'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });
 }
+
+bool pathOutsideAt(Rect rect, double x, double y) =>
+    !buildNotchedCardPath(rect).contains(Offset(x, y));
+
+bool pathInsideAt(Rect rect, double x, double y) =>
+    buildNotchedCardPath(rect).contains(Offset(x, y));

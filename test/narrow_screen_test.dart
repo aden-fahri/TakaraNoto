@@ -62,7 +62,7 @@ void main() {
     // reset handled per test
   });
 
-  testWidgets('dashboard TakaraNoto sempit [known-failing: overflow 320dp Fase 3]', (tester) async {
+  testWidgets('dashboard TakaraNoto sempit [overflow 320dp: header banner Row dan baris internal kartu saldo NotchedCard]', (tester) async {
     _setNarrow(tester);
     await tester.pumpWidget(_financeApp());
     await tester.pump();
@@ -70,7 +70,7 @@ void main() {
     _reset(tester);
   }, skip: true);
 
-  testWidgets('dashboard Kas Zain sempit [known-failing: overflow 320dp Fase 3]', (tester) async {
+  testWidgets('dashboard Kas Zain sempit [overflow 320dp: header banner Row greeting/judul+tombol 53px]', (tester) async {
     _setNarrow(tester);
     await tester.runAsync(openTestDatabase);
     final provider = ZainNotoProvider(repository: ZainNotoRepository());
@@ -81,7 +81,7 @@ void main() {
     _reset(tester);
   }, skip: true);
 
-  testWidgets('Iuran Kas sempit [known-failing: overflow 320dp Fase 3]', (tester) async {
+  testWidgets('Iuran Kas sempit [overflow 320dp: header banner Row 53px dan toggle Checklist/Matriks 28px]', (tester) async {
     _setNarrow(tester);
     await tester.runAsync(openTestDatabase);
     final provider = ZainNotoProvider(repository: ZainNotoRepository());
@@ -93,7 +93,7 @@ void main() {
     _reset(tester);
   }, skip: true);
 
-  testWidgets('Statistik Zain sempit [known-failing: overflow 320dp Fase 3]', (tester) async {
+  testWidgets('Statistik Zain sempit [overflow 320dp: header banner Row greeting/judul+tombol 53px]', (tester) async {
     _setNarrow(tester);
     await tester.runAsync(openTestDatabase);
     final provider = ZainNotoProvider(repository: ZainNotoRepository());
@@ -105,3 +105,4 @@ void main() {
     _reset(tester);
   }, skip: true);
 }
+

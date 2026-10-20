@@ -19,34 +19,54 @@ class AppTheme {
     Color seed,
     Color background, {
     bool dark = false,
+    ThemePalette palette = ThemePalette.custom,
   }) {
-    final base = ColorScheme.fromSeed(
-      seedColor: seed,
-      brightness: dark ? Brightness.dark : Brightness.light,
-    );
-    // Use the exact chosen color as the primary (not the M3 tonal variant),
-    // so the banner/buttons match what the user picked.
-    final onPrimary = ThemeData.estimateBrightnessForColor(seed) ==
-            Brightness.dark
-        ? Colors.white
-        : const Color(0xFF0F172A);
-    final surface = dark ? const Color(0xFF1E293B) : Colors.white;
-    final onSurface = dark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
-    final outline = dark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
-    final scheme = base.copyWith(
-      primary: seed,
-      onPrimary: onPrimary,
-      surface: surface,
-      onSurface: onSurface,
-      outline: outline,
-      outlineVariant: outline,
-    );
-    // In dark mode the page background is derived from the user's pick:
-    // a subtle tint of their chosen hue over a near-black base.
-    final pageBg = dark
-        ? Color.lerp(background, const Color(0xFF0B1120), 0.88)!
-        : background;
-    final tokens = AppTokens.fromScheme(scheme, pageBg: pageBg);
+    final brightness = dark ? Brightness.dark : Brightness.light;
+    AppTokens tokens;
+    ColorScheme scheme;
+    Color pageBg;
+    if (palette == ThemePalette.plum) {
+      tokens = AppTokens.plum(brightness);
+      pageBg = tokens.pageBg;
+      scheme = ColorScheme(
+        brightness: brightness,
+        primary: tokens.accent,
+        onPrimary: tokens.onAccent,
+        secondary: tokens.accent,
+        onSecondary: tokens.onAccent,
+        error: tokens.expense,
+        onError: Colors.white,
+        surface: tokens.card,
+        onSurface: tokens.textPrimary,
+        outline: tokens.border,
+        outlineVariant: tokens.border,
+      );
+    } else if (palette == ThemePalette.teal) {
+      tokens = AppTokens.teal(brightness);
+      pageBg = tokens.pageBg;
+      scheme = ColorScheme(
+        brightness: brightness,
+        primary: tokens.accent,
+        onPrimary: tokens.onAccent,
+        secondary: tokens.accent,
+        onSecondary: tokens.onAccent,
+        error: tokens.expense,
+        onError: Colors.white,
+        surface: tokens.card,
+        onSurface: tokens.textPrimary,
+        outline: tokens.border,
+        outlineVariant: tokens.border,
+      );
+    } else {
+      final base = ColorScheme.fromSeed(seedColor: seed, brightness: brightness);
+      final onPrimary = ThemeData.estimateBrightnessForColor(seed) == Brightness.dark ? Colors.white : const Color(0xFF0F172A);
+      final surface = dark ? const Color(0xFF1E293B) : Colors.white;
+      final onSurface = dark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
+      final outline = dark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+      scheme = base.copyWith(primary: seed, onPrimary: onPrimary, surface: surface, onSurface: onSurface, outline: outline, outlineVariant: outline);
+      pageBg = dark ? Color.lerp(background, const Color(0xFF0B1120), 0.88)! : background;
+      tokens = AppTokens.fromScheme(scheme, pageBg: pageBg);
+    }
 
     final textTheme = GoogleFonts.poppinsTextTheme().copyWith(
       displayLarge: GoogleFonts.poppins(

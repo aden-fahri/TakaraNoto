@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'app_tokens.dart';
+
 /// A selectable color preset.
 class ThemePreset {
   const ThemePreset(this.name, this.color);
@@ -21,6 +23,7 @@ class ThemeController extends ChangeNotifier {
   static const String prefKey = 'custom_primary_color';
   static const String backgroundPrefKey = 'custom_background_color';
   static const String darkModePrefKey = 'dark_mode_enabled';
+  static const String palettePrefKey = 'theme_palette';
   static const int defaultColorValue = 0xFF381932;
   static const int defaultBackgroundValue = 0xFFFFF3E6;
 
@@ -45,11 +48,13 @@ class ThemeController extends ChangeNotifier {
   Color _background = const Color(defaultBackgroundValue);
   bool _darkMode = false;
   bool _isReady = false;
+  ThemePalette _palette = ThemePalette.plum;
 
   Color get seed => _seed;
   Color get background => _background;
   bool get darkMode => _darkMode;
   bool get isReady => _isReady;
+  ThemePalette get palette => _palette;
 
   /// True when the given color matches one of the built-in accent presets.
   bool isPresetSelected(Color color) =>
@@ -71,6 +76,21 @@ class ThemeController extends ChangeNotifier {
         _background = Color(storedBackground);
       }
       _darkMode = prefs.getBool(darkModePrefKey) ?? false;
+      final storedPalette = prefs.getString(palettePrefKey);
+      if (storedPalette == 'teal') {
+        _palette = ThemePalette.teal;
+      } else if (storedPalette == 'custom') {
+        _palette = ThemePalette.custom;
+      } else {
+        _palette = ThemePalette.plum;
+      }
+      if (_palette == ThemePalette.plum) {
+        _seed = const Color(0xFF381932);
+        _background = const Color(0xFFFFF3E6);
+      } else if (_palette == ThemePalette.teal) {
+        _seed = const Color(0xFF10B981);
+        _background = const Color(0xFFF3F1EB);
+      }
     } catch (error) {
       debugPrint('ThemeController: gagal memuat warna tema: $error');
     }
@@ -111,6 +131,29 @@ class ThemeController extends ChangeNotifier {
       await prefs.setBool(darkModePrefKey, value);
     } catch (error) {
       debugPrint('ThemeController: gagal menyimpan mode gelap: $error');
+    }
+  }
+
+  Future<void> setPalette(ThemePalette value) async {
+    if (value == _palette) return;
+    _palette = value;
+    if (value == ThemePalette.plum) {
+      _seed = const Color(0xFF381932);
+      _background = const Color(0xFFFFF3E6);
+    } else if (value == ThemePalette.teal) {
+      _seed = const Color(0xFF10B981);
+      _background = const Color(0xFFF3F1EB);
+    }
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(palettePrefKey, value.name);
+      if (value != ThemePalette.custom) {
+        await prefs.setInt(prefKey, _seed.toARGB32());
+        await prefs.setInt(backgroundPrefKey, _background.toARGB32());
+      }
+    } catch (error) {
+      debugPrint('ThemeController: gagal menyimpan palet: $error');
     }
   }
 }

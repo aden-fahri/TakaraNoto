@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 
+enum ThemePalette { plum, teal, custom }
+
 /// Semantic, theme-aware color tokens for the whole app.
-///
-/// All screens read colors from `context.tokens` instead of hardcoded
-/// constants, so the accent + background colors picked by the user
-/// (presets or custom) instantly re-skin the app.
 @immutable
 class AppTokens extends ThemeExtension<AppTokens> {
   const AppTokens({
@@ -28,63 +26,174 @@ class AppTokens extends ThemeExtension<AppTokens> {
     required this.incomeOnHeader,
     required this.expenseOnHeader,
     required this.transfer,
+    required this.chip,
+    required this.nav,
+    required this.persik,
+    required this.lunasBg,
+    required this.lunasFg,
+    required this.telatBg,
+    required this.telatFg,
+    required this.cicilBg,
+    required this.cicilFg,
   });
 
-  /// Banner / header background (the accent color).
   final Color headerBg;
-
-  /// Text and icons on the header.
   final Color headerFg;
-
-  /// Muted text on the header (e.g. labels inside banners).
   final Color headerMuted;
-
-  /// Translucent surface for chips/boxes placed on the header.
   final Color headerSurface;
-
-  /// Translucent border for elements placed on the header.
   final Color headerBorder;
-
-  /// Scaffold / page background (user-selectable).
   final Color pageBg;
-
-  /// Card background (white in light mode, dark slate in dark mode).
   final Color card;
-
-  /// Accent-tinted light surface (chips, pills, input fills).
   final Color softSurface;
-
-  /// Stronger accent-tinted surface (selected/active states).
   final Color softSurfaceStrong;
-
-  /// Primary body text (dark slate).
   final Color textPrimary;
-
-  /// Muted/secondary text (slate gray).
   final Color textMuted;
-
-  /// Neutral border (slate).
   final Color border;
-
-  /// Accent color for primary buttons, active states, icons.
   final Color accent;
-
-  /// Text/icons on top of the accent color.
   final Color onAccent;
-
-  /// Status colors.
   final Color income;
   final Color expense;
   final Color warning;
-
-  /// Status colors lightened for use on top of the header/accent background
-  /// so they stay distinguishable even when the accent shares their hue.
   final Color incomeOnHeader;
   final Color expenseOnHeader;
-
-  /// Semantic color for wallet transfers.
   final Color transfer;
+  final Color chip;
+  final Color nav;
+  final Color persik;
+  final Color lunasBg;
+  final Color lunasFg;
+  final Color telatBg;
+  final Color telatFg;
+  final Color cicilBg;
+  final Color cicilFg;
 
+  // ─── Plum Klasik ───────────────────────────────────────────────────────────
+  static const _plumLight = <String, Color>{
+    'hd': Color(0xFF381932),
+    'pg': Color(0xFFFFF3E6),
+    'card': Color(0xFFFFFFFF),
+    'bd': Color(0xFFF0E4D6),
+    'tx': Color(0xFF2A1426),
+    'mu': Color(0xFF6B5A68),
+    'inc': Color(0xFF047857),
+    'exp': Color(0xFFBE123C),
+    'ac': Color(0xFF381932),
+    'onac': Color(0xFFFFFFFF),
+    'soft': Color(0xFFF4ECEF),
+    'chip': Color(0xFF52294A),
+    'nav': Color(0xFFFFFFFF),
+    'persik': Color(0xFFF4C99A),
+    'transfer': Color(0xFF3F51B5),
+  };
+  static const _plumDark = <String, Color>{
+    'hd': Color(0xFF2B1530),
+    'pg': Color(0xFF1D1020),
+    'card': Color(0xFF2A1A2E),
+    'bd': Color(0xFF4A3050),
+    'tx': Color(0xFFF6EEF4),
+    'mu': Color(0xFFB7A3B5),
+    'inc': Color(0xFF5EE0A8),
+    'exp': Color(0xFFFF8FA3),
+    'ac': Color(0xFFF4C99A),
+    'onac': Color(0xFF2A1426),
+    'soft': Color(0xFF382340),
+    'chip': Color(0xFF4A2A50),
+    'nav': Color(0xFF2A1A2E),
+    'persik': Color(0xFFF4C99A),
+    'transfer': Color(0xFF3F51B5),
+  };
+
+  // ─── Teal ───────────────────────────────────────────────────────────────────
+  static const _tealLight = <String, Color>{
+    'hd': Color(0xFF0F3D3A),
+    'pg': Color(0xFFF3F1EB),
+    'card': Color(0xFFFBFAF7),
+    'bd': Color(0xFFE3DFD3),
+    'tx': Color(0xFF0B2B2A),
+    'mu': Color(0xFF5E6F6C),
+    'inc': Color(0xFF047857),
+    'exp': Color(0xFFBE123C),
+    'ac': Color(0xFF10B981),
+    // onac hasil koreksi kontras, bukan dari desain.md (§3.2 tidak menetapkan onac).
+    'onac': Color(0xFF0B2B2A),
+    'soft': Color(0xFFE8EFEC),
+    'chip': Color(0xFF1C5A55),
+    'nav': Color(0xFFFBFAF7), // pakai card sampai HTML mockup datang
+    'persik': Color(0xFFF2D3A0),
+    'transfer': Color(0xFF3F51B5),
+  };
+  // PROVISIONAL: belum disetujui pemilik — diturunkan dari pola Plum gelap.
+  static const _tealDark = <String, Color>{
+    'hd': Color(0xFF0B2E2C),
+    'pg': Color(0xFF1A1F1E),
+    'card': Color(0xFF1E2826),
+    'bd': Color(0xFF3A4440),
+    'tx': Color(0xFFE8F0EE),
+    'mu': Color(0xFFA0B0AD),
+    'inc': Color(0xFF5EE0A8),
+    'exp': Color(0xFFFF8FA3),
+    'ac': Color(0xFFF2D3A0),
+    'onac': Color(0xFF1E2826),
+    'soft': Color(0xFF1A2B28),
+    'chip': Color(0xFF144540),
+    'nav': Color(0xFF1E2826),
+    'persik': Color(0xFFF2D3A0),
+    'transfer': Color(0xFF3F51B5),
+  };
+
+  static const _lunasBg = Color(0xFFD5F1E4);
+  static const _lunasFg = Color(0xFF065F46);
+  static const _telatBg = Color(0xFFFBDADF);
+  static const _telatFg = Color(0xFF8F1D2C);
+  static const _cicilBg = Color(0xFFFBE8C4);
+  static const _cicilFg = Color(0xFF7A4A05);
+
+  static AppTokens plum(Brightness b) {
+    final src = b == Brightness.dark ? _plumDark : _plumLight;
+    return _fromMap(src);
+  }
+
+  static AppTokens teal(Brightness b) {
+    final src = b == Brightness.dark ? _tealDark : _tealLight;
+    return _fromMap(src);
+  }
+
+  static AppTokens _fromMap(Map<String, Color> s) {
+    const onHeader = Colors.white;
+    return AppTokens(
+      headerBg: s['hd']!,
+      headerFg: onHeader,
+      headerMuted: onHeader.withValues(alpha: 0.72),
+      headerSurface: onHeader.withValues(alpha: 0.20),
+      headerBorder: onHeader.withValues(alpha: 0.45),
+      pageBg: s['pg']!,
+      card: s['card']!,
+      softSurface: s['soft']!,
+      softSurfaceStrong: Color.alphaBlend(s['ac']!.withValues(alpha: 0.18), s['card']!),
+      textPrimary: s['tx']!,
+      textMuted: s['mu']!,
+      border: s['bd']!,
+      accent: s['ac']!,
+      onAccent: s['onac']!,
+      income: s['inc']!,
+      expense: s['exp']!,
+      warning: const Color(0xFFFBBF24),
+      incomeOnHeader: s['inc']!,
+      expenseOnHeader: s['exp']!,
+      transfer: s['transfer']!,
+      chip: s['chip']!,
+      nav: s['nav']!,
+      persik: s['persik']!,
+      lunasBg: _lunasBg,
+      lunasFg: _lunasFg,
+      telatBg: _telatBg,
+      telatFg: _telatFg,
+      cicilBg: _cicilBg,
+      cicilFg: _cicilFg,
+    );
+  }
+
+  // Keep fromScheme for custom mode (backward compat)
   static const Color _textPrimary = Color(0xFF0F172A);
   static const Color _textMuted = Color(0xFF64748B);
   static const Color _border = Color(0xFFE2E8F0);
@@ -92,9 +201,6 @@ class AppTokens extends ThemeExtension<AppTokens> {
   static const Color _expense = Color(0xFFF43F5E);
   static const Color _warning = Color(0xFFFBBF24);
   static const Color _transfer = Color(0xFF3F51B5);
-
-  /// Dark palette (D6a): brighter status colors and dark surfaces so the
-  /// tokens keep the same contrast relationships as in light mode.
   static const Color _darkCard = Color(0xFF1E293B);
   static const Color _darkTextPrimary = Color(0xFFF1F5F9);
   static const Color _darkTextMuted = Color(0xFF94A3B8);
@@ -104,15 +210,13 @@ class AppTokens extends ThemeExtension<AppTokens> {
   static const Color _darkWarning = Color(0xFFFCD34D);
   static const Color _darkTransfer = Color(0xFF818CF8);
 
-  factory AppTokens.fromScheme(
-    ColorScheme scheme, {
-    required Color pageBg,
-  }) {
+  factory AppTokens.fromScheme(ColorScheme scheme, {required Color pageBg}) {
     final isDark = scheme.brightness == Brightness.dark;
     final onHeader = scheme.onPrimary;
     final card = isDark ? _darkCard : Colors.white;
     final income = isDark ? _darkIncome : _income;
     final expense = isDark ? _darkExpense : _expense;
+    final accent = scheme.primary;
     return AppTokens(
       headerBg: scheme.primary,
       headerFg: onHeader,
@@ -121,18 +225,12 @@ class AppTokens extends ThemeExtension<AppTokens> {
       headerBorder: onHeader.withValues(alpha: 0.45),
       pageBg: pageBg,
       card: card,
-      softSurface: Color.alphaBlend(
-        scheme.primary.withValues(alpha: isDark ? 0.22 : 0.10),
-        card,
-      ),
-      softSurfaceStrong: Color.alphaBlend(
-        scheme.primary.withValues(alpha: isDark ? 0.34 : 0.18),
-        card,
-      ),
+      softSurface: Color.alphaBlend(accent.withValues(alpha: isDark ? 0.22 : 0.10), card),
+      softSurfaceStrong: Color.alphaBlend(accent.withValues(alpha: isDark ? 0.34 : 0.18), card),
       textPrimary: isDark ? _darkTextPrimary : _textPrimary,
       textMuted: isDark ? _darkTextMuted : _textMuted,
       border: isDark ? _darkBorder : _border,
-      accent: scheme.primary,
+      accent: accent,
       onAccent: scheme.onPrimary,
       income: income,
       expense: expense,
@@ -140,6 +238,15 @@ class AppTokens extends ThemeExtension<AppTokens> {
       incomeOnHeader: Color.lerp(income, onHeader, 0.30)!,
       expenseOnHeader: Color.lerp(expense, onHeader, 0.30)!,
       transfer: isDark ? _darkTransfer : _transfer,
+      chip: isDark ? const Color(0xFF4A2A50) : const Color(0xFF52294A),
+      nav: card,
+      persik: const Color(0xFFF4C99A),
+      lunasBg: _lunasBg,
+      lunasFg: _lunasFg,
+      telatBg: _telatBg,
+      telatFg: _telatFg,
+      cicilBg: _cicilBg,
+      cicilFg: _cicilFg,
     );
   }
 
@@ -165,6 +272,15 @@ class AppTokens extends ThemeExtension<AppTokens> {
     Color? incomeOnHeader,
     Color? expenseOnHeader,
     Color? transfer,
+    Color? chip,
+    Color? nav,
+    Color? persik,
+    Color? lunasBg,
+    Color? lunasFg,
+    Color? telatBg,
+    Color? telatFg,
+    Color? cicilBg,
+    Color? cicilFg,
   }) {
     return AppTokens(
       headerBg: headerBg ?? this.headerBg,
@@ -187,6 +303,15 @@ class AppTokens extends ThemeExtension<AppTokens> {
       incomeOnHeader: incomeOnHeader ?? this.incomeOnHeader,
       expenseOnHeader: expenseOnHeader ?? this.expenseOnHeader,
       transfer: transfer ?? this.transfer,
+      chip: chip ?? this.chip,
+      nav: nav ?? this.nav,
+      persik: persik ?? this.persik,
+      lunasBg: lunasBg ?? this.lunasBg,
+      lunasFg: lunasFg ?? this.lunasFg,
+      telatBg: telatBg ?? this.telatBg,
+      telatFg: telatFg ?? this.telatFg,
+      cicilBg: cicilBg ?? this.cicilBg,
+      cicilFg: cicilFg ?? this.cicilFg,
     );
   }
 
@@ -202,8 +327,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
       pageBg: Color.lerp(pageBg, other.pageBg, t)!,
       card: Color.lerp(card, other.card, t)!,
       softSurface: Color.lerp(softSurface, other.softSurface, t)!,
-      softSurfaceStrong:
-          Color.lerp(softSurfaceStrong, other.softSurfaceStrong, t)!,
+      softSurfaceStrong: Color.lerp(softSurfaceStrong, other.softSurfaceStrong, t)!,
       textPrimary: Color.lerp(textPrimary, other.textPrimary, t)!,
       textMuted: Color.lerp(textMuted, other.textMuted, t)!,
       border: Color.lerp(border, other.border, t)!,
@@ -215,57 +339,37 @@ class AppTokens extends ThemeExtension<AppTokens> {
       incomeOnHeader: Color.lerp(incomeOnHeader, other.incomeOnHeader, t)!,
       expenseOnHeader: Color.lerp(expenseOnHeader, other.expenseOnHeader, t)!,
       transfer: Color.lerp(transfer, other.transfer, t)!,
+      chip: Color.lerp(chip, other.chip, t)!,
+      nav: Color.lerp(nav, other.nav, t)!,
+      persik: Color.lerp(persik, other.persik, t)!,
+      lunasBg: Color.lerp(lunasBg, other.lunasBg, t)!,
+      lunasFg: Color.lerp(lunasFg, other.lunasFg, t)!,
+      telatBg: Color.lerp(telatBg, other.telatBg, t)!,
+      telatFg: Color.lerp(telatFg, other.telatFg, t)!,
+      cicilBg: Color.lerp(cicilBg, other.cicilBg, t)!,
+      cicilFg: Color.lerp(cicilFg, other.cicilFg, t)!,
     );
   }
-}
-
-/// Typography scale (D3).
-///
-/// Screens used to carry 24 different literal `fontSize` values; this scale
-/// folds them into 11 named steps. Prefer `AppText.*` over raw numbers so
-/// the text hierarchy stays consistent across the app.
-abstract final class AppText {
-  /// Smallest text (badges, micro captions). Absorbs 8/9/10/10.5.
-  static const double micro = 10;
-
-  /// Small labels (chips, captions). Absorbs 11/11.5.
-  static const double label = 11;
-
-  /// Main body text / dense tables. Absorbs 12/12.5.
-  static const double body = 12;
-
-  /// Slightly larger body (list tiles, small paragraphs). Absorbs 13/13.5.
-  static const double bodyLarge = 13;
-
-  /// Sub-headings / button text. Absorbs 14/15.
-  static const double subtitle = 14;
-
-  /// Card & dialog titles. Absorbs 16/18.
-  static const double title = 16;
-
-  /// Prominent numbers & headings. Absorbs 20/22.
-  static const double headline = 20;
-
-  /// Large stat numbers. Absorbs 24/26.
-  static const double display = 24;
-
-  /// Extra-large numbers. 28.
-  static const double displayLarge = 28;
-
-  /// Primary balances / hero amounts. Absorbs 32/34.
-  static const double stat = 32;
-
-  /// App name / hero numerals. Absorbs 36/40.
-  static const double hero = 36;
 }
 
 extension AppTokensContext on BuildContext {
   AppTokens get tokens {
     final theme = Theme.of(this);
     return theme.extension<AppTokens>() ??
-        AppTokens.fromScheme(
-          theme.colorScheme,
-          pageBg: theme.scaffoldBackgroundColor,
-        );
+        AppTokens.fromScheme(theme.colorScheme, pageBg: theme.scaffoldBackgroundColor);
   }
+}
+
+abstract final class AppText {
+  static const double micro = 10;
+  static const double label = 11;
+  static const double body = 12;
+  static const double bodyLarge = 13;
+  static const double subtitle = 14;
+  static const double title = 16;
+  static const double headline = 20;
+  static const double display = 24;
+  static const double displayLarge = 28;
+  static const double stat = 32;
+  static const double hero = 36;
 }
