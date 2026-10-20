@@ -572,6 +572,16 @@ class ZainNotoRepository {
       };
       await txn
           .update('zn_charges', updated, where: 'id = ?', whereArgs: [chargeId]);
+      if (!waived) {
+        final memberId = old['member_id'] as String?;
+        if (memberId != null) {
+          final mrows = await txn.query('zn_members', columns: ['group_id'], where: 'id = ?', whereArgs: [memberId], limit: 1);
+          if (mrows.isNotEmpty) {
+            final groupId = mrows.first['group_id'] as String;
+            await _consumeCredits(txn, memberId: memberId, groupId: groupId);
+          }
+        }
+      }
       await _audit(txn,
           entity: 'charge',
           entityId: chargeId,

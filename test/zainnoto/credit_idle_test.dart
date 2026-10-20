@@ -1,58 +1,72 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finflow_flutter/zainnoto/models/entities.dart';
-import 'package:finflow_flutter/zainnoto/repositories/zainnoto_repository.dart';
 import 'helpers.dart';
 
 void main() {
-  test('credit idle: waive then unwaive consumes or keeps credit', () async {
+  test('Scenario A: unwaive memakai kredit', () async {
     final ctx = await seedWeekly(amount: 20000, dueDay: 1, startDate: '2026-01-05');
     final repo = ctx.repo;
-    await repo.generatePeriods(groupId: ctx.groupId, upTo: DateTime(2026, 2, 28));
-    // Alice pays 50000 -> 2 periods + credit 10000
+    final db = ctx.db;
+
+    // 1. hanya periode pertama
+    await repo.generatePeriods(groupId: ctx.groupId, upTo: DateTime(2026, 1, 7));
+
+    // period1 charge id
+    final p1 = await db.query('zn_charges',
+        where: 'member_id = ?', whereArgs: [ctx.aliceId]);
+    final charge1 = p1.first['id'] as String;
+
+    // 2. waive period1 sebelum bayar
+    await repo.setChargeWaived(charge1, waived: true);
+
+    // 3. Alice bayar 100000 -> seluruhnya jadi kredit (period1 waived)
     await repo.recordDuesPayment(
       groupId: ctx.groupId,
       memberId: ctx.aliceId,
-      amount: 50000,
+      amount: 100000,
       date: '2026-01-05',
     );
-
-    // find a future charge for Alice that is unpaid
-    final db = ctx.db;
-    final charges = await db.query('zn_charges',
-        where: 'member_id = ? AND waived = 0', whereArgs: [ctx.aliceId]);
-    // waive then unwaive the last charge
-    final target = charges.last['id'] as String;
-    await repo.setChargeWaived(target, waived: true);
-    await repo.setChargeWaived(target, waived: false);
-
-    // invariant: no member with credit>0 and unpaid due charge
-    final credits = await db.rawQuery(
+    final creditAfterPay = await db.rawQuery(
         "SELECT COALESCE(SUM(amount_remaining),0) s FROM zn_member_credits WHERE member_id=?",
         [ctx.aliceId]);
-    final credit = (credits.first['s'] as num).toInt();
-    // if credit>0, all due charges should be paid
-    if (credit > 0) {
-      final unpaid = await db.rawQuery('''
-        SELECT COUNT(*) c FROM zn_charges c JOIN zn_periods p ON p.id=c.period_id
-        WHERE c.member_id=? AND c.waived=0 AND p.due_date < '2026-03-01'
-        AND (SELECT COALESCE(SUM(a.amount_allocated),0) FROM zn_allocations a JOIN zn_transactions t ON t.id=a.transaction_id AND t.is_deleted=0 WHERE a.charge_id=c.id) < c.amount_due
-      ''', [ctx.aliceId]);
-      expect(unpaid.first['c'], 0);
-    }
+    expect((creditAfterPay.first['s'] as num).toInt(), 100000);
+
+    // 4. generate periode 2 (credit terpakai untuk periode2)
+    await repo.generatePeriods(groupId: ctx.groupId, upTo: DateTime(2026, 1, 14));
+    final creditAfterGen = await db.rawQuery(
+        "SELECT COALESCE(SUM(amount_remaining),0) s FROM zn_member_credits WHERE member_id=?",
+        [ctx.aliceId]);
+    expect((creditAfterGen.first['s'] as num).toInt(), 80000);
+
+    // 5. unwaive period1 -> harus terbayar lewat kredit
+    await repo.setChargeWaived(charge1, waived: false);
+
+    final alloc = await db.rawQuery(
+        'SELECT COALESCE(SUM(amount_allocated),0) s FROM zn_allocations WHERE charge_id=?',
+        [charge1]);
+    expect((alloc.first['s'] as num).toInt(), 20000);
+
+    final creditNow = await db.rawQuery(
+        "SELECT COALESCE(SUM(amount_remaining),0) s FROM zn_member_credits WHERE member_id=?",
+        [ctx.aliceId]);
+    expect((creditNow.first['s'] as num).toInt(), 60000);
   });
 
-  test('credit idle: change amount and regenerate periods keeps credit', () async {
+  test('Scenario B: nominal iuran naik dengan kredit utuh', () async {
     final ctx = await seedWeekly(amount: 20000, dueDay: 1, startDate: '2026-01-05');
     final repo = ctx.repo;
-    await repo.generatePeriods(groupId: ctx.groupId, upTo: DateTime(2026, 2, 28));
+    final db = ctx.db;
+
+    await repo.generatePeriods(groupId: ctx.groupId, upTo: DateTime(2026, 1, 7));
     await repo.recordDuesPayment(
       groupId: ctx.groupId,
       memberId: ctx.aliceId,
-      amount: 50000,
+      amount: 100000,
       date: '2026-01-05',
     );
-    // change amount
+    // credit 80000
+
     final plans = await repo.getDuesPlans(ctx.groupId);
     await repo.upsertDuesPlan(
       id: plans.first.id,
@@ -62,14 +76,12 @@ void main() {
       dueDay: 1,
       startDate: '2026-01-05',
     );
-    await repo.generatePeriods(groupId: ctx.groupId, upTo: DateTime(2026, 2, 28));
+    await repo.generatePeriods(groupId: ctx.groupId, upTo: DateTime(2026, 1, 14));
 
-    final db = ctx.db;
-    final credits = await db.rawQuery(
+    final credit = await db.rawQuery(
         "SELECT COALESCE(SUM(amount_remaining),0) s FROM zn_member_credits WHERE member_id=?",
         [ctx.aliceId]);
-    final credit = (credits.first['s'] as num).toInt();
-    // credit should be >=0
-    expect(credit, greaterThanOrEqualTo(0));
+    // 80000 - 30000 = 50000 (period2 costs 30000)
+    expect((credit.first['s'] as num).toInt(), 50000);
   });
 }
