@@ -34,8 +34,11 @@ void main() {
     expect(p.monthlyTotals['income'], 5000000.0);
     expect(p.monthlyTotals['expense'], 1500000.0);
     expect(p.cumulativeBalance, 3000000.0);
-    expect(p.topupBalance, 200000.0);
-    expect(p.netSaved, 500000.0);
+    expect(p.topupBalance, 0.0);
+    expect(p.totalSaved, 500000.0);
+    final julySpending = p.categorySpending;
+    expect(julySpending.firstWhere((e) => e['category_name'] == 'Makanan & Minuman')['amount'], 1200000.0);
+    expect(julySpending.firstWhere((e) => e['category_name'] == 'Transportasi')['amount'], 300000.0);
 
     // August
     p.changeMonth('2026-08');
@@ -44,7 +47,10 @@ void main() {
     expect(p.monthlyTotals['expense'], 1600000.0);
     expect(p.cumulativeBalance, 5700000.0);
     expect(p.topupBalance, 200000.0);
-    expect(p.netSaved, 500000.0);
+    expect(p.totalSaved, 1000000.0);
+    final augSpending = p.categorySpending;
+    expect(augSpending.firstWhere((e) => e['category_name'] == 'Makanan & Minuman')['amount'], 1300000.0);
+    expect(augSpending.firstWhere((e) => e['category_name'] == 'Transportasi')['amount'], 300000.0);
 
     // September
     p.changeMonth('2026-09');
@@ -53,6 +59,16 @@ void main() {
     expect(p.monthlyTotals['expense'], 1700000.0);
     expect(p.cumulativeBalance, 8500000.0);
     expect(p.topupBalance, 200000.0);
-    expect(p.netSaved, 500000.0);
+    expect(p.totalSaved, 1500000.0);
+    final sepSpending = p.categorySpending;
+    expect(sepSpending.firstWhere((e) => e['category_name'] == 'Makanan & Minuman')['amount'], 1400000.0);
+    expect(sepSpending.firstWhere((e) => e['category_name'] == 'Transportasi')['amount'], 300000.0);
+
+    // Budget October
+    p.changeMonth('2026-10');
+    await Future.delayed(const Duration(milliseconds: 200));
+    final budgets = p.budgets;
+    final makananBudget = budgets.firstWhere((b) => b.categoryName == 'Makanan & Minuman');
+    expect(makananBudget.limitAmount, 1500000.0);
   });
 }

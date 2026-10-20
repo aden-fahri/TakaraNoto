@@ -24,6 +24,7 @@ class FinanceProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _categoryIncome = [];
   double _cumulativeBalance = 0.0;
   double _netSaved = 0.0;
+  double _totalSaved = 0.0;
 
   // Getters
   List<FinanceTransaction> get transactions => _transactions;
@@ -36,6 +37,7 @@ class FinanceProvider extends ChangeNotifier {
   String? get error => _error;
   double get cumulativeBalance => _cumulativeBalance;
   double get netSaved => _netSaved;
+  double get totalSaved => _totalSaved;
 
   double get topupBalance => _topupBalance;
   List<FinanceTransaction> get topupTransactions => _topupTransactions;
@@ -104,6 +106,7 @@ class FinanceProvider extends ChangeNotifier {
       _categoryIncome = summary.categoryIncome;
       _cumulativeBalance = summary.cumulativeBalance;
       _netSaved = summary.netSaved;
+      _totalSaved = summary.totalSaved;
       _error = null;
       notifyListeners();
     } catch (e) {

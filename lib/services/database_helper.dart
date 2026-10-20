@@ -624,6 +624,27 @@ class DatabaseHelper {
     return await db.delete('budgets', where: 'id = ?', whereArgs: [id]);
   }
 
+  Future<double> getTopupWalletBalanceUpTo(String monthYear) async {
+    final db = await instance.database;
+    final result = await db.rawQuery('''
+      SELECT COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE -amount END), 0) as balance
+      FROM transactions
+      WHERE wallet_type = 'topup' AND substr(date, 1, 7) <= ?
+    ''', [monthYear]);
+    return (result.first['balance'] as num).toDouble();
+  }
+
+  Future<double> getCumulativeNetSavedUpTo(String monthYear) async {
+    final db = await instance.database;
+    final result = await db.rawQuery('''
+      SELECT COALESCE(SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE -t.amount END), 0) as net
+      FROM transactions t
+      INNER JOIN categories c ON c.id = t.category_id
+      WHERE t.is_transfer = 0 AND c.is_savings = 1 AND substr(t.date, 1, 7) <= ?
+    ''', [monthYear]);
+    return (result.first['net'] as num).toDouble();
+  }
+
   Future<double> getTopupWalletBalance() async {
     final db = await instance.database;
     final result = await db.rawQuery('''
@@ -706,13 +727,14 @@ class DatabaseHelper {
     final totals = await getMonthlyTotals(monthYear);
     final savingsGoals = await getSavingsGoals();
     final budgets = await getBudgets(monthYear);
-    final topupBalance = await getTopupWalletBalance();
+    final topupBalance = await getTopupWalletBalanceUpTo(monthYear);
     final topupTransactions = await getTopupTransactions();
     final monthlyNetHistory = await getMonthlyNetBalanceHistory();
     final categorySpending = await getCategorySpending(monthYear);
     final categoryIncome = await getCategoryIncome(monthYear);
     final cumulativeBalance = await getCumulativeBalanceUpTo(monthYear);
     final netSaved = await getNetSaved(monthYear);
+    final totalSaved = await getCumulativeNetSavedUpTo(monthYear);
     return MonthlySummary(
       monthYear: monthYear,
       totals: totals,
@@ -725,6 +747,7 @@ class DatabaseHelper {
       categoryIncome: categoryIncome,
       cumulativeBalance: cumulativeBalance,
       netSaved: netSaved,
+      totalSaved: totalSaved,
     );
   }
 

@@ -11,6 +11,7 @@ class MonthlySummary {
     required this.categoryIncome,
     required this.cumulativeBalance,
     required this.netSaved,
+    required this.totalSaved,
   });
 
   final String monthYear;
@@ -24,4 +25,5 @@ class MonthlySummary {
   final List<Map<String, dynamic>> categoryIncome;
   final double cumulativeBalance;
   final double netSaved;
+  final double totalSaved;
 }
