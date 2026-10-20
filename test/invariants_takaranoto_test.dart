@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -116,7 +117,7 @@ void main() {
   });
 
   test('invariant TakaraNoto pada data acak (seed=42)', () async {
-    final seed = 42;
+    final seed = int.tryParse(Platform.environment['RANDOM_SEED_TAKARANOTO'] ?? '') ?? 42;
     // ignore: avoid_print
     print('RANDOM_SEED_TAKARANOTO=$seed');
     final rng = Random(seed);

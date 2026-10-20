@@ -118,7 +118,7 @@ Layar Riwayat, Anggaran, Tabungan, Laporan tidak diubah, hanya mengikuti tema pl
 
 ## 6. Layar ZainNoto (Kelompok)
 
-Data contoh seragam: grup **Kas RT 05**, 8 anggota (Budi, Sari, Andi, Dewi, Rudi, Maya, Joko, Lina), iuran Rp 50.000 per bulan, jatuh tempo tanggal 10, mulai 1 Jul 2026. Status Okt 2026: Budi, Sari, Andi, Rudi, Lina lunas; Maya cicil Rp 25.000; Dewi telat 2 periode (Rp 100.000); Joko telat (Rp 50.000). Saldo kas Rp 2.350.000.
+Data contoh seragam: grup **Kas RT 05**, 8 anggota (Budi, Sari, Andi, Dewi, Rudi, Maya, Joko, Lina), iuran Rp 50.000 per bulan, jatuh tempo tanggal 10, mulai 1 Jul 2026. Status Okt 2026: Budi, Sari, Andi, Rudi, Lina lunas; Maya cicil Rp 25.000; Dewi telat 2 periode (Rp 100.000); Joko telat (Rp 50.000). Saldo kas Rp 1.425.000.
 
 | # | Layar | Isi dan ciri khas |
 |---|---|---|

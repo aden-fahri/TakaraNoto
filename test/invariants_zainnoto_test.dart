@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -77,7 +78,7 @@ void main() {
   });
 
   test('invariant ZainNoto data acak (seed=7)', () async {
-    const seed = 7;
+    final seed = int.tryParse(Platform.environment['RANDOM_SEED_ZAINNOTO'] ?? '') ?? 7;
     // ignore: avoid_print
     print('RANDOM_SEED_ZAINNOTO=$seed');
     final db = await DatabaseHelper.instance.database;

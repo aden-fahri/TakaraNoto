@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../theme/app_tokens.dart';
 import '../theme/theme_controller.dart';
+import '../providers/finance_provider.dart';
 import '../services/database_helper.dart';
 import '../services/example_seed.dart';
 import 'backup_restore_screen.dart';
@@ -182,11 +183,33 @@ class ThemeSettingsScreen extends StatelessWidget {
                      title: 'Isi data contoh',
                      subtitle: 'Hanya mode debug',
                      onTap: () async {
+                       final ok = await showDialog<bool>(
+                         context: context,
+                         builder: (_) => AlertDialog(
+                           title: const Text('Isi data contoh?'),
+                           content: const Text(
+                               'Semua transaksi, anggaran, dan tujuan tabungan akan diganti.'),
+                           actions: [
+                             TextButton(
+                               onPressed: () => Navigator.pop(context, false),
+                               child: const Text('Batal'),
+                             ),
+                             ElevatedButton(
+                               onPressed: () => Navigator.pop(context, true),
+                               child: const Text('Isi'),
+                             ),
+                           ],
+                         ),
+                       );
+                       if (ok != true) return;
                        await ExampleSeed.seed(
                          await DatabaseHelper.instance.database,
                          asOf: DateTime.now(),
                        );
                        if (context.mounted) {
+                         try {
+                           context.read<FinanceProvider>().refreshAll();
+                         } catch (_) {}
                          ScaffoldMessenger.of(context).showSnackBar(
                            const SnackBar(content: Text('Data contoh diisi')),
                          );
