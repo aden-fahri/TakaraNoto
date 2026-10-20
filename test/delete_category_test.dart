@@ -149,6 +149,76 @@ void main() {
     expect(() => dbh.reassignCategory(fromId, toId), throwsStateError);
   });
 
+  test('total dan donat identik setelah reassign', () async {
+    final dbh = DatabaseHelper.instance;
+    final fromId = await dbh.addCategory(Category(
+      name: 'FromX',
+      icon: 'cart',
+      color: '#9b59b6',
+      type: 'expense',
+    ));
+    final toId = await dbh.addCategory(Category(
+      name: 'ToX',
+      icon: 'cart',
+      color: '#9b59b6',
+      type: 'expense',
+    ));
+    final otherId = await dbh.addCategory(Category(
+      name: 'OtherX',
+      icon: 'cart',
+      color: '#9b59b6',
+      type: 'expense',
+    ));
+    await dbh.addTransaction(FinanceTransaction(
+      categoryId: fromId,
+      amount: 1000,
+      type: 'expense',
+      date: '2026-07-10',
+      note: 'a',
+    ));
+    await dbh.addTransaction(FinanceTransaction(
+      categoryId: fromId,
+      amount: 2000,
+      type: 'expense',
+      date: '2026-08-10',
+      note: 'b',
+    ));
+    await dbh.addTransaction(FinanceTransaction(
+      categoryId: otherId,
+      amount: 500,
+      type: 'expense',
+      date: '2026-08-10',
+      note: 'c',
+    ));
+
+    Future<Map<String, dynamic>> snapshot() async {
+      final totals = await dbh.getMonthlyTotals('2026-08');
+      final spending = await dbh.getCategorySpending('2026-08');
+      return {
+        'expense': totals['expense'],
+        'rows': spending,
+      };
+    }
+
+    final before = await snapshot();
+    await dbh.reassignCategory(fromId, toId);
+    final after = await snapshot();
+
+    expect(after['expense'], before['expense']);
+    // donat: baris from hilang, to bertambah 2000, other tetap 500
+    final beforeRows = before['rows'] as List<Map<String, dynamic>>;
+    final afterRows = after['rows'] as List<Map<String, dynamic>>;
+    double amt(List<Map<String, dynamic>> rows, String name) {
+      final r = rows.where((e) => e['category_name'] == name).toList();
+      return r.isEmpty ? 0 : (r.first['amount'] as num).toDouble();
+    }
+
+    expect(amt(afterRows, 'FromX'), 0);
+    expect(amt(afterRows, 'ToX'), 2000);
+    expect(amt(afterRows, 'OtherX'), 500);
+    expect(amt(beforeRows, 'OtherX'), 500);
+  });
+
   test('setelah reassign deleteCategory berhasil', () async {
     final dbh = DatabaseHelper.instance;
     final fromId = await dbh.addCategory(Category(

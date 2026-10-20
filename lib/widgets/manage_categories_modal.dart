@@ -103,11 +103,10 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
     final usage = await DatabaseHelper.instance.categoryUsage(cat.id!);
     if (!mounted) return;
     final provider = Provider.of<FinanceProvider>(context, listen: false);
+    final targetIds = await DatabaseHelper.instance.validReassignTargets(cat.id!);
+    if (!mounted) return;
     final candidates = provider.categories
-        .where((c) =>
-            c.id != cat.id &&
-            c.type == cat.type &&
-            c.isSpecial == false)
+        .where((c) => targetIds.contains(c.id))
         .toList();
     Category? target = candidates.isNotEmpty ? candidates.first : null;
 
@@ -123,15 +122,19 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
               Text('Terdampak: ${usage.transactions} transaksi, ${usage.budgets} anggaran.'),
               const SizedBox(height: 8),
               if (usage.transactions > 0 || usage.budgets > 0) ...[
-                const Text('Pindahkan ke:'),
-                const SizedBox(height: 4),
-                DropdownButton<Category>(
-                  value: target,
-                  items: candidates
-                      .map((c) => DropdownMenuItem(value: c, child: Text(c.name)))
-                      .toList(),
-                  onChanged: (v) => setState(() => target = v),
-                ),
+                if (candidates.isEmpty)
+                  const Text('Belum ada kategori tujuan yang cocok')
+                else ...[
+                  const Text('Pindahkan ke:'),
+                  const SizedBox(height: 4),
+                  DropdownButton<Category>(
+                    value: target,
+                    items: candidates
+                        .map((c) => DropdownMenuItem(value: c, child: Text(c.name)))
+                        .toList(),
+                    onChanged: (v) => setState(() => target = v),
+                  ),
+                ],
               ],
             ],
           ),
@@ -157,9 +160,10 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
                     );
                   }
                 } catch (e) {
+                  final msg = e is StateError ? e.message : e.toString();
                   if (ctx.mounted) {
                     ScaffoldMessenger.of(ctx).showSnackBar(
-                      SnackBar(content: Text(e.toString())),
+                      SnackBar(content: Text(msg)),
                     );
                   }
                 }

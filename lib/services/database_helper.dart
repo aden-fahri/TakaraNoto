@@ -325,6 +325,32 @@ class DatabaseHelper {
     );
   }
 
+  static const List<String> _specialCategoryNames = [
+    'Tabungan',
+    'Tarik Tabungan',
+    'Top Up',
+    'Transfer Masuk',
+  ];
+
+  Future<List<int>> validReassignTargets(int fromId) async {
+    final db = await instance.database;
+    final fromRows = await db.query('categories', where: 'id = ?', whereArgs: [fromId], limit: 1);
+    if (fromRows.isEmpty) return const [];
+    final from = fromRows.first;
+    final type = from['type'] as String;
+    final savings = from['is_savings'] as int? ?? 0;
+    final rows = await db.query(
+      'categories',
+      columns: ['id', 'name'],
+      where: 'type = ? AND is_savings = ? AND id != ?',
+      whereArgs: [type, savings, fromId],
+    );
+    return rows
+        .where((r) => !_specialCategoryNames.contains(r['name']))
+        .map((r) => r['id'] as int)
+        .toList();
+  }
+
   Future<int> deleteCategory(int id) async {
     final usage = await categoryUsage(id);
     if (usage.transactions > 0 || usage.budgets > 0) {
@@ -345,6 +371,9 @@ class DatabaseHelper {
       }
       final from = fromRows.first;
       final to = toRows.first;
+      if (_specialCategoryNames.contains(to['name'])) {
+        throw StateError('Kategori tujuan tidak boleh kategori khusus');
+      }
       if (from['type'] != to['type']) {
         throw StateError('Tipe kategori harus sama');
       }
