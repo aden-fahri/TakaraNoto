@@ -589,18 +589,18 @@ class _DuesPlanFormDialogState extends State<_DuesPlanFormDialog> {
                           value: day,
                           child: Text(
                             day == 1
-                                ? 'Senin (Hari ke-1)'
+                                ? 'Senin'
                                 : day == 2
-                                    ? 'Selasa (Hari ke-2)'
+                                    ? 'Selasa'
                                     : day == 3
-                                        ? 'Rabu (Hari ke-3)'
+                                        ? 'Rabu'
                                         : day == 4
-                                            ? 'Kamis (Hari ke-4)'
+                                            ? 'Kamis'
                                             : day == 5
-                                                ? 'Jumat (Hari ke-5)'
+                                                ? 'Jumat'
                                                 : day == 6
-                                                    ? 'Sabtu (Hari ke-6)'
-                                                    : 'Minggu (Hari ke-7)',
+                                                    ? 'Sabtu'
+                                                    : 'Minggu',
                             style: TextStyle(fontSize: AppText.bodyLarge, color: t.textPrimary),
                           ),
                         )
@@ -825,7 +825,7 @@ class _DuesSection extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           isWeekly
-                              ? 'Jatuh tempo hari ke-${plan.dueDay} · Mulai ${formatTanggalSingkat(plan.startDate)}'
+                              ? 'Jatuh tempo setiap ${_weekdayName(plan.dueDay)} · Mulai ${formatTanggalSingkat(plan.startDate)}'
                               : 'Jatuh tempo tanggal ${plan.dueDay} · Mulai ${formatTanggalSingkat(plan.startDate)}',
                           style: TextStyle(fontSize: AppText.label, color: t.textMuted),
                         ),
@@ -1045,4 +1045,9 @@ class _BackupSection extends StatelessWidget {
       ),
     );
   }
+}
+
+String _weekdayName(int day) {
+  const names = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
+  return names[(day - 1).clamp(0, 6)];
 }
