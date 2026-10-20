@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/category.dart';
 import '../providers/finance_provider.dart';
+import '../services/database_helper.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 
@@ -98,27 +99,35 @@ class _ManageCategoriesModalState extends State<ManageCategoriesModal> {
     );
   }
 
-  void _deleteCategory(Category cat) {
+  void _deleteCategory(Category cat) async {
+    final usage = await DatabaseHelper.instance.categoryUsage(cat.id!);
+    if (!mounted) return;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Hapus Kategori'),
         content: Text(
             'Apakah Anda yakin ingin menghapus kategori "${cat.name}"?\n\n'
-            'Peringatan: Menghapus kategori ini juga akan menghapus semua catatan transaksi dan anggaran yang terkait!'),
+            'Terdampak: ${usage.transactions} transaksi, ${usage.budgets} anggaran.\n'
+            'Kategori dengan transaksi/anggaran tidak dapat dihapus; pindahkan dulu.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Batal'),
           ),
           TextButton(
-            onPressed: () {
-              Provider.of<FinanceProvider>(context, listen: false).deleteCat(cat.id!);
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Kategori "${cat.name}" telah dihapus.')),
-              );
-            },
+            onPressed: usage.transactions > 0 || usage.budgets > 0
+                ? null
+                : () {
+                    Provider.of<FinanceProvider>(context, listen: false)
+                        .deleteCat(cat.id!);
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                          content:
+                              Text('Kategori "${cat.name}" telah dihapus.')),
+                    );
+                  },
             child: Text('Hapus', style: TextStyle(color: ctx.tokens.expense)),
           ),
         ],

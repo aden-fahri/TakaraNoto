@@ -313,7 +313,24 @@ class DatabaseHelper {
     return await db.insert('categories', category.toMap());
   }
 
+  Future<CategoryUsage> categoryUsage(int id) async {
+    final db = await instance.database;
+    final tx = await db.rawQuery(
+        'SELECT COUNT(*) c FROM transactions WHERE category_id = ?', [id]);
+    final bg = await db.rawQuery(
+        'SELECT COUNT(*) c FROM budgets WHERE category_id = ?', [id]);
+    return CategoryUsage(
+      transactions: (tx.first['c'] as num).toInt(),
+      budgets: (bg.first['c'] as num).toInt(),
+    );
+  }
+
   Future<int> deleteCategory(int id) async {
+    final usage = await categoryUsage(id);
+    if (usage.transactions > 0 || usage.budgets > 0) {
+      throw StateError(
+          'Kategori masih dipakai: ${usage.transactions} transaksi, ${usage.budgets} anggaran');
+    }
     final db = await instance.database;
     return await db.delete('categories', where: 'id = ?', whereArgs: [id]);
   }
@@ -621,4 +638,10 @@ class DatabaseHelper {
     ''', [monthYear]);
     return (result.first['net'] as num).toDouble();
   }
+}
+
+class CategoryUsage {
+  final int transactions;
+  final int budgets;
+  const CategoryUsage({required this.transactions, required this.budgets});
 }
