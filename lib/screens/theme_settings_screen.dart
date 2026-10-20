@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:provider/provider.dart';
 
 import '../theme/app_tokens.dart';
 import '../theme/theme_controller.dart';
+import '../services/database_helper.dart';
+import '../services/example_seed.dart';
 import 'backup_restore_screen.dart';
 
 /// Settings screen to pick the app colors: accent + background.
@@ -161,18 +164,37 @@ class ThemeSettingsScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 14),
-                _SettingsTile(
-                  icon: Icons.settings_backup_restore_rounded,
-                  title: 'Backup & Restore',
-                  subtitle: 'Ekspor atau pulihkan seluruh data aplikasi',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const BackupRestoreScreen(),
-                    ),
-                  ),
-                ),
-              ],
+                 _SettingsTile(
+                   icon: Icons.settings_backup_restore_rounded,
+                   title: 'Backup & Restore',
+                   subtitle: 'Ekspor atau pulihkan seluruh data aplikasi',
+                   onTap: () => Navigator.push(
+                     context,
+                     MaterialPageRoute(
+                       builder: (_) => const BackupRestoreScreen(),
+                     ),
+                   ),
+                 ),
+                 if (kDebugMode) ...[
+                   const SizedBox(height: 12),
+                   _SettingsTile(
+                     icon: Icons.science_rounded,
+                     title: 'Isi data contoh',
+                     subtitle: 'Hanya mode debug',
+                     onTap: () async {
+                       await ExampleSeed.seed(
+                         await DatabaseHelper.instance.database,
+                         asOf: DateTime.now(),
+                       );
+                       if (context.mounted) {
+                         ScaffoldMessenger.of(context).showSnackBar(
+                           const SnackBar(content: Text('Data contoh diisi')),
+                         );
+                       }
+                     },
+                   ),
+                 ],
+               ],
             ),
           ),
         ],
