@@ -797,10 +797,17 @@ class ZainNotoRepository {
         where: 'id = ?',
         whereArgs: [id],
       );
+      final memberId = old.memberId;
       await txn.delete('zn_allocations',
           where: 'transaction_id = ?', whereArgs: [id]);
       await txn.delete('zn_member_credits',
           where: 'source_transaction_id = ?', whereArgs: [id]);
+      if (memberId != null && old.type == TxType.dues) {
+        final mrows = await txn.query('zn_members', columns: ['group_id'], where: 'id = ?', whereArgs: [memberId], limit: 1);
+        if (mrows.isNotEmpty) {
+          await _consumeCredits(txn, memberId: memberId, groupId: mrows.first['group_id'] as String);
+        }
+      }
       await _audit(txn,
           entity: 'transaction', entityId: id, action: 'delete', oldMap: old.toMap());
     });
@@ -1182,13 +1189,17 @@ class ZainNotoRepository {
         final chargeLeft = remaining[chargeId] ?? 0;
         if (chargeLeft <= 0) continue;
         final take = math.min(creditLeft, chargeLeft);
-        await txn.insert('zn_allocations', {
-          'id': _newId(),
-          'transaction_id': creditRow['source_transaction_id'],
-          'charge_id': chargeId,
-          'amount_allocated': take,
-          'created_at': nowIso(),
-        });
+        await txn.insert(
+          'zn_allocations',
+          {
+            'id': _newId(),
+            'transaction_id': creditRow['source_transaction_id'],
+            'charge_id': chargeId,
+            'amount_allocated': take,
+            'created_at': nowIso(),
+          },
+          conflictAlgorithm: ConflictAlgorithm.ignore,
+        );
         creditLeft -= take;
         remaining[chargeId] = chargeLeft - take;
       }
