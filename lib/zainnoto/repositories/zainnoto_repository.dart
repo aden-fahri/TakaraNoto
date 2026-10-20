@@ -1189,17 +1189,29 @@ class ZainNotoRepository {
         final chargeLeft = remaining[chargeId] ?? 0;
         if (chargeLeft <= 0) continue;
         final take = math.min(creditLeft, chargeLeft);
-        await txn.insert(
+        final existing = await txn.query(
           'zn_allocations',
-          {
+          where: 'transaction_id = ? AND charge_id = ?',
+          whereArgs: [creditRow['source_transaction_id'], chargeId],
+          limit: 1,
+        );
+        if (existing.isNotEmpty) {
+          final oldAmt = (existing.first['amount_allocated'] as num).toInt();
+          await txn.update(
+            'zn_allocations',
+            {'amount_allocated': oldAmt + take},
+            where: 'id = ?',
+            whereArgs: [existing.first['id']],
+          );
+        } else {
+          await txn.insert('zn_allocations', {
             'id': _newId(),
             'transaction_id': creditRow['source_transaction_id'],
             'charge_id': chargeId,
             'amount_allocated': take,
             'created_at': nowIso(),
-          },
-          conflictAlgorithm: ConflictAlgorithm.ignore,
-        );
+          });
+        }
         creditLeft -= take;
         remaining[chargeId] = chargeLeft - take;
       }

@@ -39,12 +39,9 @@ void main() {
         "SELECT COALESCE(SUM(amount),0) s FROM zn_transactions WHERE type='dues' AND is_deleted=0");
     expect((kas.first['s'] as num).toInt(), 0);
 
-    // total tunggakan Alice = 60000
     final overdue = await repo.getOverdueMembers(groupId: ctx.groupId, asOf: DateTime(2026, 2, 1));
-    final aliceOverdue = overdue.firstWhere((m) => m.memberId == ctx.aliceId);
-    expect(aliceOverdue.totalOverdueAmount, 60000);
-
-    // invarian: tidak ada alokasi ke transaksi terhapus
+    final aliceOverdue = overdue.where((m) => m.memberId == ctx.aliceId).toList();
+    expect(aliceOverdue.first.totalOverdueAmount, 60000);
     final badAlloc = await db.rawQuery(
         'SELECT COUNT(*) c FROM zn_allocations a LEFT JOIN zn_transactions t ON t.id=a.transaction_id WHERE t.is_deleted=1 OR t.id IS NULL');
     expect((badAlloc.first['c'] as num).toInt(), 0);
@@ -77,23 +74,29 @@ void main() {
         where: "client_ref='A' AND is_deleted=0");
     await repo.deleteTransaction(txA.first['id'] as String);
 
-    // setelah hapus A: period1 lunas via kredit B (20000), kredit B tersisa 20000
     final charges = await db.query('zn_charges',
         where: 'member_id=? AND deleted_at IS NULL', whereArgs: [ctx.aliceId],
         orderBy: 'period_id');
-    // period1 allocation 20000
-    final alloc1 = await db.rawQuery(
-        'SELECT COALESCE(SUM(amount_allocated),0) s FROM zn_allocations WHERE charge_id=?',
-        [charges[0]['id']]);
-    expect((alloc1.first['s'] as num).toInt(), 20000);
-    // kredit tersisa 20000
+    for (final c in charges.take(3)) {
+      final alloc = await db.rawQuery(
+          'SELECT COALESCE(SUM(amount_allocated),0) s FROM zn_allocations WHERE charge_id=?',
+          [c['id']]);
+      expect((alloc.first['s'] as num).toInt(), 20000);
+    }
+    final overdue = await repo.getOverdueMembers(groupId: ctx.groupId, asOf: DateTime(2026, 2, 1));
+    final aliceOverdue = overdue.where((m) => m.memberId == ctx.aliceId).toList();
+    expect(aliceOverdue.isEmpty || aliceOverdue.first.totalOverdueAmount == 0, isTrue);
     final credit = await db.rawQuery(
         "SELECT COALESCE(SUM(amount_remaining),0) s FROM zn_member_credits WHERE member_id=?",
         [ctx.aliceId]);
     expect((credit.first['s'] as num).toInt(), 10000);
-    // tidak ada anggota dengan kredit>0 dan tagihan jatuh tempo belum lunas
-    // invariant bad count may be nonzero due to leftover credit; skipped
-    // invarian alokasi+kredit per transaksi
+    final bad = await db.rawQuery('''
+      SELECT COUNT(*) c FROM zn_charges c JOIN zn_periods p ON p.id=c.period_id
+      WHERE c.member_id=? AND c.waived=0 AND p.due_date < '2026-02-01'
+      AND (SELECT COALESCE(SUM(a.amount_allocated),0) FROM zn_allocations a JOIN zn_transactions t ON t.id=a.transaction_id AND t.is_deleted=0 WHERE a.charge_id=c.id) < c.amount_due
+      AND (SELECT COALESCE(SUM(cr.amount_remaining),0) FROM zn_member_credits cr WHERE cr.member_id=c.member_id) > 0
+    ''', [ctx.aliceId]);
+    expect((bad.first['c'] as num).toInt(), 0);
     final txB = await db.query('zn_transactions',
         where: "client_ref='B' AND is_deleted=0");
     final allocB = await db.rawQuery(
@@ -102,6 +105,6 @@ void main() {
     final creditB = await db.rawQuery(
         'SELECT COALESCE(SUM(amount_remaining),0) s FROM zn_member_credits WHERE source_transaction_id=?',
         [txB.first['id']]);
-    expect((allocB.first['s'] as num).toInt() + (creditB.first['s'] as num).toInt(), 60000);
+    expect((allocB.first['s'] as num).toInt() + (creditB.first['s'] as num).toInt(), 70000);
   });
 }
