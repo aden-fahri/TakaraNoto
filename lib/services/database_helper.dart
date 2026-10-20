@@ -687,6 +687,39 @@ class DatabaseHelper {
     return (result.first['balance'] as num).toDouble();
   }
 
+  /// Test hook: when true, getMonthlySummary throws.
+  static bool debugFailMonthlySummary = false;
+
+  /// Single monthly summary (totals, category spending/income, cumulative, net saved, topup).
+  Future<Map<String, dynamic>> getMonthlySummary(String monthYear) async {
+    if (debugFailMonthlySummary) {
+      throw StateError('simulated monthly summary failure');
+    }
+    final totals = await getMonthlyTotals(monthYear);
+    final savingsGoals = await getSavingsGoals();
+    final budgets = await getBudgets(monthYear);
+    final topupBalance = await getTopupWalletBalance();
+    final topupTransactions = await getTopupTransactions();
+    final monthlyNetHistory = await getMonthlyNetBalanceHistory();
+    final categorySpending = await getCategorySpending(monthYear);
+    final categoryIncome = await getCategoryIncome(monthYear);
+    final cumulativeBalance = await getCumulativeBalanceUpTo(monthYear);
+    final netSaved = await getNetSaved(monthYear);
+    return {
+      'monthYear': monthYear,
+      'totals': totals,
+      'savingsGoals': savingsGoals,
+      'budgets': budgets,
+      'topupBalance': topupBalance,
+      'topupTransactions': topupTransactions,
+      'monthlyNetHistory': monthlyNetHistory,
+      'categorySpending': categorySpending,
+      'categoryIncome': categoryIncome,
+      'cumulativeBalance': cumulativeBalance,
+      'netSaved': netSaved,
+    };
+  }
+
   /// Net amount saved in [monthYear]: savings deposits minus withdrawals.
   /// Savings flows are classified by the category flag, so this stays correct
   /// even when a savings goal is deleted.

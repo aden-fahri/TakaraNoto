@@ -155,6 +155,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
                       physics: const AlwaysScrollableScrollPhysics(),
                       children: [
+                        if (provider.error != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Text(provider.error!,
+                                style: TextStyle(color: tokens.expense)),
+                          ),
                         // Quick stats row
                         _QuickStatsRow(txCount: monthlyTxs.length),
                         const SizedBox(height: 16),

@@ -14,6 +14,8 @@ class FinanceProvider extends ChangeNotifier {
   String _currentMonth = '';
   Map<String, double> _monthlyTotals = {'income': 0.0, 'expense': 0.0};
   bool _isLoading = false;
+  String? _error;
+  int _refreshToken = 0;
 
   double _topupBalance = 0.0;
   List<FinanceTransaction> _topupTransactions = [];
@@ -31,6 +33,7 @@ class FinanceProvider extends ChangeNotifier {
   String get currentMonth => _currentMonth;
   Map<String, double> get monthlyTotals => _monthlyTotals;
   bool get isLoading => _isLoading;
+  String? get error => _error;
   double get cumulativeBalance => _cumulativeBalance;
   double get netSaved => _netSaved;
 
@@ -84,20 +87,30 @@ class FinanceProvider extends ChangeNotifier {
   }
 
   Future<void> refreshMonthlyDetails() async {
+    final token = ++_refreshToken;
+    final month = _currentMonth;
     try {
-      _monthlyTotals = await DatabaseHelper.instance.getMonthlyTotals(_currentMonth);
-      _savingsGoals = await DatabaseHelper.instance.getSavingsGoals();
-      _budgets = await DatabaseHelper.instance.getBudgets(_currentMonth);
-      _topupBalance = await DatabaseHelper.instance.getTopupWalletBalance();
-      _topupTransactions = await DatabaseHelper.instance.getTopupTransactions();
-      _monthlyNetHistory = await DatabaseHelper.instance.getMonthlyNetBalanceHistory();
-      _categorySpending = await DatabaseHelper.instance.getCategorySpending(_currentMonth);
-      _categoryIncome = await DatabaseHelper.instance.getCategoryIncome(_currentMonth);
-      _cumulativeBalance = await DatabaseHelper.instance.getCumulativeBalanceUpTo(_currentMonth);
-      _netSaved = await DatabaseHelper.instance.getNetSaved(_currentMonth);
+      final summary = await DatabaseHelper.instance.getMonthlySummary(month);
+      if (token != _refreshToken || _currentMonth != month) {
+        return; // stale result ignored
+      }
+      _monthlyTotals = (summary['totals'] as Map<String, double>);
+      _savingsGoals = (summary['savingsGoals'] as List<SavingsGoal>);
+      _budgets = (summary['budgets'] as List<Budget>);
+      _topupBalance = (summary['topupBalance'] as double);
+      _topupTransactions = (summary['topupTransactions'] as List<FinanceTransaction>);
+      _monthlyNetHistory = (summary['monthlyNetHistory'] as List<Map<String, dynamic>>);
+      _categorySpending = (summary['categorySpending'] as List<Map<String, dynamic>>);
+      _categoryIncome = (summary['categoryIncome'] as List<Map<String, dynamic>>);
+      _cumulativeBalance = (summary['cumulativeBalance'] as double);
+      _netSaved = (summary['netSaved'] as double);
+      _error = null;
       notifyListeners();
     } catch (e) {
+      if (token != _refreshToken) return;
+      _error = e.toString();
       debugPrint('Error refreshing monthly details: $e');
+      notifyListeners();
     }
   }
 
