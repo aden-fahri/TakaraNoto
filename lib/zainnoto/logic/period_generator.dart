@@ -45,6 +45,12 @@ List<PeriodDraft> planPeriods({
 
   final drafts = <PeriodDraft>[];
 
+  // Aturan weekly due_day (keputusan produk): 1 = Senin ... 7 = Minggu,
+  // tetapi periode adalah blok 7 hari mulai startDate, dan dueDay adalah
+  // hari ke-N di dalam blok (offset dueDay-1). Jika hari itu jatuh sebelum
+  // startDate, gunakan hari itu pada blok pertama bila >= startDate; bila
+  // tidak, geser ke pekan berikutnya yang masih di dalam blok; bila tidak
+  // ada, jatuh tempo = akhir blok.
   if (frequency == DuesFrequency.weekly) {
     var blockStart = start;
     while (!blockStart.isAfter(target)) {
