@@ -68,7 +68,7 @@ void main() {
     await tester.pump();
     expect(tester.takeException(), isNull);
     _reset(tester);
-  }, skip: true);
+  });
 
   testWidgets('dashboard Kas Zain sempit [overflow 320dp: header banner Row greeting/judul+tombol 53px]', (tester) async {
     _setNarrow(tester);

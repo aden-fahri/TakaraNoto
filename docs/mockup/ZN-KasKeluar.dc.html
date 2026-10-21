@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>ZainNoto Catat kas</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap">
+<style>
+body{margin:0}
+.r{--pg:#FFF3E6;--card:#FFFFFF;--bd:#F0E4D6;--tx:#2A1426;--mu:#6B5A68;--ac:#381932;--onac:#fff;--soft:#F4ECEF;position:relative;overflow:hidden;box-sizing:border-box;width:390px;height:844px;background:#9C8A98;color:var(--tx);font-family:Poppins,sans-serif;font-size:13px}
+.r *{box-sizing:border-box}
+.row{display:flex;align-items:center}
+.mu{color:var(--mu);font-size:12px}
+.sh{position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:28px 28px 0 0;padding:12px 20px 24px}
+.fld{height:52px;border-radius:16px;border:1px solid var(--bd);background:var(--pg);display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-weight:500}
+.tg{display:flex;background:var(--soft);border-radius:999px;padding:3px}
+.tg b{flex:1;text-align:center;padding:10px 0;font-size:12px;font-weight:600;border-radius:999px;color:var(--mu)}
+.tg b.on{background:var(--ac);color:var(--onac)}
+.btn{height:52px;border-radius:26px;background:var(--ac);color:var(--onac);font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center}
+</style>
+</helmet>
+<div class="r">
+  <div class="sh">
+    <div style="width:40px;height:4px;border-radius:2px;background:#DCCBD6;margin:0 auto 16px"></div>
+    <div style="font-size:18px;font-weight:600;margin-bottom:14px">Catat kas</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="tg"><b>Setor kas</b><b class="on">Pengeluaran</b></div>
+      <div><div class="mu" style="margin:0 4px 6px">Jumlah</div><div class="fld"><span style="font-size:20px;font-weight:600">Rp 150.000</span><span class="mu">Saldo Rp 1.425.000</span></div></div>
+      <div><div class="mu" style="margin:0 4px 6px">Keperluan</div><div class="fld"><span>Beli spanduk 17 Agustus</span></div></div>
+      <div class="row" style="gap:10px">
+        <div style="flex:1"><div class="mu" style="margin:0 4px 6px">Tanggal</div><div class="fld"><span>16 Okt 2026</span></div></div>
+        <div style="flex:1"><div class="mu" style="margin:0 4px 6px">Dicatat oleh</div><div class="fld"><span>Budi</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B5A68" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div></div>
+      </div>
+      <div style="background:var(--soft);border-radius:16px;padding:12px 14px;line-height:1.6" class="mu">Pengeluaran mengurangi saldo kas bersama dan terlihat oleh semua anggota di Riwayat.</div>
+      <div class="btn" style="margin-top:4px">Simpan pengeluaran</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -15,12 +15,21 @@ void main() {
       expect(pathInsideAt(rect, 248, 22), isTrue, reason: 'x=248 < 250.6, di luar notch');
     });
 
-    test('memotong notch di sudut kanan atas', () {
+    test('memotong notch di sudut kanan atas (path = SVG mockup)', () {
       expect(pathOutsideAt(rect, 300, 20), isTrue, reason: 'dalam notch');
       expect(pathOutsideAt(rect, 357, 43), isTrue, reason: 'dalam notch');
-      expect(pathInsideAt(rect, 357, 50), isTrue, reason: 'di bawah notch');
       expect(pathInsideAt(rect, 150, 90), isTrue, reason: 'jauh dari notch');
       expect(pathInsideAt(rect, 200, 20), isTrue, reason: 'kiri notch');
+      expect(pathInsideAt(rect, 300, 50), isTrue, reason: 'tepat di bawah dasar notch');
+    });
+
+    test('bahu luar radius 24 seperti SVG mockup (pusat (334,68))', () {
+      // SVG: A24 24 0 0 1 358 68 dari titik (334,44).
+      // Pada x=357 batas busur = 68 − √(24² − 23²) ≈ 61.1
+      expect(pathOutsideAt(rect, 357, 50), isTrue, reason: 'di atas busur bahu (udara)');
+      expect(pathInsideAt(rect, 357, 70), isTrue, reason: 'di bawah busur bahu');
+      expect(pathInsideAt(rect, 345, 60), isTrue, reason: 'di dalam bahu');
+      expect(pathOutsideAt(rect, 357, 45), isTrue, reason: 'dekat sudut luar yang terpotong');
     });
 
     test('mempertahankan sudut membulat radius 24', () {

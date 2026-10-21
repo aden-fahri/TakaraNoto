@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>ZainNoto Iuran kas checklist</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap">
+<style>
+body{margin:0}
+.r{--hd:#381932;--pg:#FFF3E6;--card:#FFFFFF;--bd:#F0E4D6;--tx:#2A1426;--mu:#6B5A68;--inc:#047857;--exp:#BE123C;--ac:#381932;--onac:#fff;--soft:#F4ECEF;--chip:#52294A;--nav:#FFFFFF;position:relative;overflow:hidden;box-sizing:border-box;width:390px;height:1000px;background:var(--pg);color:var(--tx);font-family:Poppins,sans-serif;font-size:13px}
+.r *{box-sizing:border-box}
+.hd{background:var(--hd);border-radius:0 0 32px 32px;padding:18px 16px 24px}
+.row{display:flex;align-items:center}
+.btn40{height:40px;border-radius:14px;background:var(--chip);border:1px solid rgba(255,255,255,.25);color:#fff;display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;font-weight:600;padding:0 12px}
+.gc{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:12px;background:var(--chip);color:#fff;font-size:11px;font-weight:600}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:24px;padding:4px 16px}
+.mu{color:var(--mu);font-size:12px}
+.per{display:flex;align-items:center;justify-content:space-between;height:52px;padding:0 12px;border-radius:20px;background:var(--card);border:1px solid var(--bd);font-weight:600}
+.tg{display:flex;background:var(--soft);border-radius:999px;padding:3px}
+.tg b{flex:1;text-align:center;padding:9px 0;font-size:12px;font-weight:600;border-radius:999px;color:var(--mu)}
+.tg b.on{background:var(--ac);color:var(--onac)}
+.tx{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--bd)}
+.ck{width:28px;height:28px;border-radius:50%;border:2px solid #CDBBC8;flex:none;display:flex;align-items:center;justify-content:center}
+.ck.on{background:var(--ac);border-color:var(--ac)}
+.ck.half{border-color:#E2A21B;background:#FBE8C4}
+.bd{font-size:11px;font-weight:600;padding:4px 10px;border-radius:999px;display:inline-block}
+.ok{background:#D5F1E4;color:#065F46}.late{background:#FBDADF;color:#8F1D2C}.part{background:#FBE8C4;color:#7A4A05}
+.nav{position:absolute;left:0;right:0;bottom:0;height:76px;background:var(--nav);border-top:1px solid var(--bd);border-radius:24px 24px 0 0;display:flex}
+.ni{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11px;font-weight:500;color:var(--mu);position:relative}
+.ni.on{color:var(--ac);font-weight:600;background:var(--soft)}
+.ni.on i{position:absolute;top:0;left:50%;margin-left:-14px;width:28px;height:3px;border-radius:2px;background:var(--ac)}
+</style>
+</helmet>
+<div class="r">
+  <div class="hd">
+    <div class="row">
+      <div style="flex:1;min-width:0"><div class="gc"><span style="width:7px;height:7px;border-radius:50%;background:#F4C99A"></span>Kas RT 05<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" role="img" aria-label="Ganti grup"><path d="M6 9l6 6 6-6"/></svg></div><div style="font-size:24px;font-weight:600;color:#fff;line-height:1.35">ZainNoto</div></div>
+      <div class="btn40" style="width:40px;padding:0;margin-right:8px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" role="img" aria-label="Tema warna"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-.5-.3-.9-.5-1.3-.3-.4-.4-.9-.1-1.4.3-.5.8-.7 1.4-.7H17a4 4 0 0 0 4-4c0-4.4-4-9-9-9z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10.5" cy="7" r="1"/><circle cx="15.5" cy="7.5" r="1"/></svg></div>
+      <div class="btn40"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 8h16M16 4l4 4-4 4M20 16H4M8 12l-4 4 4 4"/></svg>TakaraNoto</div>
+    </div>
+  </div>
+  <div style="padding:16px;display:flex;flex-direction:column;gap:14px">
+    <div style="font-size:18px;font-weight:600;margin:0 4px">Iuran kas</div>
+    <div class="tg"><b class="on">Checklist</b><b>Matriks</b></div>
+    <div class="per"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2A1426" stroke-width="2.5" stroke-linecap="round" role="img" aria-label="Sebelumnya"><path d="M15 6l-6 6 6 6"/></svg><span><span class="mu" style="font-weight:500">Periode:</span> Oktober 2026</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2A1426" stroke-width="2.5" stroke-linecap="round" role="img" aria-label="Berikutnya"><path d="M9 6l6 6-6 6"/></svg></div>
+    <div class="row" style="justify-content:space-between;padding:0 4px"><span style="font-weight:600">5 dari 8 lunas</span><span class="mu">Terkumpul Rp 275.000 / 400.000</span></div>
+    <div class="card">
+      <div class="tx" style="border-top:0"><div class="ck on"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" aria-label="Lunas" role="img"><path d="M5 12l5 5 9-10"/></svg></div><div style="flex:1"><div style="font-weight:500">Budi</div><div class="mu">Bayar 3 Okt · Rp 50.000</div></div><span class="bd ok">Lunas</span></div>
+      <div class="tx"><div class="ck on"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" aria-label="Lunas" role="img"><path d="M5 12l5 5 9-10"/></svg></div><div style="flex:1"><div style="font-weight:500">Sari</div><div class="mu">Bayar hari ini · Rp 50.000</div></div><span class="bd ok">Lunas</span></div>
+      <div class="tx"><div class="ck on"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" aria-label="Lunas" role="img"><path d="M5 12l5 5 9-10"/></svg></div><div style="flex:1"><div style="font-weight:500">Andi</div><div class="mu">Bayar 8 Okt · Rp 50.000</div></div><span class="bd ok">Lunas</span></div>
+      <div class="tx"><div class="ck" role="img" aria-label="Belum lunas, ketuk untuk menandai"></div><div style="flex:1"><div style="font-weight:500">Dewi</div><div class="mu" style="color:#8F1D2C">Telat 9 hari · 2 periode</div></div><span class="bd late">Telat</span></div>
+      <div class="tx"><div class="ck on"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" aria-label="Lunas" role="img"><path d="M5 12l5 5 9-10"/></svg></div><div style="flex:1"><div style="font-weight:500">Rudi</div><div class="mu">Bayar 2 Okt · Rp 50.000</div></div><span class="bd ok">Lunas</span></div>
+      <div class="tx"><div class="ck half" role="img" aria-label="Cicil"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7A4A05" stroke-width="3.2" stroke-linecap="round" aria-hidden="true"><path d="M6 12h12"/></svg></div><div style="flex:1"><div style="font-weight:500">Maya</div><div class="mu" style="color:#7A4A05">Masuk Rp 25.000 dari Rp 50.000</div></div><span class="bd part">Cicil</span></div>
+      <div class="tx"><div class="ck" role="img" aria-label="Belum lunas, ketuk untuk menandai"></div><div style="flex:1"><div style="font-weight:500">Joko</div><div class="mu" style="color:#8F1D2C">Telat 9 hari</div></div><span class="bd late">Telat</span></div>
+      <div class="tx"><div class="ck on"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" aria-label="Lunas" role="img"><path d="M5 12l5 5 9-10"/></svg></div><div style="flex:1"><div style="font-weight:500">Lina</div><div class="mu">Bayar 5 Okt · Rp 50.000</div></div><span class="bd ok">Lunas</span></div>
+    </div>
+    <div class="mu" style="text-align:center;line-height:1.6;padding:0 12px">Ketuk lingkaran untuk mencatat bayar. Bayar lebih dari tagihan menjadi kredit dan dipakai otomatis di periode berikutnya.</div>
+  </div>
+  <div class="nav">
+    <div class="ni"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 7V6a2 2 0 0 1 2-2h12M16 14h2"/></svg>Kas</div>
+    <div class="ni on"><i></i><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Iuran kas</div>
+    <div class="ni"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Statistik</div>
+    <div class="ni"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2"/></svg>Riwayat</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1000}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

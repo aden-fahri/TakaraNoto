@@ -12,6 +12,7 @@ class ListRow extends StatelessWidget {
     this.subtitle,
     this.amount,
     this.amountColor,
+    this.iconColor,
     this.onTap,
   });
 
@@ -20,6 +21,7 @@ class ListRow extends StatelessWidget {
   final String? subtitle;
   final String? amount;
   final Color? amountColor;
+  final Color? iconColor;
   final VoidCallback? onTap;
 
   @override
@@ -38,7 +40,7 @@ class ListRow extends StatelessWidget {
                 color: t.softSurface,
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(icon, size: 22, color: t.accent),
+              child: Icon(icon, size: 20, color: iconColor ?? t.accent),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -61,7 +63,10 @@ class ListRow extends StatelessWidget {
                       subtitle!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: AppText.body, color: t.textMuted),
+                      style: TextStyle(
+                        fontSize: AppText.body,
+                        color: t.textMuted,
+                      ),
                     ),
                   ],
                 ],
@@ -69,12 +74,16 @@ class ListRow extends StatelessWidget {
             ),
             if (amount != null) ...[
               const SizedBox(width: 8),
-              Text(
-                amount!,
-                style: TextStyle(
-                  fontSize: AppText.bodyLarge,
-                  fontWeight: FontWeight.w600,
-                  color: amountColor ?? t.textPrimary,
+              Flexible(
+                child: Text(
+                  amount!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: AppText.bodyLarge,
+                    fontWeight: FontWeight.w600,
+                    color: amountColor ?? t.textPrimary,
+                  ),
                 ),
               ),
             ],

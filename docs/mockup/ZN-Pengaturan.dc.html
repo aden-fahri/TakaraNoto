@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>ZainNoto Pengaturan</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap">
+<style>
+body{margin:0}
+.r{--hd:#381932;--pg:#FFF3E6;--card:#FFFFFF;--bd:#F0E4D6;--tx:#2A1426;--mu:#6B5A68;--ac:#381932;--soft:#F4ECEF;--chip:#52294A;position:relative;overflow:hidden;box-sizing:border-box;width:390px;height:844px;background:var(--pg);color:var(--tx);font-family:Poppins,sans-serif;font-size:13px}
+.r *{box-sizing:border-box}
+.hd{background:var(--hd);border-radius:0 0 32px 32px;padding:18px 16px 24px}
+.row{display:flex;align-items:center}
+.btn40{height:40px;border-radius:14px;background:var(--chip);border:1px solid rgba(255,255,255,.25);color:#fff;display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;font-weight:600;padding:0 12px}
+.mu{color:var(--mu);font-size:12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:24px;padding:0 16px}
+.li{display:flex;align-items:center;gap:12px;height:58px;border-top:1px solid var(--bd)}
+.li:first-child{border-top:0}
+.ic{width:34px;height:34px;border-radius:12px;background:var(--soft);display:flex;align-items:center;justify-content:center;flex:none}
+.sec{font-size:12px;font-weight:600;color:var(--mu);margin:0 4px -4px}
+.tgl{width:44px;height:26px;border-radius:13px;background:var(--ac);position:relative}
+.tgl i{position:absolute;right:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff}
+</style>
+</helmet>
+<div class="r">
+  <div class="hd">
+    <div class="row" style="gap:12px">
+      <div class="btn40" style="width:40px;padding:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" role="img" aria-label="Kembali"><path d="M15 6l-6 6 6 6"/></svg></div>
+      <div style="flex:1;min-width:0"><div style="font-size:12px;color:#E7CFE0">Kas RT 05</div><div style="font-size:22px;font-weight:600;color:#fff;line-height:1.3">Pengaturan</div></div>
+    </div>
+  </div>
+  <div style="padding:16px;display:flex;flex-direction:column;gap:14px">
+    <div class="sec">IURAN</div>
+    <div class="card">
+      <div class="li"><div style="flex:1">Nominal iuran</div><b>Rp 50.000</b></div>
+      <div class="li"><div style="flex:1">Jatuh tempo tiap bulan</div><b>Tanggal 10</b></div>
+      <div class="li"><div style="flex:1">Mulai berlaku</div><b>1 Jul 2026</b></div>
+      <div class="li"><div style="flex:1">Pakai kredit otomatis</div><div class="tgl"><i></i></div></div>
+    </div>
+    <div class="sec">TAMPILAN</div>
+    <div class="card">
+      <div class="li"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#381932" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-.5-.3-.9-.5-1.3-.3-.4-.4-.9-.1-1.4.3-.5.8-.7 1.4-.7H17a4 4 0 0 0 4-4c0-4.4-4-9-9-9z"/></svg></div><div style="flex:1">Tema warna</div><span class="row" style="gap:8px"><i style="width:18px;height:18px;border-radius:50%;background:#381932;display:block"></i><span class="mu">Plum Klasik</span></span></div>
+      <div class="li"><div style="flex:1">Mode gelap</div><span class="mu">Ikuti sistem</span></div>
+    </div>
+    <div class="sec">GRUP</div>
+    <div class="card">
+      <div class="li"><div style="flex:1">Kode undangan</div><b>RT05-K7X9</b></div>
+      <div class="li"><div style="flex:1">Bendahara</div><b>Budi</b></div>
+      <div class="li"><div style="flex:1;color:#BE123C;font-weight:500">Keluar dari grup</div></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

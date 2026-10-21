@@ -31,6 +31,14 @@ const int _plumLightTelatFg = 0xFF8F1D2C;
 const int _plumLightCicilBg = 0xFFFBE8C4;
 const int _plumLightCicilFg = 0xFF7A4A05;
 
+// Baris atas header (mockup Main.dc.html: #E7CFE0; Dashboard-gelap: #D9C3D6)
+const int _plumLightHeaderMuted = 0xFFE7CFE0;
+const int _plumDarkHeaderMuted = 0xFFD9C3D6;
+// Teks di atas kartu persik (mockup: #2A1426 terang & gelap; nominal #065F46/#9F1239)
+const int _onPersik = 0xFF2A1426;
+const int _incomeOnPersik = 0xFF065F46;
+const int _expenseOnPersik = 0xFF9F1239;
+
 const int _plumDarkTx = 0xFFF6EEF4;
 const int _plumDarkMu = 0xFFB7A3B5;
 const int _plumDarkInc = 0xFF5EE0A8;
@@ -112,6 +120,10 @@ void main() {
       expect(t.telatFg.toARGB32(), _plumLightTelatFg);
       expect(t.cicilBg.toARGB32(), _plumLightCicilBg);
       expect(t.cicilFg.toARGB32(), _plumLightCicilFg);
+      expect(t.headerMuted.toARGB32(), _plumLightHeaderMuted);
+      expect(t.onPersik.toARGB32(), _onPersik);
+      expect(t.incomeOnPersik.toARGB32(), _incomeOnPersik);
+      expect(t.expenseOnPersik.toARGB32(), _expenseOnPersik);
     });
   });
 
@@ -132,6 +144,10 @@ void main() {
       expect(t.pageBg.toARGB32(), _plumDarkPg);
       expect(t.card.toARGB32(), _plumDarkCard);
       expect(t.border.toARGB32(), _plumDarkBd);
+      expect(t.headerMuted.toARGB32(), _plumDarkHeaderMuted);
+      expect(t.onPersik.toARGB32(), _onPersik);
+      expect(t.incomeOnPersik.toARGB32(), _incomeOnPersik);
+      expect(t.expenseOnPersik.toARGB32(), _expenseOnPersik);
     });
   });
 
@@ -160,6 +176,10 @@ void main() {
       _expectContrast(t.textMuted, t.pageBg, '$name mu/pg');
       _expectContrast(t.onAccent, t.accent, '$name onac/ac');
       _expectContrast(t.headerFg, t.headerBg, '$name headerFg/hd');
+      _expectContrast(t.headerMuted, t.headerBg, '$name headerMuted/hd');
+      _expectContrast(t.onPersik, t.persik, '$name onPersik/persik');
+      _expectContrast(t.incomeOnPersik, t.persik, '$name incOnPersik/persik');
+      _expectContrast(t.expenseOnPersik, t.persik, '$name expOnPersik/persik');
       _expectContrast(t.lunasFg, t.lunasBg, '$name lunas');
       _expectContrast(t.telatFg, t.telatBg, '$name telat');
       _expectContrast(t.cicilFg, t.cicilBg, '$name cicil');

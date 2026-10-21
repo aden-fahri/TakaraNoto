@@ -51,6 +51,14 @@ class NotchedCard extends StatelessWidget {
   }
 }
 
+/// Path kartu bertakik persis seperti SVG di `docs/mockup/Main.dc.html`:
+/// `M24 0H234 A16 16 0 0 1 250 16 V28 A16 16 0 0 0 266 44 H334
+///  A24 24 0 0 1 358 68 V190 A24 24 0 0 1 334 214 H24 A24 24 0 0 1 0 190
+///  V24 A24 24 0 0 1 24 0Z` (untuk 358×214).
+///
+/// Artinya: dinding takik `rect.right - notchWidth`, fillet 16 di dinding
+/// atas dan dasar, lalu bahu luar radius 24 yang membuat tepi kanan kartu
+/// baru mulai pada `top + notchHeight + 24`.
 Path buildNotchedCardPath(
   Rect rect, {
   double radius = 24,
@@ -59,21 +67,60 @@ Path buildNotchedCardPath(
   double notchHeight = 44,
   double notchRadius = 16,
 }) {
-  final resolvedNotchWidth = notchWidth ?? rect.width * notchRatio;
-  final base = Path()..addRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius)));
-  final notch = Path()
-    ..addRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTRB(
-          rect.right - resolvedNotchWidth,
-          rect.top,
-          rect.right + resolvedNotchWidth,
-          rect.top + notchHeight,
-        ),
-        Radius.circular(notchRadius),
-      ),
-    );
-  return Path.combine(PathOperation.difference, base, notch);
+  final nW = notchWidth ?? rect.width * notchRatio;
+  final usable =
+      nW + notchRadius > radius && notchHeight + radius < rect.height;
+  if (!usable) {
+    return Path()
+      ..addRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius)));
+  }
+
+  final wall = rect.right - nW;
+  return Path()
+    ..moveTo(rect.left + radius, rect.top)
+    ..lineTo(wall - notchRadius, rect.top)
+    ..arcToPoint(
+      Offset(wall, rect.top + notchRadius),
+      radius: Radius.circular(notchRadius),
+      largeArc: false,
+      clockwise: true,
+    )
+    ..lineTo(wall, rect.top + notchHeight - notchRadius)
+    ..arcToPoint(
+      Offset(wall + notchRadius, rect.top + notchHeight),
+      radius: Radius.circular(notchRadius),
+      largeArc: false,
+      clockwise: false,
+    )
+    ..lineTo(rect.right - radius, rect.top + notchHeight)
+    ..arcToPoint(
+      Offset(rect.right, rect.top + notchHeight + radius),
+      radius: Radius.circular(radius),
+      largeArc: false,
+      clockwise: true,
+    )
+    ..lineTo(rect.right, rect.bottom - radius)
+    ..arcToPoint(
+      Offset(rect.right - radius, rect.bottom),
+      radius: Radius.circular(radius),
+      largeArc: false,
+      clockwise: true,
+    )
+    ..lineTo(rect.left + radius, rect.bottom)
+    ..arcToPoint(
+      Offset(rect.left, rect.bottom - radius),
+      radius: Radius.circular(radius),
+      largeArc: false,
+      clockwise: true,
+    )
+    ..lineTo(rect.left, rect.top + radius)
+    ..arcToPoint(
+      Offset(rect.left + radius, rect.top),
+      radius: Radius.circular(radius),
+      largeArc: false,
+      clockwise: true,
+    )
+    ..close();
 }
 
 class _NotchedCardPainter extends CustomPainter {

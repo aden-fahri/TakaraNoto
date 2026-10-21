@@ -43,29 +43,47 @@ class AppHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                children: [
-                  if (leading != null) ...[
-                    leading!,
+              if (topRow != null)
+                // Varian Home: sapaan + judul satu kolom di kiri, tombol di kanan
+                // (mockup Main.dc.html: baris atas top 18, tombol ikut tengah).
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    if (leading != null) ...[
+                      leading!,
+                      const SizedBox(width: 8),
+                    ],
+                    Expanded(child: _HomeTitleBlock(title: title, topRow: topRow!)),
+                    _PaletteButton(onTap: onPaletteTap),
                     const SizedBox(width: 8),
+                    const ModeSwitchButton(),
                   ],
-                  if (topRow != null) Expanded(child: topRow!) else const Spacer(),
-                  _PaletteButton(onTap: onPaletteTap),
-                  const SizedBox(width: 8),
-                  const ModeSwitchButton(),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: AppText.display,
-                  fontWeight: FontWeight.w600,
-                  color: t.headerFg,
+                )
+              else ...[
+                Row(
+                  children: [
+                    if (leading != null) ...[
+                      leading!,
+                      const SizedBox(width: 8),
+                    ],
+                    const Spacer(),
+                    _PaletteButton(onTap: onPaletteTap),
+                    const SizedBox(width: 8),
+                    const ModeSwitchButton(),
+                  ],
                 ),
-              ),
+                const SizedBox(height: 8),
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: AppText.display,
+                    fontWeight: FontWeight.w600,
+                    color: t.headerFg,
+                  ),
+                ),
+              ],
               if (child != null) ...[
                 const SizedBox(height: 12),
                 child!,
@@ -74,6 +92,38 @@ class AppHeader extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _HomeTitleBlock extends StatelessWidget {
+  const _HomeTitleBlock({required this.title, required this.topRow});
+
+  final String title;
+  final Widget topRow;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        topRow,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            title,
+            maxLines: 1,
+            style: TextStyle(
+              fontSize: AppText.display,
+              fontWeight: FontWeight.w600,
+              color: t.headerFg,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

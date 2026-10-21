@@ -35,6 +35,9 @@ class AppTokens extends ThemeExtension<AppTokens> {
     required this.telatFg,
     required this.cicilBg,
     required this.cicilFg,
+    required this.onPersik,
+    required this.incomeOnPersik,
+    required this.expenseOnPersik,
   });
 
   final Color headerBg;
@@ -66,6 +69,9 @@ class AppTokens extends ThemeExtension<AppTokens> {
   final Color telatFg;
   final Color cicilBg;
   final Color cicilFg;
+  final Color onPersik;
+  final Color incomeOnPersik;
+  final Color expenseOnPersik;
 
   // ─── Plum Klasik ───────────────────────────────────────────────────────────
   static const _plumLight = <String, Color>{
@@ -84,6 +90,10 @@ class AppTokens extends ThemeExtension<AppTokens> {
     'nav': Color(0xFFFFFFFF),
     'persik': Color(0xFFF4C99A),
     'transfer': Color(0xFF3F51B5),
+    // Baris atas header (mockup Main.dc.html §2).
+    'hdm': Color(0xFFE7CFE0),
+    // Teks utama di atas kartu persik (mockup: #2A1426 di kedua tema).
+    'onPersik': Color(0xFF2A1426),
   };
   static const _plumDark = <String, Color>{
     'hd': Color(0xFF2B1530),
@@ -100,7 +110,11 @@ class AppTokens extends ThemeExtension<AppTokens> {
     'chip': Color(0xFF4A2A50),
     'nav': Color(0xFF2A1A2E),
     'persik': Color(0xFFF4C99A),
-    'transfer': Color(0xFF3F51B5),
+    // Mockup gelap memakai #A9A4FF (indigo terang) untuk baris transfer.
+    'transfer': Color(0xFFA9A4FF),
+    // Baris atas header gelap (mockup Dashboard-gelap.dc.html).
+    'hdm': Color(0xFFD9C3D6),
+    'onPersik': Color(0xFF2A1426),
   };
 
   // ─── Teal ───────────────────────────────────────────────────────────────────
@@ -121,6 +135,8 @@ class AppTokens extends ThemeExtension<AppTokens> {
     'nav': Color(0xFFFBFAF7), // pakai card sampai HTML mockup datang
     'persik': Color(0xFFF2D3A0),
     'transfer': Color(0xFF3F51B5),
+    // Kartu persik tetap terang di tema Teal, jadi teksnya gelap (tx Teal).
+    'onPersik': Color(0xFF0B2B2A),
   };
   // PROVISIONAL: belum disetujui pemilik — diturunkan dari pola Plum gelap.
   static const _tealDark = <String, Color>{
@@ -139,6 +155,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     'nav': Color(0xFF1E2826),
     'persik': Color(0xFFF2D3A0),
     'transfer': Color(0xFF3F51B5),
+    'onPersik': Color(0xFF0B2B2A),
   };
 
   static const _lunasBg = Color(0xFFD5F1E4);
@@ -147,6 +164,12 @@ class AppTokens extends ThemeExtension<AppTokens> {
   static const _telatFg = Color(0xFF8F1D2C);
   static const _cicilBg = Color(0xFFFBE8C4);
   static const _cicilFg = Color(0xFF7A4A05);
+
+  // Teks & nominal di atas kartu persik: mockup memakai warna gelap yang sama
+  // pada tema terang dan gelap (kartu persik sendiri selalu terang).
+  static const _onPersik = Color(0xFF2A1426);
+  static const _incomeOnPersik = Color(0xFF065F46);
+  static const _expenseOnPersik = Color(0xFF9F1239);
 
   static AppTokens plum(Brightness b) {
     final src = b == Brightness.dark ? _plumDark : _plumLight;
@@ -163,13 +186,16 @@ class AppTokens extends ThemeExtension<AppTokens> {
     return AppTokens(
       headerBg: s['hd']!,
       headerFg: onHeader,
-      headerMuted: onHeader.withValues(alpha: 0.72),
+      headerMuted: s['hdm'] ?? onHeader.withValues(alpha: 0.72),
       headerSurface: onHeader.withValues(alpha: 0.20),
       headerBorder: onHeader.withValues(alpha: 0.45),
       pageBg: s['pg']!,
       card: s['card']!,
       softSurface: s['soft']!,
-      softSurfaceStrong: Color.alphaBlend(s['ac']!.withValues(alpha: 0.18), s['card']!),
+      softSurfaceStrong: Color.alphaBlend(
+        s['ac']!.withValues(alpha: 0.18),
+        s['card']!,
+      ),
       textPrimary: s['tx']!,
       textMuted: s['mu']!,
       border: s['bd']!,
@@ -190,6 +216,9 @@ class AppTokens extends ThemeExtension<AppTokens> {
       telatFg: _telatFg,
       cicilBg: _cicilBg,
       cicilFg: _cicilFg,
+      onPersik: s['onPersik'] ?? _onPersik,
+      incomeOnPersik: _incomeOnPersik,
+      expenseOnPersik: _expenseOnPersik,
     );
   }
 
@@ -225,8 +254,14 @@ class AppTokens extends ThemeExtension<AppTokens> {
       headerBorder: onHeader.withValues(alpha: 0.45),
       pageBg: pageBg,
       card: card,
-      softSurface: Color.alphaBlend(accent.withValues(alpha: isDark ? 0.22 : 0.10), card),
-      softSurfaceStrong: Color.alphaBlend(accent.withValues(alpha: isDark ? 0.34 : 0.18), card),
+      softSurface: Color.alphaBlend(
+        accent.withValues(alpha: isDark ? 0.22 : 0.10),
+        card,
+      ),
+      softSurfaceStrong: Color.alphaBlend(
+        accent.withValues(alpha: isDark ? 0.34 : 0.18),
+        card,
+      ),
       textPrimary: isDark ? _darkTextPrimary : _textPrimary,
       textMuted: isDark ? _darkTextMuted : _textMuted,
       border: isDark ? _darkBorder : _border,
@@ -247,6 +282,9 @@ class AppTokens extends ThemeExtension<AppTokens> {
       telatFg: _telatFg,
       cicilBg: _cicilBg,
       cicilFg: _cicilFg,
+      onPersik: _onPersik,
+      incomeOnPersik: _incomeOnPersik,
+      expenseOnPersik: _expenseOnPersik,
     );
   }
 
@@ -281,6 +319,9 @@ class AppTokens extends ThemeExtension<AppTokens> {
     Color? telatFg,
     Color? cicilBg,
     Color? cicilFg,
+    Color? onPersik,
+    Color? incomeOnPersik,
+    Color? expenseOnPersik,
   }) {
     return AppTokens(
       headerBg: headerBg ?? this.headerBg,
@@ -312,6 +353,9 @@ class AppTokens extends ThemeExtension<AppTokens> {
       telatFg: telatFg ?? this.telatFg,
       cicilBg: cicilBg ?? this.cicilBg,
       cicilFg: cicilFg ?? this.cicilFg,
+      onPersik: onPersik ?? this.onPersik,
+      incomeOnPersik: incomeOnPersik ?? this.incomeOnPersik,
+      expenseOnPersik: expenseOnPersik ?? this.expenseOnPersik,
     );
   }
 
@@ -327,7 +371,11 @@ class AppTokens extends ThemeExtension<AppTokens> {
       pageBg: Color.lerp(pageBg, other.pageBg, t)!,
       card: Color.lerp(card, other.card, t)!,
       softSurface: Color.lerp(softSurface, other.softSurface, t)!,
-      softSurfaceStrong: Color.lerp(softSurfaceStrong, other.softSurfaceStrong, t)!,
+      softSurfaceStrong: Color.lerp(
+        softSurfaceStrong,
+        other.softSurfaceStrong,
+        t,
+      )!,
       textPrimary: Color.lerp(textPrimary, other.textPrimary, t)!,
       textMuted: Color.lerp(textMuted, other.textMuted, t)!,
       border: Color.lerp(border, other.border, t)!,
@@ -348,6 +396,9 @@ class AppTokens extends ThemeExtension<AppTokens> {
       telatFg: Color.lerp(telatFg, other.telatFg, t)!,
       cicilBg: Color.lerp(cicilBg, other.cicilBg, t)!,
       cicilFg: Color.lerp(cicilFg, other.cicilFg, t)!,
+      onPersik: Color.lerp(onPersik, other.onPersik, t)!,
+      incomeOnPersik: Color.lerp(incomeOnPersik, other.incomeOnPersik, t)!,
+      expenseOnPersik: Color.lerp(expenseOnPersik, other.expenseOnPersik, t)!,
     );
   }
 }
@@ -356,7 +407,10 @@ extension AppTokensContext on BuildContext {
   AppTokens get tokens {
     final theme = Theme.of(this);
     return theme.extension<AppTokens>() ??
-        AppTokens.fromScheme(theme.colorScheme, pageBg: theme.scaffoldBackgroundColor);
+        AppTokens.fromScheme(
+          theme.colorScheme,
+          pageBg: theme.scaffoldBackgroundColor,
+        );
   }
 }
 

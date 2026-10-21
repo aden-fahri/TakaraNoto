@@ -23,43 +23,42 @@ class ModeSwitchButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = context.tokens;
     final mode = context.watch<AppModeController>().mode;
     final toGroup = mode == AppMode.personal;
     final label = toGroup ? 'ZainNoto' : 'TakaraNoto';
-    final icon = toGroup ? Icons.groups_rounded : Icons.person_rounded;
+    final t = context.tokens;
 
+    // Tombol header sesuai mockup (`.btn40`): latar chip, radius 14,
+    // border putih 25%, ikon panah 16 + nama aplikasi tujuan, jarak 6.
     return GestureDetector(
-      onTap: () => _switch(
-        context,
-        toGroup ? AppMode.group : AppMode.personal,
-      ),
+      onTap: () => _switch(context, toGroup ? AppMode.group : AppMode.personal),
       behavior: HitTestBehavior.opaque,
       child: Container(
         height: _height,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          color: t.headerSurface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: t.headerBorder, width: 1),
+          color: t.chip,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.25),
+            width: 1,
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 15, color: t.headerFg),
+            Icon(Icons.swap_horiz_rounded, size: 16, color: Colors.white),
             const SizedBox(width: 6),
             Text(
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: AppText.body,
-                fontWeight: FontWeight.w700,
-                color: t.headerFg,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
               ),
             ),
-            const SizedBox(width: 6),
-            Icon(Icons.arrow_forward_rounded, size: 15, color: t.headerFg),
           ],
         ),
       ),
