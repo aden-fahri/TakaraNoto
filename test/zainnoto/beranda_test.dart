@@ -5,6 +5,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
 import 'package:finflow_flutter/providers/app_mode_controller.dart';
+import 'package:finflow_flutter/screens/zainnoto/group_picker_screen.dart';
 import 'package:finflow_flutter/screens/zainnoto/tabs/beranda_tab.dart';
 import 'package:finflow_flutter/screens/zainnoto/widgets/group_management_sheet.dart';
 import 'package:finflow_flutter/screens/zainnoto/widgets/transaction_form_sheet.dart';
@@ -538,6 +539,197 @@ void main() {
         reason: 'tipe default form = kas keluar',
       );
       expect(find.text('Simpan'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Pilih grup (ZN-Grup): chip buka layar, kartu terpilih, subtitle data & aksi bawah',
+    (tester) async {
+      _viewport(tester);
+      final provider = await _seeded(tester);
+
+      // Grup kedua tanpa data (repo langsung, supaya grup terpilih tidak
+      // ikut pindah) → subtitle '0 anggota · Rp 0'.
+      final repo = ZainNotoRepository();
+      await tester.runAsync(() => repo.createGroup(name: 'Arisan RT 05'));
+      await tester.runAsync(provider.loadGroups);
+      await tester.runAsync(provider.loadPickerInfo);
+
+      await _pumpBeranda(tester, provider);
+
+      // Chip grup → layar pilih grup (route penuh sesuai mockup ZN-Grup).
+      await tester.tap(find.byKey(const ValueKey('zn-group-chip')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(tester.takeException(), isNull);
+      expect(find.byType(GroupPickerScreen), findsOneWidget);
+      expect(find.text('Pilih grup kas'), findsOneWidget);
+
+      // Header varian ZN-Grup: bottomPadding 26 + baris kecil 'Mode kelompok'
+      // di atas judul (diketemukan hanya di dalam picker).
+      final pickerHeader = find.descendant(
+        of: find.byType(GroupPickerScreen),
+        matching: find.byType(AppHeader),
+      );
+      expect(tester.widget<AppHeader>(pickerHeader).bottomPadding, 26);
+      expect(find.text('Mode kelompok'), findsOneWidget);
+
+      Finder card(String name) => find
+          .ancestor(
+            of: find.descendant(
+              of: find.byType(GroupPickerScreen),
+              matching: find.text(name),
+            ),
+            matching: find.byWidgetPredicate(
+              (w) =>
+                  w is Container &&
+                  w.decoration is BoxDecoration &&
+                  (w.decoration as BoxDecoration).borderRadius ==
+                      BorderRadius.circular(24),
+            ),
+          )
+          .first;
+
+      // Kartu terpilih: border 2 accent + ikon 48 persik + check 'Dipilih'.
+      final selectedBorder =
+          (tester.widget<Container>(card('Kas RT 05')).decoration!
+                      as BoxDecoration)
+                  .border!
+              as Border;
+      expect(selectedBorder.top.width, 2, reason: 'kartu on: border 2');
+      expect(selectedBorder.top.color, _tokens.accent);
+      expect(
+        find.descendant(
+          of: card('Kas RT 05'),
+          matching: find.byWidgetPredicate(
+            (w) => w is Semantics && w.properties.label == 'Dipilih',
+          ),
+        ),
+        findsOneWidget,
+        reason: 'check dalam Semantics(label: Dipilih) hanya di kartu terpilih',
+      );
+      final iconBox = find
+          .descendant(
+            of: card('Kas RT 05'),
+            matching: find.byWidgetPredicate(
+              (w) =>
+                  w is Container &&
+                  w.constraints?.maxWidth == 48 &&
+                  w.constraints?.maxHeight == 48,
+            ),
+          )
+          .first;
+      expect(tester.getSize(iconBox), const Size(48, 48));
+      expect(
+        (tester.widget<Container>(iconBox).decoration! as BoxDecoration).color,
+        _tokens.persik,
+        reason: 'ikon kartu terpilih: latar persik',
+      );
+      expect(
+        find.descendant(
+          of: card('Kas RT 05'),
+          matching: find.byIcon(Icons.work_rounded),
+        ),
+        findsOneWidget,
+        reason: 'briefcase (bukan GroupAvatar)',
+      );
+
+      // Kartu non-terpilih: border 1 border-token, tanpa check.
+      final unselectedBorder =
+          (tester.widget<Container>(card('Arisan RT 05')).decoration!
+                      as BoxDecoration)
+                  .border!
+              as Border;
+      expect(unselectedBorder.top.width, 1);
+      expect(unselectedBorder.top.color, _tokens.border);
+      expect(
+        find.descendant(
+          of: card('Arisan RT 05'),
+          matching: find.byWidgetPredicate(
+            (w) => w is Semantics && w.properties.label == 'Dipilih',
+          ),
+        ),
+        findsNothing,
+      );
+
+      // Subtitle terikat data per kartu (anggota · saldo).
+      expect(
+        _under(
+          find.descendant(
+            of: find.byType(GroupPickerScreen),
+            matching: find.text('Kas RT 05'),
+          ),
+          tester,
+        ),
+        '8 anggota · Rp 1.425.000',
+        reason: '8 anggota seed, saldo = balance summary',
+      );
+      expect(
+        _under(
+          find.descendant(
+            of: find.byType(GroupPickerScreen),
+            matching: find.text('Arisan RT 05'),
+          ),
+          tester,
+        ),
+        '0 anggota · Rp 0',
+        reason: 'grup baru tanpa anggota/transaksi',
+      );
+
+      // Aksi bawah: Gabung dengan kode → snackbar jelas "segera hadir".
+      expect(find.text('Buat grup baru'), findsOneWidget);
+      expect(find.text('Gabung dengan kode'), findsOneWidget);
+      await tester.tap(find.text('Gabung dengan kode'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Fitur gabung kode belum tersedia'), findsOneWidget);
+
+      // Buat grup baru → dialog pembuatan lama tetap terjangkau (di atas picker).
+      await tester.tap(find.text('Buat grup baru'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Buat Grup Baru'), findsOneWidget);
+      expect(
+        find.byType(GroupPickerScreen),
+        findsOneWidget,
+        reason: 'picker tetap terbuka di bawah dialog',
+      );
+      await tester.tap(find.text('Batal'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Buat Grup Baru'), findsNothing);
+      expect(find.byType(GroupPickerScreen), findsOneWidget);
+
+      // Pilih grup kedua → picker pop, chip beranda menampilkan grup baru.
+      await tester.tap(card('Arisan RT 05'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(GroupPickerScreen), findsNothing);
+      expect(provider.selectedGroup!.name, 'Arisan RT 05');
+      expect(
+        find.text('Arisan RT 05'),
+        findsOneWidget,
+        reason: 'chip beranda kini grup terpilih',
+      );
+      // selectGroup memicu refresh data grup; drain bergantian runAsync+pump
+      // supaya kelanjutan future DB (zona fake) ikut maju dan tidak ada
+      // query yang tersisa saat database ditutup di teardown.
+      for (var i = 0; i < 100 && provider.isRefreshing; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 30)),
+        );
+        await tester.pump();
+      }
+      expect(
+        provider.isRefreshing,
+        isFalse,
+        reason: 'refresh grup selesai sebelum test berakhir',
+      );
+      await tester.pump();
+      // Habiskan timer SnackBar (4 detik) agar tidak tertinggal di teardown.
+      await tester.pump(const Duration(seconds: 5));
+      expect(tester.takeException(), isNull);
     },
   );
 }

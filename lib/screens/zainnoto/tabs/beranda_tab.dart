@@ -11,6 +11,7 @@ import '../../../zainnoto/logic/dues_status.dart';
 import '../../../zainnoto/models/entities.dart';
 import '../../../zainnoto/providers/zainnoto_provider.dart';
 import '../../../zainnoto/utils/format.dart';
+import '../group_picker_screen.dart';
 import '../widgets/group_management_sheet.dart';
 import '../widgets/group_sheets.dart';
 import '../widgets/transaction_form_sheet.dart';
@@ -87,7 +88,7 @@ class BerandaTab extends StatelessWidget {
       onPaletteTap: () => showPaletteSheet(context),
       topRow: _GroupChip(
         name: group?.name ?? 'Belum ada grup',
-        onTap: () => showGroupSwitcher(context),
+        onTap: () => GroupPickerScreen.show(context),
       ),
     );
 

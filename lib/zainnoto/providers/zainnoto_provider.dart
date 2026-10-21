@@ -130,6 +130,33 @@ class ZainNotoProvider extends ChangeNotifier {
     return null;
   }
 
+  // ── Info layar pilih grup ──────────────────────────────────────────────────
+
+  final Map<String, GroupPickerInfo> _pickerInfo = {};
+
+  /// Info anggota & saldo per grup untuk layar pilih grup (per grup di-skip
+  /// bila sudah termuat).
+  Map<String, GroupPickerInfo> get pickerInfo => _pickerInfo;
+
+  /// Mengisi [_pickerInfo] untuk semua grup; kartu tampil dulu tanpa subtitle,
+  /// data menyusul per grup (gagal dimuat dibiarkan tanpa subtitle).
+  Future<void> loadPickerInfo() async {
+    for (final g in _groups) {
+      if (_pickerInfo.containsKey(g.id)) continue;
+      try {
+        final summary = await _repository.getGroupSummary(groupId: g.id);
+        final members = await _repository.getMembers(g.id);
+        _pickerInfo[g.id] = GroupPickerInfo(
+          memberCount: members.length,
+          balance: summary.balance,
+        );
+        notifyListeners();
+      } catch (_) {
+        // Info tidak wajib: kartu tetap tampil tanpa subtitle.
+      }
+    }
+  }
+
   // ── Loading ───────────────────────────────────────────────────────────────
 
   Future<void> loadGroups() async {
@@ -138,6 +165,7 @@ class ZainNotoProvider extends ChangeNotifier {
     notifyListeners();
     try {
       _groups = await _repository.getGroups();
+      _pickerInfo.clear();
       final selected = _selectedGroup;
       if (selected != null &&
           !_groups.any((group) => group.id == selected.id)) {

@@ -23,18 +23,13 @@ class PeriodMemberRow {
   final bool waived;
   final DateTime dueDate;
 
-  ChargeStatus get status => deriveChargeStatus(
-        amountDue: amountDue,
-        paid: paid,
-        waived: waived,
-      );
+  ChargeStatus get status =>
+      deriveChargeStatus(amountDue: amountDue, paid: paid, waived: waived);
 
   int get remaining => math.max(0, amountDue - paid);
 
   bool isOverdue(DateTime asOf) =>
-      !waived &&
-      paid < amountDue &&
-      dateOnly(dueDate).isBefore(dateOnly(asOf));
+      !waived && paid < amountDue && dateOnly(dueDate).isBefore(dateOnly(asOf));
 }
 
 /// Aggregated numbers for the group dashboard.
@@ -58,6 +53,14 @@ class GroupSummary {
   int get activityPct => currentPeriodTotalCount == 0
       ? 0
       : ((currentPeriodPaidCount / currentPeriodTotalCount) * 100).round();
+}
+
+/// Ringkas satu grup untuk layar pilih grup: jumlah anggota aktif + saldo kas.
+class GroupPickerInfo {
+  const GroupPickerInfo({required this.memberCount, required this.balance});
+
+  final int memberCount;
+  final int balance;
 }
 
 /// Information about a member who has overdue dues.

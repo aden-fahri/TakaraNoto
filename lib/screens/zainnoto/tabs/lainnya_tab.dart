@@ -11,6 +11,7 @@ import '../../../zainnoto/utils/dates.dart';
 import '../../../zainnoto/utils/format.dart';
 import '../../backup_restore_screen.dart';
 import '../widgets/group_avatar.dart';
+import '../group_picker_screen.dart';
 import '../widgets/group_sheets.dart';
 import '../widgets/member_avatar.dart';
 
@@ -37,9 +38,7 @@ class LainnyaTab extends StatelessWidget {
           ),
         Expanded(
           child: group == null
-              ? _NoGroup(
-                  onCreate: () => showCreateGroupDialog(context),
-                )
+              ? _NoGroup(onCreate: () => showCreateGroupDialog(context))
               : ListView(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
                   children: [
@@ -202,11 +201,7 @@ class _GroupSection extends StatelessWidget {
         children: [
           Row(
             children: [
-              GroupAvatar(
-                name: group.name,
-                colorHex: group.colorHex,
-                size: 44,
-              ),
+              GroupAvatar(name: group.name, colorHex: group.colorHex, size: 44),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -245,7 +240,7 @@ class _GroupSection extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () => showGroupSwitcher(context),
+                  onPressed: () => GroupPickerScreen.show(context),
                   icon: const Icon(Icons.swap_horiz_rounded, size: 18),
                   label: const Text('Ganti'),
                 ),
@@ -277,10 +272,7 @@ class _GroupSection extends StatelessWidget {
                     size: 16,
                     color: t.expense,
                   ),
-                  label: Text(
-                    'Hapus Grup',
-                    style: TextStyle(color: t.expense),
-                  ),
+                  label: Text('Hapus Grup', style: TextStyle(color: t.expense)),
                 ),
               ),
             ],
@@ -305,10 +297,12 @@ class _MemberFormDialog extends StatefulWidget {
 }
 
 class _MemberFormDialogState extends State<_MemberFormDialog> {
-  late final TextEditingController _nameCtrl =
-      TextEditingController(text: widget.member?.name ?? '');
-  late final TextEditingController _phoneCtrl =
-      TextEditingController(text: widget.member?.phoneNumber ?? '');
+  late final TextEditingController _nameCtrl = TextEditingController(
+    text: widget.member?.name ?? '',
+  );
+  late final TextEditingController _phoneCtrl = TextEditingController(
+    text: widget.member?.phoneNumber ?? '',
+  );
   late bool _active = widget.member == null || widget.member!.isActive;
 
   @override
@@ -321,10 +315,11 @@ class _MemberFormDialogState extends State<_MemberFormDialog> {
   void _submit() {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) return;
-    Navigator.pop(
-      context,
-      (name: name, phone: _phoneCtrl.text.trim(), active: _active),
-    );
+    Navigator.pop(context, (
+      name: name,
+      phone: _phoneCtrl.text.trim(),
+      active: _active,
+    ));
   }
 
   @override
@@ -332,9 +327,7 @@ class _MemberFormDialogState extends State<_MemberFormDialog> {
     final t = context.tokens;
     final member = widget.member;
     return AlertDialog(
-      title: Text(
-        member == null ? 'Tambah Anggota' : 'Ubah Anggota',
-      ),
+      title: Text(member == null ? 'Tambah Anggota' : 'Ubah Anggota'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -382,10 +375,7 @@ class _MemberFormDialogState extends State<_MemberFormDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Batal'),
         ),
-        ElevatedButton(
-          onPressed: _submit,
-          child: const Text('Simpan'),
-        ),
+        ElevatedButton(onPressed: _submit, child: const Text('Simpan')),
       ],
     );
   }
@@ -510,8 +500,7 @@ class _MembersSection extends StatelessWidget {
                               ),
                               Text(
                                 member.isActive
-                                    ? (member.phoneNumber ??
-                                        'Anggota aktif')
+                                    ? (member.phoneNumber ?? 'Anggota aktif')
                                     : 'Nonaktif',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -570,8 +559,9 @@ class _DuesPlanFormDialog extends StatefulWidget {
 }
 
 class _DuesPlanFormDialogState extends State<_DuesPlanFormDialog> {
-  late final TextEditingController _amountCtrl =
-      TextEditingController(text: widget.plan?.amount.toString() ?? '');
+  late final TextEditingController _amountCtrl = TextEditingController(
+    text: widget.plan?.amount.toString() ?? '',
+  );
   late DuesFrequency _frequency =
       widget.plan?.frequency ?? DuesFrequency.monthly;
   late int _dueDay = widget.plan?.dueDay ?? 10;
@@ -587,18 +577,12 @@ class _DuesPlanFormDialogState extends State<_DuesPlanFormDialog> {
   void _submit() {
     final amount = int.tryParse(_amountCtrl.text) ?? 0;
     if (amount <= 0) return;
-    Navigator.pop(
-      context,
-      (
-        amount: amount,
-        frequency: _frequency,
-        dueDay: _dueDay.clamp(
-          1,
-          _frequency == DuesFrequency.weekly ? 7 : 28,
-        ),
-        startDate: _startDate,
-      ),
-    );
+    Navigator.pop(context, (
+      amount: amount,
+      frequency: _frequency,
+      dueDay: _dueDay.clamp(1, _frequency == DuesFrequency.weekly ? 7 : 28),
+      startDate: _startDate,
+    ));
   }
 
   @override
@@ -610,9 +594,7 @@ class _DuesPlanFormDialogState extends State<_DuesPlanFormDialog> {
     final amount = int.tryParse(_amountCtrl.text) ?? 0;
 
     return AlertDialog(
-      title: Text(
-        plan == null ? 'Atur Rencana Iuran' : 'Ubah Rencana Iuran',
-      ),
+      title: Text(plan == null ? 'Atur Rencana Iuran' : 'Ubah Rencana Iuran'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -622,9 +604,7 @@ class _DuesPlanFormDialogState extends State<_DuesPlanFormDialog> {
               controller: _amountCtrl,
               autofocus: plan == null,
               keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-              ],
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               onChanged: (_) => setState(() {}),
               decoration: groupInputDecoration(
                 t,
@@ -639,9 +619,8 @@ class _DuesPlanFormDialogState extends State<_DuesPlanFormDialog> {
                   child: _PlanFrequencyPill(
                     label: 'Mingguan',
                     selected: _frequency == DuesFrequency.weekly,
-                    onTap: () => setState(
-                      () => _frequency = DuesFrequency.weekly,
-                    ),
+                    onTap: () =>
+                        setState(() => _frequency = DuesFrequency.weekly),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -649,9 +628,8 @@ class _DuesPlanFormDialogState extends State<_DuesPlanFormDialog> {
                   child: _PlanFrequencyPill(
                     label: 'Bulanan',
                     selected: _frequency == DuesFrequency.monthly,
-                    onTap: () => setState(
-                      () => _frequency = DuesFrequency.monthly,
-                    ),
+                    onTap: () =>
+                        setState(() => _frequency = DuesFrequency.monthly),
                   ),
                 ),
               ],
@@ -881,9 +859,9 @@ class _DuesSection extends StatelessWidget {
                         Text(
                           isWeekly
                               ? 'Jatuh tempo hari ke-${plan.dueDay} · '
-                                  'mulai ${formatTanggalSingkat(plan.startDate)}'
+                                    'mulai ${formatTanggalSingkat(plan.startDate)}'
                               : 'Jatuh tempo tanggal ${plan.dueDay} · '
-                                  'mulai ${formatTanggalSingkat(plan.startDate)}',
+                                    'mulai ${formatTanggalSingkat(plan.startDate)}',
                           style: TextStyle(
                             fontSize: AppText.label,
                             color: t.textMuted,
@@ -939,9 +917,7 @@ class _PlanFrequencyPill extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 11),
         decoration: BoxDecoration(
-          color: selected
-              ? t.accent.withValues(alpha: 0.12)
-              : t.softSurface,
+          color: selected ? t.accent.withValues(alpha: 0.12) : t.softSurface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected
@@ -983,14 +959,18 @@ class _ShareSection extends StatelessWidget {
 
     try {
       final rows = await provider.repository.getPeriodRows(period.id);
-      final waived =
-          rows.where((row) => row.status == ChargeStatus.waived).length;
-      final paid =
-          rows.where((row) => row.status == ChargeStatus.paid).toList();
+      final waived = rows
+          .where((row) => row.status == ChargeStatus.waived)
+          .length;
+      final paid = rows
+          .where((row) => row.status == ChargeStatus.paid)
+          .toList();
       final unpaid = rows
-          .where((row) =>
-              row.status == ChargeStatus.unpaid ||
-              row.status == ChargeStatus.partial)
+          .where(
+            (row) =>
+                row.status == ChargeStatus.unpaid ||
+                row.status == ChargeStatus.partial,
+          )
           .toList();
 
       final buffer = StringBuffer()
@@ -1023,10 +1003,7 @@ class _ShareSection extends StatelessWidget {
       }
 
       await SharePlus.instance.share(
-        ShareParams(
-          text: buffer.toString(),
-          subject: 'Rekap ${group.name}',
-        ),
+        ShareParams(text: buffer.toString(), subject: 'Rekap ${group.name}'),
       );
     } catch (_) {
       messenger.showSnackBar(
@@ -1047,7 +1024,11 @@ class _ShareSection extends StatelessWidget {
           Text(
             'Bagikan ringkasan iuran periode berjalan: status per anggota, '
             'saldo kas, dan tunggakan.',
-            style: TextStyle(fontSize: AppText.body, height: 1.4, color: t.textMuted),
+            style: TextStyle(
+              fontSize: AppText.body,
+              height: 1.4,
+              color: t.textMuted,
+            ),
           ),
           const SizedBox(height: 12),
           ElevatedButton.icon(
@@ -1073,9 +1054,7 @@ class _BackupSection extends StatelessWidget {
       title: 'Data',
       child: GestureDetector(
         onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => const BackupRestoreScreen(),
-          ),
+          MaterialPageRoute<void>(builder: (_) => const BackupRestoreScreen()),
         ),
         behavior: HitTestBehavior.opaque,
         child: Row(
@@ -1087,11 +1066,7 @@ class _BackupSection extends StatelessWidget {
                 color: t.softSurface,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(
-                Icons.backup_rounded,
-                size: 18,
-                color: t.accent,
-              ),
+              child: Icon(Icons.backup_rounded, size: 18, color: t.accent),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1108,16 +1083,15 @@ class _BackupSection extends StatelessWidget {
                   ),
                   Text(
                     'Cadangkan seluruh data aplikasi',
-                    style: TextStyle(fontSize: AppText.label, color: t.textMuted),
+                    style: TextStyle(
+                      fontSize: AppText.label,
+                      color: t.textMuted,
+                    ),
                   ),
                 ],
               ),
             ),
-            Icon(
-              Icons.chevron_right_rounded,
-              size: 20,
-              color: t.textMuted,
-            ),
+            Icon(Icons.chevron_right_rounded, size: 20, color: t.textMuted),
           ],
         ),
       ),
@@ -1148,11 +1122,7 @@ class _NoGroup extends StatelessWidget {
                 color: t.softSurface,
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.groups_rounded,
-                size: 30,
-                color: t.accent,
-              ),
+              child: Icon(Icons.groups_rounded, size: 30, color: t.accent),
             ),
             const SizedBox(height: 16),
             Text(
@@ -1167,7 +1137,11 @@ class _NoGroup extends StatelessWidget {
             Text(
               'Buat grup dulu untuk mengelola anggota dan iuran.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: AppText.bodyLarge, height: 1.5, color: t.textMuted),
+              style: TextStyle(
+                fontSize: AppText.bodyLarge,
+                height: 1.5,
+                color: t.textMuted,
+              ),
             ),
             const SizedBox(height: 20),
             ElevatedButton.icon(

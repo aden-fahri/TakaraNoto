@@ -13,6 +13,7 @@ import '../../../zainnoto/utils/format.dart';
 import '../../backup_restore_screen.dart';
 import 'audit_log_sheet.dart';
 import 'group_avatar.dart';
+import '../group_picker_screen.dart';
 import 'group_sheets.dart';
 import 'member_avatar.dart';
 import 'member_form.dart';
@@ -72,7 +73,11 @@ class GroupManagementSheet extends StatelessWidget {
                             color: t.accent.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Icon(Icons.settings_rounded, color: t.accent, size: 20),
+                          child: Icon(
+                            Icons.settings_rounded,
+                            color: t.accent,
+                            size: 20,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -91,7 +96,10 @@ class GroupManagementSheet extends StatelessWidget {
                                 group?.name ?? 'Belum ada grup',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: AppText.body, color: t.textMuted),
+                                style: TextStyle(
+                                  fontSize: AppText.body,
+                                  color: t.textMuted,
+                                ),
                               ),
                             ],
                           ),
@@ -281,7 +289,7 @@ class _GroupSection extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () => showGroupSwitcher(context),
+                  onPressed: () => GroupPickerScreen.show(context),
                   icon: const Icon(Icons.swap_horiz_rounded, size: 18),
                   label: const Text('Ganti'),
                 ),
@@ -314,10 +322,7 @@ class _GroupSection extends StatelessWidget {
                     size: 16,
                     color: t.expense,
                   ),
-                  label: Text(
-                    'Hapus Grup',
-                    style: TextStyle(color: t.expense),
-                  ),
+                  label: Text('Hapus Grup', style: TextStyle(color: t.expense)),
                 ),
               ),
             ],
@@ -476,7 +481,9 @@ class _DuesPlanFormDialog extends StatefulWidget {
 
 class _DuesPlanFormDialogState extends State<_DuesPlanFormDialog> {
   late final TextEditingController _amountCtrl = TextEditingController(
-    text: widget.plan != null ? RupiahInputFormatter.format(widget.plan!.amount) : '',
+    text: widget.plan != null
+        ? RupiahInputFormatter.format(widget.plan!.amount)
+        : '',
   );
   late DuesFrequency _frequency =
       widget.plan?.frequency ?? DuesFrequency.monthly;
@@ -493,18 +500,12 @@ class _DuesPlanFormDialogState extends State<_DuesPlanFormDialog> {
   void _submit() {
     final amount = RupiahInputFormatter.parseClean(_amountCtrl.text);
     if (amount <= 0) return;
-    Navigator.pop(
-      context,
-      (
-        amount: amount,
-        frequency: _frequency,
-        dueDay: _dueDay.clamp(
-          1,
-          _frequency == DuesFrequency.weekly ? 7 : 28,
-        ),
-        startDate: _startDate,
-      ),
-    );
+    Navigator.pop(context, (
+      amount: amount,
+      frequency: _frequency,
+      dueDay: _dueDay.clamp(1, _frequency == DuesFrequency.weekly ? 7 : 28),
+      startDate: _startDate,
+    ));
   }
 
   @override
@@ -516,9 +517,7 @@ class _DuesPlanFormDialogState extends State<_DuesPlanFormDialog> {
     final amount = RupiahInputFormatter.parseClean(_amountCtrl.text);
 
     return AlertDialog(
-      title: Text(
-        plan == null ? 'Atur Rencana Iuran' : 'Ubah Rencana Iuran',
-      ),
+      title: Text(plan == null ? 'Atur Rencana Iuran' : 'Ubah Rencana Iuran'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -546,9 +545,8 @@ class _DuesPlanFormDialogState extends State<_DuesPlanFormDialog> {
                   child: _PlanFrequencyPill(
                     label: 'Mingguan',
                     selected: _frequency == DuesFrequency.weekly,
-                    onTap: () => setState(
-                      () => _frequency = DuesFrequency.weekly,
-                    ),
+                    onTap: () =>
+                        setState(() => _frequency = DuesFrequency.weekly),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -556,9 +554,8 @@ class _DuesPlanFormDialogState extends State<_DuesPlanFormDialog> {
                   child: _PlanFrequencyPill(
                     label: 'Bulanan',
                     selected: _frequency == DuesFrequency.monthly,
-                    onTap: () => setState(
-                      () => _frequency = DuesFrequency.monthly,
-                    ),
+                    onTap: () =>
+                        setState(() => _frequency = DuesFrequency.monthly),
                   ),
                 ),
               ],
@@ -568,7 +565,11 @@ class _DuesPlanFormDialogState extends State<_DuesPlanFormDialog> {
               _frequency == DuesFrequency.weekly
                   ? 'Jatuh tempo setiap'
                   : 'Tanggal jatuh tempo',
-              style: TextStyle(fontSize: AppText.body, fontWeight: FontWeight.w600, color: t.textPrimary),
+              style: TextStyle(
+                fontSize: AppText.body,
+                fontWeight: FontWeight.w600,
+                color: t.textPrimary,
+              ),
             ),
             const SizedBox(height: 6),
             Container(
@@ -591,17 +592,20 @@ class _DuesPlanFormDialogState extends State<_DuesPlanFormDialog> {
                             day == 1
                                 ? 'Senin'
                                 : day == 2
-                                    ? 'Selasa'
-                                    : day == 3
-                                        ? 'Rabu'
-                                        : day == 4
-                                            ? 'Kamis'
-                                            : day == 5
-                                                ? 'Jumat'
-                                                : day == 6
-                                                    ? 'Sabtu'
-                                                    : 'Minggu',
-                            style: TextStyle(fontSize: AppText.bodyLarge, color: t.textPrimary),
+                                ? 'Selasa'
+                                : day == 3
+                                ? 'Rabu'
+                                : day == 4
+                                ? 'Kamis'
+                                : day == 5
+                                ? 'Jumat'
+                                : day == 6
+                                ? 'Sabtu'
+                                : 'Minggu',
+                            style: TextStyle(
+                              fontSize: AppText.bodyLarge,
+                              color: t.textPrimary,
+                            ),
                           ),
                         )
                     else
@@ -610,7 +614,10 @@ class _DuesPlanFormDialogState extends State<_DuesPlanFormDialog> {
                           value: day,
                           child: Text(
                             'Tanggal $day setiap bulan',
-                            style: TextStyle(fontSize: AppText.bodyLarge, color: t.textPrimary),
+                            style: TextStyle(
+                              fontSize: AppText.bodyLarge,
+                              color: t.textPrimary,
+                            ),
                           ),
                         ),
                   ],
@@ -638,7 +645,10 @@ class _DuesPlanFormDialogState extends State<_DuesPlanFormDialog> {
                 },
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
                   decoration: BoxDecoration(
                     color: t.card,
                     borderRadius: BorderRadius.circular(12),
@@ -646,11 +656,18 @@ class _DuesPlanFormDialogState extends State<_DuesPlanFormDialog> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.calendar_today_rounded, size: 16, color: t.textMuted),
+                      Icon(
+                        Icons.calendar_today_rounded,
+                        size: 16,
+                        color: t.textMuted,
+                      ),
                       const SizedBox(width: 10),
                       Text(
                         'Mulai: ${formatTanggalSingkat(dateToStr(_startDate))}',
-                        style: TextStyle(fontSize: AppText.bodyLarge, color: t.textPrimary),
+                        style: TextStyle(
+                          fontSize: AppText.bodyLarge,
+                          color: t.textPrimary,
+                        ),
                       ),
                     ],
                   ),
@@ -659,7 +676,11 @@ class _DuesPlanFormDialogState extends State<_DuesPlanFormDialog> {
             else
               Text(
                 'Mulai ${formatTanggalSingkat(plan.startDate)} · Perubahan berlaku untuk periode baru',
-                style: TextStyle(fontSize: AppText.label, height: 1.4, color: t.textMuted),
+                style: TextStyle(
+                  fontSize: AppText.label,
+                  height: 1.4,
+                  color: t.textMuted,
+                ),
               ),
           ],
         ),
@@ -768,7 +789,9 @@ class _DuesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.tokens;
-    final plan = provider.duesPlans.isNotEmpty ? provider.duesPlans.first : null;
+    final plan = provider.duesPlans.isNotEmpty
+        ? provider.duesPlans.first
+        : null;
     final isWeekly = plan?.frequency == DuesFrequency.weekly;
 
     return _SectionCard(
@@ -784,7 +807,11 @@ class _DuesSection extends StatelessWidget {
           if (plan == null)
             Text(
               'Belum ada rencana iuran. Atur nominal dan jadwal agar periode dan tagihan otomatis terhitung.',
-              style: TextStyle(fontSize: AppText.body, height: 1.4, color: t.textMuted),
+              style: TextStyle(
+                fontSize: AppText.body,
+                height: 1.4,
+                color: t.textMuted,
+              ),
             )
           else
             Container(
@@ -827,7 +854,10 @@ class _DuesSection extends StatelessWidget {
                           isWeekly
                               ? 'Jatuh tempo setiap ${_weekdayName(plan.dueDay)} · Mulai ${formatTanggalSingkat(plan.startDate)}'
                               : 'Jatuh tempo tanggal ${plan.dueDay} · Mulai ${formatTanggalSingkat(plan.startDate)}',
-                          style: TextStyle(fontSize: AppText.label, color: t.textMuted),
+                          style: TextStyle(
+                            fontSize: AppText.label,
+                            color: t.textMuted,
+                          ),
                         ),
                       ],
                     ),
@@ -877,14 +907,18 @@ class _ShareSection extends StatelessWidget {
 
     try {
       final rows = await provider.repository.getPeriodRows(period.id);
-      final waived =
-          rows.where((row) => row.status == ChargeStatus.waived).length;
-      final paid =
-          rows.where((row) => row.status == ChargeStatus.paid).toList();
+      final waived = rows
+          .where((row) => row.status == ChargeStatus.waived)
+          .length;
+      final paid = rows
+          .where((row) => row.status == ChargeStatus.paid)
+          .toList();
       final unpaid = rows
-          .where((row) =>
-              row.status == ChargeStatus.unpaid ||
-              row.status == ChargeStatus.partial)
+          .where(
+            (row) =>
+                row.status == ChargeStatus.unpaid ||
+                row.status == ChargeStatus.partial,
+          )
           .toList();
 
       final buffer = StringBuffer()
@@ -915,10 +949,7 @@ class _ShareSection extends StatelessWidget {
       }
 
       await SharePlus.instance.share(
-        ShareParams(
-          text: buffer.toString(),
-          subject: 'Rekap ${group.name}',
-        ),
+        ShareParams(text: buffer.toString(), subject: 'Rekap ${group.name}'),
       );
     } catch (_) {
       messenger.showSnackBar(
@@ -938,7 +969,11 @@ class _ShareSection extends StatelessWidget {
         children: [
           Text(
             'Bagikan ringkasan iuran periode berjalan: status pembayaran anggota, saldo kas, dan tunggakan.',
-            style: TextStyle(fontSize: AppText.body, height: 1.4, color: t.textMuted),
+            style: TextStyle(
+              fontSize: AppText.body,
+              height: 1.4,
+              color: t.textMuted,
+            ),
           ),
           const SizedBox(height: 12),
           ElevatedButton.icon(
@@ -968,7 +1003,11 @@ class _AuditSection extends StatelessWidget {
           Text(
             'Catatan otomatis perubahan data kas: transaksi, tagihan, '
             'anggota, dan jadwal iuran.',
-            style: TextStyle(fontSize: AppText.body, height: 1.4, color: t.textMuted),
+            style: TextStyle(
+              fontSize: AppText.body,
+              height: 1.4,
+              color: t.textMuted,
+            ),
           ),
           const SizedBox(height: 12),
           OutlinedButton.icon(
@@ -994,9 +1033,7 @@ class _BackupSection extends StatelessWidget {
       title: 'Data & Cadangan',
       child: GestureDetector(
         onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => const BackupRestoreScreen(),
-          ),
+          MaterialPageRoute<void>(builder: (_) => const BackupRestoreScreen()),
         ),
         behavior: HitTestBehavior.opaque,
         child: Row(
@@ -1009,11 +1046,7 @@ class _BackupSection extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: t.border),
               ),
-              child: Icon(
-                Icons.backup_rounded,
-                size: 18,
-                color: t.accent,
-              ),
+              child: Icon(Icons.backup_rounded, size: 18, color: t.accent),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1030,16 +1063,15 @@ class _BackupSection extends StatelessWidget {
                   ),
                   Text(
                     'Cadangkan dan pulihkan seluruh data aplikasi',
-                    style: TextStyle(fontSize: AppText.label, color: t.textMuted),
+                    style: TextStyle(
+                      fontSize: AppText.label,
+                      color: t.textMuted,
+                    ),
                   ),
                 ],
               ),
             ),
-            Icon(
-              Icons.chevron_right_rounded,
-              size: 20,
-              color: t.textMuted,
-            ),
+            Icon(Icons.chevron_right_rounded, size: 20, color: t.textMuted),
           ],
         ),
       ),
@@ -1048,6 +1080,14 @@ class _BackupSection extends StatelessWidget {
 }
 
 String _weekdayName(int day) {
-  const names = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
+  const names = [
+    'Senin',
+    'Selasa',
+    'Rabu',
+    'Kamis',
+    'Jumat',
+    'Sabtu',
+    'Minggu',
+  ];
   return names[(day - 1).clamp(0, 6)];
 }

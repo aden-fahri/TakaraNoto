@@ -24,102 +24,6 @@ InputDecoration groupInputDecoration(
   );
 }
 
-/// Bottom sheet listing every group with the active one checked.
-Future<void> showGroupSwitcher(BuildContext context) async {
-  final provider = context.read<ZainNotoProvider>();
-
-  await showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: context.tokens.card,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-    ),
-    builder: (sheetContext) {
-      final t = sheetContext.tokens;
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: t.border,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Pilih Grup',
-                style: TextStyle(
-                  fontSize: AppText.subtitle,
-                  fontWeight: FontWeight.w700,
-                  color: t.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 8),
-              for (final group in provider.groups)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: GroupAvatar(
-                    name: group.name,
-                    colorHex: group.colorHex,
-                    iconIndex: group.iconIndex,
-                    size: 42,
-                  ),
-                  title: Text(
-                    group.name,
-                    style: TextStyle(
-                      fontSize: AppText.subtitle,
-                      fontWeight: FontWeight.w600,
-                      color: t.textPrimary,
-                    ),
-                  ),
-                  subtitle: group.description != null
-                      ? Text(
-                          group.description!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: AppText.label, color: t.textMuted),
-                        )
-                      : null,
-                  trailing: provider.selectedGroup?.id == group.id
-                      ? Icon(
-                          Icons.check_circle_rounded,
-                          color: t.accent,
-                          size: 20,
-                        )
-                      : null,
-                  onTap: () {
-                    provider.selectGroup(group);
-                    Navigator.pop(sheetContext);
-                  },
-                ),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(sheetContext);
-                    showCreateGroupDialog(context);
-                  },
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('Tambah Grup Baru'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    },
-  );
-}
-
 /// Dialog to create a new group; returns the created group if successful.
 Future<Group?> showCreateGroupDialog(BuildContext context) async {
   final provider = context.read<ZainNotoProvider>();
@@ -241,10 +145,12 @@ class _GroupFormDialog extends StatefulWidget {
 }
 
 class _GroupFormDialogState extends State<_GroupFormDialog> {
-  late final TextEditingController _nameCtrl =
-      TextEditingController(text: widget.initialName);
-  late final TextEditingController _descCtrl =
-      TextEditingController(text: widget.initialDescription);
+  late final TextEditingController _nameCtrl = TextEditingController(
+    text: widget.initialName,
+  );
+  late final TextEditingController _descCtrl = TextEditingController(
+    text: widget.initialDescription,
+  );
   late int _iconIndex = widget.initialIconIndex;
   late String _colorHex = widget.initialColorHex;
 
@@ -319,7 +225,10 @@ class _GroupFormDialogState extends State<_GroupFormDialog> {
                 Expanded(
                   child: Text(
                     'Tampilan grup di daftar & banner',
-                    style: TextStyle(fontSize: AppText.label, color: t.textMuted),
+                    style: TextStyle(
+                      fontSize: AppText.label,
+                      color: t.textMuted,
+                    ),
                   ),
                 ),
               ],
@@ -336,36 +245,49 @@ class _GroupFormDialogState extends State<_GroupFormDialog> {
             const SizedBox(height: 8),
             SizedBox(
               height: 40,
-              child: ListView.separated(
+              // ListView horizontal tidak mendukung intrinsik (AlertDialog
+              // membungkus konten dalam IntrinsicWidth); SingleChildScrollView
+              // punya viewport sendiri yang aman untuk intrinsik.
+              child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                itemCount: _groupColorOptions.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
-                itemBuilder: (_, i) {
-                  final hex = _groupColorOptions[i];
-                  final selected = _colorHex == hex;
-                  final color = _parseColor(hex);
-                  return GestureDetector(
-                    onTap: () => setState(() => _colorHex = hex),
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: color,
-                        shape: BoxShape.circle,
-                        border: selected
-                            ? Border.all(color: t.textPrimary, width: 2.5)
-                            : null,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (var i = 0; i < _groupColorOptions.length; i++)
+                      if (i > 0) const SizedBox(width: 8),
+                    for (final hex in _groupColorOptions)
+                      Builder(
+                        builder: (context) {
+                          final selected = _colorHex == hex;
+                          final color = _parseColor(hex);
+                          return GestureDetector(
+                            onTap: () => setState(() => _colorHex = hex),
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: color,
+                                shape: BoxShape.circle,
+                                border: selected
+                                    ? Border.all(
+                                        color: t.textPrimary,
+                                        width: 2.5,
+                                      )
+                                    : null,
+                              ),
+                              child: selected
+                                  ? const Icon(
+                                      Icons.check_rounded,
+                                      color: Colors.white,
+                                      size: 16,
+                                    )
+                                  : null,
+                            ),
+                          );
+                        },
                       ),
-                      child: selected
-                          ? const Icon(
-                              Icons.check_rounded,
-                              color: Colors.white,
-                              size: 16,
-                            )
-                          : null,
-                    ),
-                  );
-                },
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 14),
@@ -378,50 +300,53 @@ class _GroupFormDialogState extends State<_GroupFormDialog> {
               ),
             ),
             const SizedBox(height: 8),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 6,
-                mainAxisSpacing: 8,
-                crossAxisSpacing: 8,
-              ),
-              itemCount: groupIconOptions.length,
-              itemBuilder: (_, i) {
-                final icon = groupIconOptions[i];
-                final selected = _iconIndex == i;
-                return GestureDetector(
-                  onTap: () => setState(() => _iconIndex = i),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? t.accent.withValues(alpha: 0.15)
-                          : t.softSurface,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: selected ? t.accent : Colors.transparent,
-                        width: 2,
-                      ),
-                    ),
-                    child: icon == null
-                        ? Center(
-                            child: Text(
-                              'A',
-                              style: TextStyle(
-                                fontSize: AppText.subtitle,
-                                fontWeight: FontWeight.w800,
-                                color: selected ? t.accent : t.textMuted,
-                              ),
+            // GridView (sliver) tidak mendukung intrinsik; Wrap menampilkan
+            // pilihan ikon 6-per-baris tanpa viewport.
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (var i = 0; i < groupIconOptions.length; i++)
+                  Builder(
+                    builder: (context) {
+                      final icon = groupIconOptions[i];
+                      final selected = _iconIndex == i;
+                      return GestureDetector(
+                        onTap: () => setState(() => _iconIndex = i),
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: selected
+                                ? t.accent.withValues(alpha: 0.15)
+                                : t.softSurface,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: selected ? t.accent : Colors.transparent,
+                              width: 2,
                             ),
-                          )
-                        : Icon(
-                            icon,
-                            size: 18,
-                            color: selected ? t.accent : t.textMuted,
                           ),
+                          child: icon == null
+                              ? Center(
+                                  child: Text(
+                                    'A',
+                                    style: TextStyle(
+                                      fontSize: AppText.subtitle,
+                                      fontWeight: FontWeight.w800,
+                                      color: selected ? t.accent : t.textMuted,
+                                    ),
+                                  ),
+                                )
+                              : Icon(
+                                  icon,
+                                  size: 18,
+                                  color: selected ? t.accent : t.textMuted,
+                                ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
+              ],
             ),
           ],
         ),
@@ -431,10 +356,7 @@ class _GroupFormDialogState extends State<_GroupFormDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Batal'),
         ),
-        ElevatedButton(
-          onPressed: _submit,
-          child: const Text('Simpan'),
-        ),
+        ElevatedButton(onPressed: _submit, child: const Text('Simpan')),
       ],
     );
   }
