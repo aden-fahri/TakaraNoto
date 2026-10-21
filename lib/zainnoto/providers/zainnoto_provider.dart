@@ -13,8 +13,8 @@ import '../utils/dates.dart';
 /// after every write so derived statuses stay in sync.
 class ZainNotoProvider extends ChangeNotifier {
   ZainNotoProvider({ZainNotoRepository? repository, Uuid? uuid})
-      : _repository = repository ?? ZainNotoRepository(),
-        _uuid = uuid ?? const Uuid();
+    : _repository = repository ?? ZainNotoRepository(),
+      _uuid = uuid ?? const Uuid();
 
   final ZainNotoRepository _repository;
   final Uuid _uuid;
@@ -31,6 +31,7 @@ class ZainNotoProvider extends ChangeNotifier {
   GroupSummary? _summary;
   Period? _currentPeriod;
   List<PeriodMemberRow> _periodRows = const [];
+  List<PeriodMemberRow> _currentPeriodRows = const [];
   List<Period> _periods = const [];
   List<Member> _members = const [];
   List<Member> _allMembers = const [];
@@ -52,6 +53,10 @@ class ZainNotoProvider extends ChangeNotifier {
   GroupSummary? get summary => _summary;
   Period? get currentPeriod => _currentPeriod;
   List<PeriodMemberRow> get periodRows => _periodRows;
+
+  /// Baris tagihan periode berjalan — selalu mengikuti [currentPeriod],
+  /// bukan periode yang dipilih pengguna di tab Iuran.
+  List<PeriodMemberRow> get currentPeriodRows => _currentPeriodRows;
   List<Period> get periods => _periods;
   List<Member> get members => _members;
   List<Member> get allMembers => _allMembers;
@@ -78,6 +83,41 @@ class ZainNotoProvider extends ChangeNotifier {
     var total = 0;
     for (final tx in _transactions) {
       if (tx.type == TxType.expense) total += tx.amount;
+    }
+    return total;
+  }
+
+  /// Iuran terkumpul periode berjalan + pemasukan lain pada rentang tanggal
+  /// periode itu. Tanpa periode → total semua waktu.
+  int get incomeThisPeriod {
+    final period = _currentPeriod;
+    if (period == null) return totalIncome;
+    var total = 0;
+    for (final row in _currentPeriodRows) {
+      if (!row.waived) total += row.paid;
+    }
+    for (final tx in _transactions) {
+      if (tx.type == TxType.otherIncome &&
+          tx.date.compareTo(period.startDate) >= 0 &&
+          tx.date.compareTo(period.endDate) <= 0) {
+        total += tx.amount;
+      }
+    }
+    return total;
+  }
+
+  /// Pengeluaran pada rentang tanggal periode berjalan; tanpa periode →
+  /// total semua waktu.
+  int get expenseThisPeriod {
+    final period = _currentPeriod;
+    if (period == null) return totalExpense;
+    var total = 0;
+    for (final tx in _transactions) {
+      if (tx.type == TxType.expense &&
+          tx.date.compareTo(period.startDate) >= 0 &&
+          tx.date.compareTo(period.endDate) <= 0) {
+        total += tx.amount;
+      }
     }
     return total;
   }
@@ -156,8 +196,10 @@ class ZainNotoProvider extends ChangeNotifier {
     final currentFuture = _repository.getCurrentPeriod(groupId);
     final periodsFuture = _repository.getPeriods(groupId);
     final membersFuture = _repository.getMembers(groupId);
-    final allMembersFuture =
-        _repository.getMembers(groupId, includeInactive: true);
+    final allMembersFuture = _repository.getMembers(
+      groupId,
+      includeInactive: true,
+    );
     final transactionsFuture = _repository.getTransactions(groupId);
     final plansFuture = _repository.getDuesPlans(groupId);
     final overdueFuture = _repository.getOverdueMembers(groupId: groupId);
@@ -181,8 +223,15 @@ class ZainNotoProvider extends ChangeNotifier {
     }
     _selectedPeriod = keepSelected ?? _currentPeriod;
     final period = _selectedPeriod;
-    _periodRows =
-        period == null ? const [] : await _repository.getPeriodRows(period.id);
+    _periodRows = period == null
+        ? const []
+        : await _repository.getPeriodRows(period.id);
+    final current = _currentPeriod;
+    _currentPeriodRows = current == null
+        ? const []
+        : (period != null && period.id == current.id)
+        ? _periodRows
+        : await _repository.getPeriodRows(current.id);
     _matrixStale = true;
   }
 
@@ -190,6 +239,7 @@ class ZainNotoProvider extends ChangeNotifier {
     _summary = null;
     _currentPeriod = null;
     _periodRows = const [];
+    _currentPeriodRows = const [];
     _periods = const [];
     _members = const [];
     _allMembers = const [];
@@ -217,7 +267,10 @@ class ZainNotoProvider extends ChangeNotifier {
         colorHex: colorHex,
       );
       _groups = await _repository.getGroups();
-      final created = _groups.firstWhere((g) => g.id == id, orElse: () => _groups.first);
+      final created = _groups.firstWhere(
+        (g) => g.id == id,
+        orElse: () => _groups.first,
+      );
       _selectedGroup = created;
       await _loadGroupData(created.id);
       notifyListeners();
@@ -467,8 +520,7 @@ class ZainNotoProvider extends ChangeNotifier {
     final group = _selectedGroup;
     if (group == null) return 0;
     try {
-      final created =
-          await _repository.generatePeriods(groupId: group.id);
+      final created = await _repository.generatePeriods(groupId: group.id);
       await refreshGroup();
       return created;
     } catch (error) {
@@ -517,8 +569,6 @@ class ZainNotoProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<List<AllocationDetail>> allocationDetailsFor(
-    String transactionId,
-  ) =>
+  Future<List<AllocationDetail>> allocationDetailsFor(String transactionId) =>
       _repository.getAllocationDetails(transactionId);
 }

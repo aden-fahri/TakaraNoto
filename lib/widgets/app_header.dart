@@ -13,6 +13,7 @@ class AppHeader extends StatelessWidget {
     this.topRow,
     this.onPaletteTap,
     this.height,
+    this.bottomPadding = 24,
     this.child,
   });
 
@@ -21,6 +22,9 @@ class AppHeader extends StatelessWidget {
   final Widget? topRow;
   final VoidCallback? onPaletteTap;
   final double? height;
+
+  /// Padding bawah: mockup ZN-Grup memakai 26, varian lain 24.
+  final double bottomPadding;
   final Widget? child;
 
   @override
@@ -38,7 +42,7 @@ class AppHeader extends StatelessWidget {
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
+          padding: EdgeInsets.fromLTRB(16, 18, 16, bottomPadding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -53,10 +57,19 @@ class AppHeader extends StatelessWidget {
                       leading!,
                       const SizedBox(width: 8),
                     ],
-                    Expanded(child: _HomeTitleBlock(title: title, topRow: topRow!)),
+                    Expanded(
+                      child: _HomeTitleBlock(title: title, topRow: topRow!),
+                    ),
                     _PaletteButton(onTap: onPaletteTap),
                     const SizedBox(width: 8),
-                    const ModeSwitchButton(),
+                    // Cap 170 ≈ lebar alami tombol pada textScale 1.0
+                    // (320dp × 1.3: tanpa cap, tombol 206px mendesak title
+                    // block sampai chip grup overflow 18px). Di dalam, FittedBox
+                    // mengecilkan label bila kena cap.
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 170),
+                      child: const ModeSwitchButton(),
+                    ),
                   ],
                 )
               else ...[
@@ -84,10 +97,7 @@ class AppHeader extends StatelessWidget {
                   ),
                 ),
               ],
-              if (child != null) ...[
-                const SizedBox(height: 12),
-                child!,
-              ],
+              if (child != null) ...[const SizedBox(height: 12), child!],
             ],
           ),
         ),
@@ -147,7 +157,11 @@ class _PaletteButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
           ),
-          child: const Icon(Icons.palette_outlined, size: 20, color: Colors.white),
+          child: const Icon(
+            Icons.palette_outlined,
+            size: 20,
+            color: Colors.white,
+          ),
         ),
       ),
     );

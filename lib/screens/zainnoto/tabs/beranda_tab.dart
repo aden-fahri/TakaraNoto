@@ -2,20 +2,73 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../theme/app_tokens.dart';
-import '../../../widgets/decorative_header_circles.dart';
-import '../../../widgets/mode_switch_button.dart';
+import '../../../widgets/app_header.dart';
+import '../../../widgets/list_row.dart';
 import '../../../widgets/notched_card.dart';
+import '../../../widgets/palette_sheet.dart';
+import '../../../widgets/status_badge.dart';
+import '../../../zainnoto/logic/dues_status.dart';
 import '../../../zainnoto/models/entities.dart';
 import '../../../zainnoto/providers/zainnoto_provider.dart';
-import '../../../zainnoto/utils/dates.dart';
 import '../../../zainnoto/utils/format.dart';
-import '../widgets/group_avatar.dart';
 import '../widgets/group_management_sheet.dart';
 import '../widgets/group_sheets.dart';
 import '../widgets/transaction_form_sheet.dart';
 
-/// Beranda tab: Redesigned header, modern wallet card (serasi dengan TakaraNoto),
-/// live status iuran & tunggakan, quick actions, and direct FAB catat pengeluaran/belanja.
+/// Ukuran judul kartu (`.h2` di mockup: 15/600).
+const double _h2 = 15;
+
+const List<String> _shortMonths = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'Mei',
+  'Jun',
+  'Jul',
+  'Agu',
+  'Sep',
+  'Okt',
+  'Nov',
+  'Des',
+];
+
+/// `2026-10-01` → `Okt 2026` (chip bulan di takik kartu saldo).
+String _monthChipLabel(String iso) {
+  try {
+    final p = iso.split('-');
+    return '${_shortMonths[int.parse(p[1]) - 1]} ${p[0]}';
+  } catch (_) {
+    return iso;
+  }
+}
+
+/// `2026-10-10` → `10 Okt` (baris jatuh tempo kartu iuran).
+String _dueLabel(String iso) {
+  try {
+    final p = iso.split('-');
+    return '${int.parse(p[2])} ${_shortMonths[int.parse(p[1]) - 1]}';
+  } catch (_) {
+    return iso;
+  }
+}
+
+/// `2026-10-10` → `Hari ini` / `Kemarin` / `10 Oktober 2026`.
+String _dateLabel(String iso) {
+  final date = DateTime.tryParse(iso);
+  if (date != null) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(date.year, date.month, date.day);
+    if (day == today) return 'Hari ini';
+    if (day == today.subtract(const Duration(days: 1))) return 'Kemarin';
+  }
+  return formatTanggal(iso);
+}
+
+/// Beranda ZainNoto dari `docs/mockup/ZN-Beranda.dc.html`: header 172 + chip
+/// grup, kartu saldo bertakik, 4 tile tindakan, kartu iuran, tunggakan,
+/// dan aktivitas terbaru.
 class BerandaTab extends StatelessWidget {
   const BerandaTab({super.key, required this.onGoToTab});
 
@@ -26,101 +79,135 @@ class BerandaTab extends StatelessWidget {
     final provider = context.watch<ZainNotoProvider>();
     final t = context.tokens;
     final group = provider.selectedGroup;
+    final hasGroup = provider.groups.isNotEmpty;
+
+    final header = AppHeader(
+      height: 172,
+      title: 'ZainNoto',
+      onPaletteTap: () => showPaletteSheet(context),
+      topRow: _GroupChip(
+        name: group?.name ?? 'Belum ada grup',
+        onTap: () => showGroupSwitcher(context),
+      ),
+    );
+
+    if (!hasGroup) {
+      return Scaffold(
+        backgroundColor: t.pageBg,
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            header,
+            if (provider.isRefreshing)
+              LinearProgressIndicator(
+                minHeight: 2,
+                color: t.accent,
+                backgroundColor: Colors.transparent,
+              ),
+            Expanded(
+              child: provider.isLoading
+                  ? Center(child: CircularProgressIndicator(color: t.accent))
+                  : _EmptyGroups(
+                      error: provider.error,
+                      onCreate: () => showCreateGroupDialog(context),
+                      onRetry: provider.loadGroups,
+                    ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      floatingActionButton: group != null
-          ? FloatingActionButton.extended(
-              heroTag: 'zainnoto-beranda-fab',
-              onPressed: () => TransactionFormSheet.show(context),
-              backgroundColor: t.accent,
-              foregroundColor: t.onAccent,
-              icon: const Icon(Icons.add_shopping_cart_rounded, size: 20),
-              label: const Text(
-                'Catat Belanja / Kas Keluar',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: AppText.bodyLarge),
-              ),
-              elevation: 4,
-            )
-          : null,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      backgroundColor: t.pageBg,
+      body: Stack(
         children: [
-          _Banner(
-            group: group,
-            onSwitch: () => showGroupSwitcher(context),
-            onManageGroup: () => GroupManagementSheet.show(context),
-          ),
-          if (provider.isRefreshing)
-            LinearProgressIndicator(
-              minHeight: 2,
-              color: t.accent,
-              backgroundColor: Colors.transparent,
-            ),
-          Expanded(
-            child: provider.isLoading && provider.groups.isEmpty
-                ? Center(child: CircularProgressIndicator(color: t.accent))
-                : provider.groups.isEmpty
-                    ? _EmptyGroups(
-                        error: provider.error,
-                        onCreate: () => showCreateGroupDialog(context),
-                        onRetry: provider.loadGroups,
-                      )
-                    : RefreshIndicator(
+          // ── Header (tinggi 172, kartu saldo menimpa) ────────────────────────
+          Positioned(top: 0, left: 0, right: 0, child: header),
+
+          // ── Konten: mulai di top 96, terpotong di batas itu ─────────────────
+          Positioned(
+            top: 96,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: ClipRect(
+              child: RefreshIndicator(
+                color: t.accent,
+                onRefresh: provider.refreshGroup,
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                  children: [
+                    if (provider.isRefreshing)
+                      LinearProgressIndicator(
+                        minHeight: 2,
                         color: t.accent,
-                        onRefresh: provider.refreshGroup,
-                        child: ListView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 110),
-                          children: [
-                            // Modern Wallet Card untuk Kas Kelompok
-                            _ModernGroupWalletCard(provider: provider),
-                            const SizedBox(height: 14),
-
-                            // Bento Stats: Keaktifan & Tunggakan
-                            IntrinsicHeight(
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Expanded(
-                                    child: _ActivityCard(
-                                      provider: provider,
-                                      onTap: () => onGoToTab(1),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: _OverdueCard(
-                                      overdueTotal:
-                                          provider.summary?.overdueTotal ?? 0,
-                                      overdueCount:
-                                          provider.summary?.overdueMemberCount ?? 0,
-                                      onTap: () => onGoToTab(1),
-                                      onShowList: () =>
-                                          _showOverdueSheet(context, provider),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-
-                            // Quick Action Shortcuts
-                            _QuickActions(
-                              onGoToTab: onGoToTab,
-                              onOpenSettings: () => GroupManagementSheet.show(context),
-                            ),
-
-                            if (provider.error != null) ...[
-                              const SizedBox(height: 14),
-                              _ErrorCard(
-                                message: provider.error!,
-                                onRetry: provider.refreshGroup,
-                              ),
-                            ],
-                          ],
-                        ),
+                        backgroundColor: Colors.transparent,
                       ),
+                    _BalanceCard(provider: provider),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        _ActionTile(
+                          tileKey: const ValueKey('zn-tile-anggota'),
+                          icon: Icons.groups_rounded,
+                          label: 'Anggota',
+                          boxColor: t.softSurface,
+                          iconColor: t.accent,
+                          onTap: () => GroupManagementSheet.show(context),
+                        ),
+                        const SizedBox(width: 10),
+                        _ActionTile(
+                          tileKey: const ValueKey('zn-tile-setor'),
+                          icon: Icons.north_rounded,
+                          label: 'Setor kas',
+                          boxColor: t.lunasBg,
+                          iconColor: t.income,
+                          onTap: () => onGoToTab(1),
+                        ),
+                        const SizedBox(width: 10),
+                        _ActionTile(
+                          tileKey: const ValueKey('zn-tile-keluar'),
+                          icon: Icons.south_rounded,
+                          label: 'Pengeluaran',
+                          boxColor: t.telatBg,
+                          iconColor: t.expense,
+                          onTap: () => TransactionFormSheet.show(context),
+                        ),
+                        const SizedBox(width: 10),
+                        _ActionTile(
+                          tileKey: const ValueKey('zn-tile-pengaturan'),
+                          icon: Icons.tune_rounded,
+                          label: 'Pengaturan',
+                          boxColor: t.cicilBg,
+                          iconColor: t.cicilFg,
+                          onTap: () => GroupManagementSheet.show(context),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    if (provider.currentPeriod != null) ...[
+                      _IuranCard(provider: provider),
+                      const SizedBox(height: 16),
+                    ],
+                    _TunggakanCard(provider: provider),
+                    const SizedBox(height: 16),
+                    _AktivitasCard(
+                      provider: provider,
+                      onSeeAll: () => onGoToTab(2),
+                    ),
+                    if (provider.error != null) ...[
+                      const SizedBox(height: 16),
+                      _ErrorCard(
+                        message: provider.error!,
+                        onRetry: provider.refreshGroup,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -128,300 +215,298 @@ class BerandaTab extends StatelessWidget {
   }
 }
 
-// ─── Header Banner ────────────────────────────────────────────────────────────
-class _Banner extends StatelessWidget {
-  const _Banner({
-    required this.group,
-    required this.onSwitch,
-    required this.onManageGroup,
-  });
+// ─── Chip grup di header ───────────────────────────────────────────────────────
+class _GroupChip extends StatelessWidget {
+  const _GroupChip({required this.name, required this.onTap});
 
-  final Group? group;
-  final VoidCallback onSwitch;
-  final VoidCallback onManageGroup;
+  final String name;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final t = context.tokens;
-    final name = group?.name ?? 'Belum ada grup';
-
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: t.headerBg,
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(30)),
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        key: const ValueKey('zn-group-chip'),
+        height: 24,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: t.chip,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              key: const ValueKey('zn-group-chip-dot'),
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(
+                color: t.persik,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: AlignmentDirectional.centerStart,
+                child: Text(
+                  name,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: AppText.label,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Icon(
+              Icons.expand_more_rounded,
+              size: 12,
+              color: Colors.white,
+            ),
+          ],
+        ),
       ),
-      child: SafeArea(
-        bottom: false,
+    );
+  }
+}
+
+// ─── Kartu saldo bertakik ─────────────────────────────────────────────────────
+class _BalanceCard extends StatelessWidget {
+  const _BalanceCard({required this.provider});
+
+  final ZainNotoProvider provider;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final period = provider.currentPeriod;
+    final balance = provider.summary?.balance ?? 0;
+    final members = provider.members.length;
+    final plan = provider.duesPlans.isNotEmpty
+        ? provider.duesPlans.first
+        : null;
+    final freqLabel = plan?.frequency == DuesFrequency.weekly
+        ? 'minggu'
+        : 'bulan';
+
+    return NotchedCard(
+      color: t.persik,
+      borderColor: null,
+      borderWidth: 0,
+      child: SizedBox(
+        height: 214,
         child: Stack(
           children: [
-            const DecorativeHeaderCircles(),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+            // Chip bulan di dalam takik (kanan 10, atas 6, tinggi 32)
+            if (period != null)
+              Positioned(
+                right: 10,
+                top: 6,
+                child: Container(
+                  key: const ValueKey('zn-month-chip'),
+                  height: 32,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: t.chip,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _monthChipLabel(period.startDate),
+                        style: const TextStyle(
+                          fontSize: AppText.body,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      const Icon(
+                        Icons.expand_more_rounded,
+                        size: 12,
+                        color: Colors.white,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+            // Label + saldo (kiri 20, atas 18)
+            Positioned(
+              left: 20,
+              right: 20,
+              top: 18,
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                children: [
-                  if (group != null)
-                    GroupAvatar(
-                      name: group!.name,
-                      colorHex: group!.colorHex,
-                      iconIndex: group!.iconIndex,
-                      size: 46,
-                    )
-                  else
-                    Container(
-                      width: 46,
-                      height: 46,
-                      decoration: BoxDecoration(
-                        color: t.headerSurface,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: t.headerBorder, width: 1.5),
-                      ),
-                      child: Icon(
-                        Icons.groups_rounded,
-                        color: t.headerFg,
-                        size: 24,
-                      ),
-                    ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Mode Kelompok · Kas Bersama',
-                          style: TextStyle(
-                            fontSize: AppText.label,
-                            fontWeight: FontWeight.w500,
-                            color: t.headerMuted,
-                          ),
-                        ),
-                        Text(
-                          name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: AppText.headline,
-                            fontWeight: FontWeight.w800,
-                            color: t.headerFg,
-                          ),
-                        ),
-                      ],
+                  Text(
+                    'Saldo kas bersama',
+                    style: TextStyle(
+                      fontSize: AppText.body,
+                      fontWeight: FontWeight.w500,
+                      color: t.onPersik.withValues(alpha: 0.8),
                     ),
                   ),
-                  const ModeSwitchButton(),
-                  const SizedBox(width: 8),
-                  if (group != null) ...[
-                    Tooltip(
-                      message: 'Kelola grup & anggota',
-                      child: GestureDetector(
-                        onTap: onManageGroup,
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: t.headerSurface,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: t.headerBorder, width: 1),
-                          ),
-                          child: Icon(
-                            Icons.settings_rounded,
-                            color: t.headerFg,
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  Tooltip(
-                    message: 'Ganti grup',
-                    child: GestureDetector(
-                      onTap: onSwitch,
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: t.headerSurface,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: t.headerBorder, width: 1),
-                        ),
-                        child: Icon(
-                          Icons.swap_horiz_rounded,
-                          color: t.headerFg,
-                          size: 22,
-                        ),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      formatRupiah(balance),
+                      style: TextStyle(
+                        fontSize: AppText.stat,
+                        fontWeight: FontWeight.w600,
+                        height: 1.3,
+                        color: t.onPersik,
                       ),
                     ),
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+
+            // Dua kotak masuk/keluar (kiri-kanan 20, atas 92)
+            Positioned(
+              left: 20,
+              right: 20,
+              top: 92,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _FlowBox(
+                      label: 'Masuk bulan ini',
+                      value: formatRupiah(provider.incomeThisPeriod),
+                      valueColor: t.incomeOnPersik,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _FlowBox(
+                      label: 'Keluar bulan ini',
+                      value: formatRupiah(provider.expenseThisPeriod),
+                      valueColor: t.expenseOnPersik,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Ringkasan anggota & iuran (kiri-kanan 20, atas 164, tinggi 36)
+            Positioned(
+              left: 20,
+              right: 20,
+              top: 164,
+              height: 36,
+              child: Container(
+                padding: const EdgeInsets.only(top: 8),
+                decoration: BoxDecoration(
+                  border: Border(
+                    top: BorderSide(color: t.onPersik.withValues(alpha: 0.18)),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Text(
+                          '$members anggota aktif',
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontSize: AppText.body,
+                            fontWeight: FontWeight.w500,
+                            color: t.onPersik,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: AlignmentDirectional.centerEnd,
+                        child: Text(
+                          plan == null
+                              ? 'Belum ada rencana iuran'
+                              : 'Iuran ${formatRupiah(plan.amount)} / $freqLabel',
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontSize: AppText.bodyLarge,
+                            fontWeight: FontWeight.w600,
+                            color: t.onPersik,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
-    ),
-  ),
-);
+      ),
+    );
   }
 }
 
-// ─── Modern Group Wallet Card ─────────────────────────────────────────────────
-class _ModernGroupWalletCard extends StatelessWidget {
-  const _ModernGroupWalletCard({required this.provider});
+/// Kotak masuk/keluar di kartu saldo: label 11 + nilai 14 (mockup: 8% gelap).
+class _FlowBox extends StatelessWidget {
+  const _FlowBox({
+    required this.label,
+    required this.value,
+    required this.valueColor,
+  });
 
-  final ZainNotoProvider provider;
+  final String label;
+  final String value;
+  final Color valueColor;
 
   @override
   Widget build(BuildContext context) {
     final t = context.tokens;
-    final balance = provider.summary?.balance ?? 0;
-    final totalIn = provider.totalIncome;
-    final totalOut = provider.totalExpense;
-    final period = provider.currentPeriod;
-
-    return NotchedCard(
-      color: t.card,
-      borderColor: t.border,
-      borderWidth: 1.2,
-      shadowColor: Colors.black.withValues(alpha: 0.05),
-      shadowBlur: 14,
-      shadowOffset: const Offset(0, 4),
-      child: Stack(
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: t.onPersik.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Main Card Contents
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.account_balance_wallet_rounded,
-                      size: 16,
-                      color: t.accent,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'DOMPET KAS KELOMPOK',
-                      style: TextStyle(
-                        fontSize: AppText.label,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.1,
-                        color: t.textPrimary,
-                      ),
-                    ),
-                    if (period != null) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: t.softSurface,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: t.border),
-                        ),
-                        child: Text(
-                          period.label,
-                          style: TextStyle(
-                            fontSize: AppText.micro,
-                            fontWeight: FontWeight.w600,
-                            color: t.textMuted,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 14),
-
-                // Saldo Kas Utama (Besar)
-                Text(
-                  'Saldo Kas Bersama',
-                  style: TextStyle(
-                    fontSize: AppText.body,
-                    fontWeight: FontWeight.w500,
-                    color: t.textMuted,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    formatRupiah(balance),
-                    style: TextStyle(
-                      fontSize: AppText.stat,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.5,
-                      color: balance >= 0 ? t.textPrimary : t.expense,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                // Kas Masuk & Kas Keluar Pills
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: t.income.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: t.income.withValues(alpha: 0.15)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.arrow_downward_rounded,
-                            size: 13,
-                            color: t.income,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Masuk: ${formatRupiah(totalIn)}',
-                            style: TextStyle(
-                              fontSize: AppText.label,
-                              fontWeight: FontWeight.w700,
-                              color: t.income,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: t.expense.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: t.expense.withValues(alpha: 0.15)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.arrow_upward_rounded,
-                            size: 13,
-                            color: t.expense,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Keluar: ${formatRupiah(totalOut)}',
-                            style: TextStyle(
-                              fontSize: AppText.label,
-                              fontWeight: FontWeight.w700,
-                              color: t.expense,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(
+              label,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: AppText.label,
+                fontWeight: FontWeight.w500,
+                color: t.onPersik,
+              ),
+            ),
+          ),
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(
+              value,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: AppText.subtitle,
+                fontWeight: FontWeight.w600,
+                color: valueColor,
+              ),
             ),
           ),
         ],
@@ -430,300 +515,445 @@ class _ModernGroupWalletCard extends StatelessWidget {
   }
 }
 
-// ─── Bento Cards ──────────────────────────────────────────────────────────────
-class _ActivityCard extends StatelessWidget {
-  const _ActivityCard({required this.provider, required this.onTap});
-
-  final ZainNotoProvider provider;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = context.tokens;
-    final summary = provider.summary;
-    final paid = summary?.currentPeriodPaidCount ?? 0;
-    final total = summary?.currentPeriodTotalCount ?? 0;
-    final pct = summary?.activityPct ?? 0;
-
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: t.card,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: t.border),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _IconChip(icon: Icons.checklist_rounded, color: t.accent),
-                Icon(Icons.chevron_right_rounded, size: 18, color: t.textMuted),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Iuran Periode Ini',
-              style: TextStyle(
-                fontSize: AppText.label,
-                fontWeight: FontWeight.w600,
-                color: t.textMuted,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              total == 0 ? '—' : '$paid / $total lunas',
-              style: TextStyle(
-                fontSize: AppText.title,
-                fontWeight: FontWeight.w800,
-                color: t.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              provider.currentPeriod?.label ?? 'Belum ada periode',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: AppText.label, color: t.textMuted),
-            ),
-            const SizedBox(height: 10),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(3),
-              child: LinearProgressIndicator(
-                value: total == 0 ? 0 : pct / 100,
-                minHeight: 5,
-                color: t.income,
-                backgroundColor: t.border,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _OverdueCard extends StatelessWidget {
-  const _OverdueCard({
-    required this.overdueTotal,
-    required this.overdueCount,
-    required this.onTap,
-    required this.onShowList,
-  });
-
-  final int overdueTotal;
-  final int overdueCount;
-  final VoidCallback onTap;
-  final VoidCallback onShowList;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = context.tokens;
-    final hasOverdue = overdueTotal > 0;
-
-    return GestureDetector(
-      onTap: hasOverdue ? onShowList : onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: t.card,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: t.border),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _IconChip(
-                  icon: Icons.error_outline_rounded,
-                  color: hasOverdue ? t.expense : t.income,
-                ),
-                if (hasOverdue && overdueCount > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: t.expense.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '$overdueCount orang',
-                      style: TextStyle(
-                        fontSize: AppText.micro,
-                        fontWeight: FontWeight.w700,
-                        color: t.expense,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Tunggakan',
-              style: TextStyle(
-                fontSize: AppText.label,
-                fontWeight: FontWeight.w600,
-                color: t.textMuted,
-              ),
-            ),
-            const SizedBox(height: 4),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                formatRupiah(overdueTotal),
-                style: TextStyle(
-                  fontSize: AppText.title,
-                  fontWeight: FontWeight.w800,
-                  color: hasOverdue ? t.expense : t.income,
-                ),
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              hasOverdue ? 'Ketuk untuk rincian' : 'Semua iuran lancar',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: AppText.label,
-                color: hasOverdue ? t.expense : t.textMuted,
-                fontWeight: hasOverdue ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _IconChip extends StatelessWidget {
-  const _IconChip({required this.icon, required this.color});
-
-  final IconData icon;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 34,
-      height: 34,
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(11),
-      ),
-      child: Icon(icon, size: 18, color: color),
-    );
-  }
-}
-
-// ─── Quick Actions ────────────────────────────────────────────────────────────
-class _QuickActions extends StatelessWidget {
-  const _QuickActions({
-    required this.onGoToTab,
-    required this.onOpenSettings,
-  });
-
-  final ValueChanged<int> onGoToTab;
-  final VoidCallback onOpenSettings;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _QuickAction(
-            icon: Icons.checklist_rounded,
-            label: 'Catat Iuran',
-            onTap: () => onGoToTab(1),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _QuickAction(
-            icon: Icons.receipt_long_rounded,
-            label: 'Transaksi',
-            onTap: () => onGoToTab(2),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _QuickAction(
-            icon: Icons.analytics_rounded,
-            label: 'Statistik',
-            onTap: () => onGoToTab(3),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _QuickAction(
-            icon: Icons.settings_rounded,
-            label: 'Kelola',
-            onTap: onOpenSettings,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _QuickAction extends StatelessWidget {
-  const _QuickAction({
+// ─── Tile tindakan (4 kotak persegi) ──────────────────────────────────────────
+class _ActionTile extends StatelessWidget {
+  const _ActionTile({
+    required this.tileKey,
     required this.icon,
     required this.label,
+    required this.boxColor,
+    required this.iconColor,
     required this.onTap,
   });
 
+  final Key tileKey;
   final IconData icon;
   final String label;
+  final Color boxColor;
+  final Color iconColor;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final t = context.tokens;
-
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
-        decoration: BoxDecoration(
-          color: t.card,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: t.border),
-        ),
-        child: Column(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: t.softSurface,
-                borderRadius: BorderRadius.circular(12),
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          key: tileKey,
+          height: 92,
+          decoration: BoxDecoration(
+            color: t.card,
+            border: Border.all(color: t.border),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: boxColor,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, size: 22, color: iconColor),
               ),
-              child: Icon(icon, size: 18, color: t.accent),
+              const SizedBox(height: 8),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: AppText.label,
+                    fontWeight: FontWeight.w600,
+                    color: t.textPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Kartu iuran periode berjalan ─────────────────────────────────────────────
+class _IuranCard extends StatelessWidget {
+  const _IuranCard({required this.provider});
+
+  final ZainNotoProvider provider;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final period = provider.currentPeriod!;
+    var lunas = 0;
+    var cicil = 0;
+    var telat = 0;
+    var belumBayar = 0;
+    var paidSum = 0;
+    var dueSum = 0;
+    for (final row in provider.currentPeriodRows) {
+      if (row.waived) continue;
+      paidSum += row.paid;
+      dueSum += row.amountDue;
+      if (row.status == ChargeStatus.paid) {
+        lunas++;
+      } else if (row.status == ChargeStatus.partial) {
+        cicil++;
+      } else if (row.isOverdue(DateTime.now())) {
+        telat++;
+      } else {
+        belumBayar++;
+      }
+    }
+    final parts = <String>[
+      if (lunas > 0) '$lunas lunas',
+      if (cicil > 0) '$cicil cicil',
+      if (telat > 0) '$telat telat',
+      if (belumBayar > 0) '$belumBayar belum bayar',
+    ];
+    final statuses = parts.isEmpty ? 'Belum ada pembayaran' : parts.join(' · ');
+    final ratio = dueSum == 0
+        ? 0.0
+        : (paidSum / dueSum).clamp(0.0, 1.0).toDouble();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: t.card,
+        border: Border.all(color: t.border),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    'Iuran ${period.label}',
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontSize: _h2,
+                      fontWeight: FontWeight.w600,
+                      color: t.textPrimary,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: Text(
+                    'Jatuh tempo ${_dueLabel(period.dueDate)}',
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontSize: AppText.body,
+                      color: t.textMuted,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    statuses,
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontSize: AppText.bodyLarge,
+                      fontWeight: FontWeight.w500,
+                      color: t.textPrimary,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: Text(
+                    '${formatRupiah(paidSum)} / '
+                    '${formatRupiah(dueSum).replaceFirst('Rp ', '')}',
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontSize: AppText.body,
+                      color: t.textMuted,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            key: const ValueKey('zn-iuran-bar'),
+            height: 10,
+            decoration: BoxDecoration(
+              color: t.softSurface,
+              borderRadius: BorderRadius.circular(5),
             ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: AppText.label,
-                fontWeight: FontWeight.w600,
-                color: t.textPrimary,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(5),
+              child: FractionallySizedBox(
+                alignment: Alignment.topLeft,
+                widthFactor: ratio,
+                heightFactor: 1,
+                child: Container(color: t.income),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Kartu tunggakan ──────────────────────────────────────────────────────────
+class _TunggakanCard extends StatelessWidget {
+  const _TunggakanCard({required this.provider});
+
+  final ZainNotoProvider provider;
+
+  String _subtitleFor(String memberId) {
+    for (final row in provider.currentPeriodRows) {
+      if (row.memberId == memberId && row.status == ChargeStatus.partial) {
+        final due = formatRupiah(row.amountDue).replaceFirst('Rp ', '');
+        return 'Cicil ${formatRupiah(row.paid)} dari $due';
+      }
+    }
+    for (final member in provider.overdueMembers) {
+      if (member.memberId == memberId) {
+        return '${member.unpaidPeriodsCount} periode belum lunas';
+      }
+    }
+    return 'Belum lunas';
+  }
+
+  StatusKind _kindFor(String memberId) {
+    for (final row in provider.currentPeriodRows) {
+      if (row.memberId == memberId && row.status == ChargeStatus.partial) {
+        return StatusKind.cicil;
+      }
+    }
+    return StatusKind.telat;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final overdue = provider.overdueMembers;
+    final total = provider.summary?.overdueTotal ?? 0;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+      decoration: BoxDecoration(
+        color: t.card,
+        border: Border.all(color: t.border),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    'Tunggakan',
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontSize: _h2,
+                      fontWeight: FontWeight.w600,
+                      color: t.textPrimary,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: Text(
+                    formatRupiah(total),
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontSize: AppText.bodyLarge,
+                      fontWeight: FontWeight.w700,
+                      color: total > 0 ? t.expense : t.income,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (overdue.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8, bottom: 8),
+              child: Text(
+                'Semua iuran lancar',
+                style: TextStyle(fontSize: AppText.body, color: t.income),
+              ),
+            ),
+          for (var i = 0; i < overdue.length; i++) ...[
+            if (i > 0) Container(height: 1, color: t.border),
+            ListRow(
+              leading: Container(
+                width: 42,
+                height: 42,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: t.softSurface,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Text(
+                  overdue[i].memberName.isNotEmpty
+                      ? overdue[i].memberName[0].toUpperCase()
+                      : '?',
+                  style: TextStyle(
+                    fontSize: AppText.bodyLarge,
+                    fontWeight: FontWeight.w600,
+                    color: t.accent,
+                  ),
+                ),
+              ),
+              title: overdue[i].memberName,
+              subtitle: _subtitleFor(overdue[i].memberId),
+              trailing: StatusBadge(
+                label: formatRupiah(overdue[i].totalOverdueAmount),
+                kind: _kindFor(overdue[i].memberId),
               ),
             ),
           ],
-        ),
+        ],
       ),
+    );
+  }
+}
+
+// ─── Kartu aktivitas terbaru ──────────────────────────────────────────────────
+class _AktivitasCard extends StatelessWidget {
+  const _AktivitasCard({required this.provider, required this.onSeeAll});
+
+  final ZainNotoProvider provider;
+  final VoidCallback onSeeAll;
+
+  String _titleOf(GroupTransaction tx) {
+    if (tx.type == TxType.dues) {
+      final member = provider.memberById(tx.memberId);
+      if (member != null) return member.name;
+    }
+    final note = tx.note;
+    if (note != null && note.isNotEmpty) return note;
+    final category = tx.category;
+    if (category != null && category.isNotEmpty) return category;
+    return 'Iuran kas';
+  }
+
+  String _kindOf(GroupTransaction tx) {
+    if (tx.type == TxType.dues) return 'Iuran kas';
+    if (tx.type == TxType.otherIncome) return 'Pemasukan lain';
+    final category = tx.category;
+    if (category != null && category.isNotEmpty) return category;
+    return 'Pengeluaran';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final txs = provider.transactions.take(5).toList();
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+      decoration: BoxDecoration(
+        color: t.card,
+        border: Border.all(color: t.border),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    'Aktivitas kas terbaru',
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontSize: _h2,
+                      fontWeight: FontWeight.w600,
+                      color: t.textPrimary,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: onSeeAll,
+                behavior: HitTestBehavior.opaque,
+                child: Text(
+                  'Lihat semua',
+                  style: TextStyle(
+                    fontSize: AppText.body,
+                    fontWeight: FontWeight.w600,
+                    color: t.accent,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (txs.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8, bottom: 8),
+              child: Text(
+                'Belum ada transaksi',
+                style: TextStyle(fontSize: AppText.body, color: t.textMuted),
+              ),
+            ),
+          for (var i = 0; i < txs.length; i++) ...[
+            if (i > 0) Container(height: 1, color: t.border),
+            _activityRow(context, txs[i]),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _activityRow(BuildContext context, GroupTransaction tx) {
+    final t = context.tokens;
+    final isIncome = tx.type != TxType.expense;
+    final color = isIncome ? t.income : t.expense;
+    final sign = isIncome ? '+' : '-';
+    return ListRow(
+      icon: isIncome ? Icons.north_rounded : Icons.south_rounded,
+      iconColor: color,
+      title: _titleOf(tx),
+      subtitle: '${_kindOf(tx)} · ${_dateLabel(tx.date)}',
+      amount: '$sign ${formatRupiah(tx.amount)}',
+      amountColor: color,
     );
   }
 }
@@ -812,7 +1042,11 @@ class _EmptyGroups extends StatelessWidget {
             Text(
               'Buat grup kas pertamamu untuk mulai mencatat iuran anggota dan belanja bersama secara rapi dan transparan.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: AppText.bodyLarge, height: 1.5, color: t.textMuted),
+              style: TextStyle(
+                fontSize: AppText.bodyLarge,
+                height: 1.5,
+                color: t.textMuted,
+              ),
             ),
             if (error != null) ...[
               const SizedBox(height: 18),
@@ -850,7 +1084,10 @@ class _EmptyGroups extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(
                       '$error',
-                      style: TextStyle(fontSize: AppText.label, color: t.expense),
+                      style: TextStyle(
+                        fontSize: AppText.label,
+                        color: t.expense,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Align(
@@ -876,168 +1113,6 @@ class _EmptyGroups extends StatelessWidget {
               icon: const Icon(Icons.add_rounded, size: 18),
               label: const Text('Buat Grup Kas Sekarang'),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Overdue Bottom Sheet ─────────────────────────────────────────────────────
-void _showOverdueSheet(BuildContext context, ZainNotoProvider provider) {
-  showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: context.tokens.card,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-    ),
-    builder: (_) => _OverdueListSheet(provider: provider),
-  );
-}
-
-class _OverdueListSheet extends StatelessWidget {
-  const _OverdueListSheet({required this.provider});
-
-  final ZainNotoProvider provider;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = context.tokens;
-    final overdueList = provider.overdueMembers;
-
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: t.border,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: t.expense.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(Icons.warning_amber_rounded, color: t.expense, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Daftar Penunggak Kas',
-                        style: TextStyle(
-                          fontSize: AppText.title,
-                          fontWeight: FontWeight.w700,
-                          color: t.textPrimary,
-                        ),
-                      ),
-                      Text(
-                        '${overdueList.length} anggota belum melunasi kas',
-                        style: TextStyle(fontSize: AppText.body, color: t.textMuted),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (overdueList.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                child: Center(
-                  child: Text(
-                    'Tidak ada tunggakan!',
-                    style: TextStyle(color: t.income, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              )
-            else
-              Flexible(
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  itemCount: overdueList.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
-                    final item = overdueList[index];
-                    return Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: t.softSurface,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: t.border.withValues(alpha: 0.5)),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 38,
-                            height: 38,
-                            decoration: BoxDecoration(
-                              color: t.expense.withValues(alpha: 0.12),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Center(
-                              child: Text(
-                                item.memberName.isNotEmpty
-                                    ? item.memberName[0].toUpperCase()
-                                    : '?',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  color: t.expense,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item.memberName,
-                                  style: TextStyle(
-                                    fontSize: AppText.bodyLarge,
-                                    fontWeight: FontWeight.w700,
-                                    color: t.textPrimary,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Nunggak ${item.unpaidPeriodsCount} periode (sejak ${formatTanggalSingkat(dateToStr(item.oldestDueDate))})',
-                                  style: TextStyle(fontSize: AppText.label, color: t.textMuted),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Text(
-                            formatRupiah(item.totalOverdueAmount),
-                            style: TextStyle(
-                              fontSize: AppText.bodyLarge,
-                              fontWeight: FontWeight.w800,
-                              color: t.expense,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
           ],
         ),
       ),
