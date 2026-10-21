@@ -154,7 +154,8 @@ class AppTokens extends ThemeExtension<AppTokens> {
     'chip': Color(0xFF144540),
     'nav': Color(0xFF1E2826),
     'persik': Color(0xFFF2D3A0),
-    'transfer': Color(0xFF3F51B5),
+    // #3F51B5 hanya 2.1:1 di atas card gelap; ikuti pola Plum gelap (#A9A4FF).
+    'transfer': Color(0xFFA9A4FF),
     'onPersik': Color(0xFF0B2B2A),
   };
 

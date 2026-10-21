@@ -71,10 +71,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   /// Ringkas tanpa pemisah ribuan: mockup memakai `Rp 364rb` dan `Rp 477 rb`.
   String _compact(double v, {bool spaceBeforeSuffix = false}) {
     final abs = v.abs();
-    final sign = v < 0 ? '-' : '';
-    if (abs < 1000) return '$sign Rp ${abs.round()}';
+    final sign = v < 0 ? '- ' : '';
+    if (abs < 1000) return '${sign}Rp ${abs.round()}';
     final suffix = spaceBeforeSuffix ? ' rb' : 'rb';
-    return '$sign Rp ${(abs / 1000).round()}$suffix';
+    return '${sign}Rp ${(abs / 1000).round()}$suffix';
   }
 
   void _showAddTx({FinanceTransaction? editTx}) {
@@ -102,11 +102,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   /// Lembar pilih bulan (pengganti panah prev/next lama; mockup hanya
   /// menampilkan chip dengan chevron).
+  ///
+  /// Daftar tahun dibangun dari data: tahun transaksi terlama sampai tahun
+  /// depan, sehingga riwayat lama tetap terjangkau.
+  List<int> _sheetYears(FinanceProvider provider) {
+    final now = DateTime.now().year;
+    int? minYear;
+    int? maxYear;
+    for (final tx in provider.transactions) {
+      final y = tx.date.length >= 4
+          ? int.tryParse(tx.date.substring(0, 4))
+          : null;
+      if (y == null) continue;
+      minYear = (minYear == null || y < minYear) ? y : minYear;
+      maxYear = (maxYear == null || y > maxYear) ? y : maxYear;
+    }
+    final start = minYear == null || now < minYear ? now : minYear;
+    var end = now + 1;
+    if (maxYear != null && maxYear > end) end = maxYear;
+    return [for (var y = start; y <= end; y++) y];
+  }
+
   void _showMonthSheet(FinanceProvider provider) {
     final t = context.tokens;
-    final now = DateTime.now();
     final current = provider.currentMonth;
-    final years = [now.year - 1, now.year, now.year + 1];
+    final years = _sheetYears(provider);
 
     showModalBottomSheet(
       context: context,
@@ -116,9 +136,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         constraints: BoxConstraints(
           maxHeight: MediaQuery.sizeOf(context).height * 0.6,
         ),
-        child: SheetScaffold(
-          title: 'Pilih bulan',
-          child: SingleChildScrollView(
+        child: SingleChildScrollView(
+          child: SheetScaffold(
+            title: 'Pilih bulan',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -231,14 +251,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Icon(greetingIcon, size: 14, color: t.persik),
                   const SizedBox(width: 6),
                   Flexible(
-                    child: Text(
-                      greeting,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: AppText.body,
-                        fontWeight: FontWeight.w500,
-                        color: t.headerMuted,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Text(
+                        greeting,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontSize: AppText.body,
+                          fontWeight: FontWeight.w500,
+                          color: t.headerMuted,
+                        ),
                       ),
                     ),
                   ),
@@ -254,81 +277,83 @@ class _DashboardScreenState extends State<DashboardScreen> {
             right: 0,
             bottom: 0,
             child: ClipRect(
-              child: RefreshIndicator(
-                color: t.accent,
-                onRefresh: provider.refreshAll,
-                child: ListView(
-                  controller: _scrollCtrl,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-                  children: [
-                    if (provider.error != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Text(
-                          provider.error!,
-                          style: TextStyle(color: t.expense),
-                        ),
+              child: provider.isLoading
+                  ? Center(child: CircularProgressIndicator(color: t.accent))
+                  : RefreshIndicator(
+                      color: t.accent,
+                      onRefresh: provider.refreshAll,
+                      child: ListView(
+                        controller: _scrollCtrl,
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                        children: [
+                          if (provider.error != null)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Text(
+                                provider.error!,
+                                style: TextStyle(color: t.expense),
+                              ),
+                            ),
+                          _BalanceCard(
+                            monthLabel: _monthChipLabel(currentMonth),
+                            onMonthTap: () => _showMonthSheet(provider),
+                            balance: provider.cumulativeBalance,
+                            income: income,
+                            expense: expense,
+                            flow: flow,
+                            isDark: isDark,
+                            balanceText: provider.formatCurrency(
+                              provider.cumulativeBalance,
+                            ),
+                            incomeText: _compact(income),
+                            expenseText: _compact(expense),
+                            flowText:
+                                '${flow >= 0 ? '+' : '-'} ${provider.formatCurrency(flow.abs())}',
+                            onBalanceTap: _openBalance,
+                          ),
+                          const SizedBox(height: 20),
+                          Row(
+                            children: [
+                              _WalletTile(
+                                label: 'Dompet utama',
+                                value: _compact(
+                                  provider.cumulativeBalance,
+                                  spaceBeforeSuffix: true,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              _WalletTile(
+                                label: 'E-Wallet',
+                                value: _compact(
+                                  provider.topupBalance,
+                                  spaceBeforeSuffix: true,
+                                ),
+                                onTap: _openTopup,
+                              ),
+                              const SizedBox(width: 10),
+                              _WalletTile(
+                                label: 'Tabungan',
+                                value: _compact(
+                                  provider.totalSaved,
+                                  spaceBeforeSuffix: true,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          if (isEmpty)
+                            _EmptyCard(onAdd: () => _showAddTx())
+                          else
+                            _RecentCard(
+                              txs: recentTxs,
+                              provider: provider,
+                              onSeeAll: widget.onSeeAll,
+                              onRowTap: (tx) => _showAddTx(editTx: tx),
+                            ),
+                        ],
                       ),
-                    _BalanceCard(
-                      monthLabel: _monthChipLabel(currentMonth),
-                      onMonthTap: () => _showMonthSheet(provider),
-                      balance: provider.cumulativeBalance,
-                      income: income,
-                      expense: expense,
-                      flow: flow,
-                      isDark: isDark,
-                      balanceText: provider.formatCurrency(
-                        provider.cumulativeBalance,
-                      ),
-                      incomeText: _compact(income),
-                      expenseText: _compact(expense),
-                      flowText:
-                          '${flow >= 0 ? '+' : '-'} ${provider.formatCurrency(flow.abs())}',
-                      onBalanceTap: _openBalance,
                     ),
-                    const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        _WalletTile(
-                          label: 'Dompet utama',
-                          value: _compact(
-                            provider.cumulativeBalance,
-                            spaceBeforeSuffix: true,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        _WalletTile(
-                          label: 'E-Wallet',
-                          value: _compact(
-                            provider.topupBalance,
-                            spaceBeforeSuffix: true,
-                          ),
-                          onTap: _openTopup,
-                        ),
-                        const SizedBox(width: 10),
-                        _WalletTile(
-                          label: 'Tabungan',
-                          value: _compact(
-                            provider.totalSaved,
-                            spaceBeforeSuffix: true,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    if (isEmpty)
-                      _EmptyCard(onAdd: () => _showAddTx())
-                    else
-                      _RecentCard(
-                        txs: recentTxs,
-                        provider: provider,
-                        onSeeAll: widget.onSeeAll,
-                        onRowTap: (tx) => _showAddTx(editTx: tx),
-                      ),
-                  ],
-                ),
-              ),
             ),
           ),
 
@@ -354,14 +379,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Icon(Icons.add_rounded, size: 18, color: t.onAccent),
                         const SizedBox(width: 8),
                         Flexible(
-                          child: Text(
-                            'Tambah Transaksi',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: AppText.subtitle,
-                              fontWeight: FontWeight.w600,
-                              color: t.onAccent,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'Tambah Transaksi',
+                              maxLines: 1,
+                              style: TextStyle(
+                                fontSize: AppText.subtitle,
+                                fontWeight: FontWeight.w600,
+                                color: t.onAccent,
+                              ),
                             ),
                           ),
                         ),
@@ -540,33 +567,39 @@ class _BalanceCard extends StatelessWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        'Arus kas bulan ini',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: AppText.body,
-                          fontWeight: FontWeight.w500,
-                          color: t.onPersik,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Text(
+                          'Arus kas bulan ini',
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontSize: AppText.body,
+                            fontWeight: FontWeight.w500,
+                            color: t.onPersik,
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Flexible(
-                      child: Text(
-                        flow == 0
-                            ? flowText.replaceFirst(RegExp(r'^\+ |^- '), '')
-                            : flowText,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: AppText.label + 2,
-                          fontWeight: FontWeight.w600,
-                          color: flow == 0
-                              ? t.onPersik
-                              : flow >= 0
-                                  ? t.incomeOnPersik
-                                  : t.expenseOnPersik,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: AlignmentDirectional.centerEnd,
+                        child: Text(
+                          flow == 0
+                              ? flowText.replaceFirst(RegExp(r'^\+ |^- '), '')
+                              : flowText,
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontSize: AppText.label + 2,
+                            fontWeight: FontWeight.w600,
+                            color: flow == 0
+                                ? t.onPersik
+                                : flow >= 0
+                                ? t.incomeOnPersik
+                                : t.expenseOnPersik,
+                          ),
                         ),
                       ),
                     ),
@@ -618,28 +651,34 @@ class _StatBox extends StatelessWidget {
                 const SizedBox(width: 4),
               ],
               Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: AppText.label,
-                    fontWeight: FontWeight.w500,
-                    color: t.onPersik,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontSize: AppText.label,
+                      fontWeight: FontWeight.w500,
+                      color: t.onPersik,
+                    ),
                   ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 2),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: AppText.subtitle,
-              fontWeight: FontWeight.w600,
-              color: hasValue ? valueColor : t.onPersik,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(
+              value,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: AppText.subtitle,
+                fontWeight: FontWeight.w600,
+                color: hasValue ? valueColor : t.onPersik,
+              ),
             ),
           ),
         ],
@@ -672,21 +711,27 @@ class _WalletTile extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: AppText.body, color: t.textMuted),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: AlignmentDirectional.centerStart,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  style: TextStyle(fontSize: AppText.body, color: t.textMuted),
+                ),
               ),
               const SizedBox(height: 2),
-              Text(
-                value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: AppText.subtitle,
-                  fontWeight: FontWeight.w600,
-                  color: t.textPrimary,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: AlignmentDirectional.centerStart,
+                child: Text(
+                  value,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: AppText.subtitle,
+                    fontWeight: FontWeight.w600,
+                    color: t.textPrimary,
+                  ),
                 ),
               ),
             ],
@@ -726,14 +771,17 @@ class _RecentCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(
-                  'Transaksi terbaru',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: _h2,
-                    fontWeight: FontWeight.w600,
-                    color: t.textPrimary,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    'Transaksi terbaru',
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontSize: _h2,
+                      fontWeight: FontWeight.w600,
+                      color: t.textPrimary,
+                    ),
                   ),
                 ),
               ),
@@ -871,14 +919,16 @@ class _EmptyCard extends StatelessWidget {
                   Icon(Icons.add_rounded, size: 18, color: t.onAccent),
                   const SizedBox(width: 8),
                   Flexible(
-                    child: Text(
-                      'Tambah transaksi pertama',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: AppText.subtitle,
-                        fontWeight: FontWeight.w600,
-                        color: t.onAccent,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        'Tambah transaksi pertama',
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontSize: AppText.subtitle,
+                          fontWeight: FontWeight.w600,
+                          color: t.onAccent,
+                        ),
                       ),
                     ),
                   ),

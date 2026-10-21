@@ -49,14 +49,18 @@ class ModeSwitchButton extends StatelessWidget {
           children: [
             Icon(Icons.swap_horiz_rounded, size: 16, color: Colors.white),
             const SizedBox(width: 6),
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: AppText.body,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  style: const TextStyle(
+                    fontSize: AppText.body,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ),
           ],

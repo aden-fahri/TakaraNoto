@@ -47,25 +47,31 @@ class ListRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: AppText.bodyLarge,
-                      fontWeight: FontWeight.w500,
-                      color: t.textPrimary,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      style: TextStyle(
+                        fontSize: AppText.bodyLarge,
+                        fontWeight: FontWeight.w500,
+                        color: t.textPrimary,
+                      ),
                     ),
                   ),
                   if (subtitle != null) ...[
                     const SizedBox(height: 2),
-                    Text(
-                      subtitle!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: AppText.body,
-                        color: t.textMuted,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Text(
+                        subtitle!,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontSize: AppText.body,
+                          color: t.textMuted,
+                        ),
                       ),
                     ),
                   ],
@@ -75,14 +81,17 @@ class ListRow extends StatelessWidget {
             if (amount != null) ...[
               const SizedBox(width: 8),
               Flexible(
-                child: Text(
-                  amount!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: AppText.bodyLarge,
-                    fontWeight: FontWeight.w600,
-                    color: amountColor ?? t.textPrimary,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: Text(
+                    amount!,
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontSize: AppText.bodyLarge,
+                      fontWeight: FontWeight.w600,
+                      color: amountColor ?? t.textPrimary,
+                    ),
                   ),
                 ),
               ),

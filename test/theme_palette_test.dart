@@ -53,6 +53,8 @@ const int _plumDarkHd = 0xFF2B1530;
 const int _plumDarkPg = 0xFF1D1020;
 const int _plumDarkCard = 0xFF2A1A2E;
 const int _plumDarkBd = 0xFF4A3050;
+// Transfer gelap Plum dari mockup Dashboard-gelap.dc.html (#A9A4FF).
+const int _plumDarkTransfer = 0xFFA9A4FF;
 
 // Teal terang dari desain.md §3.2, onac dikoreksi kontras (lihat catatan).
 const int _tealLightHd = 0xFF0F3D3A;
@@ -145,6 +147,7 @@ void main() {
       expect(t.card.toARGB32(), _plumDarkCard);
       expect(t.border.toARGB32(), _plumDarkBd);
       expect(t.headerMuted.toARGB32(), _plumDarkHeaderMuted);
+      expect(t.transfer.toARGB32(), _plumDarkTransfer);
       expect(t.onPersik.toARGB32(), _onPersik);
       expect(t.incomeOnPersik.toARGB32(), _incomeOnPersik);
       expect(t.expenseOnPersik.toARGB32(), _expenseOnPersik);
@@ -180,14 +183,29 @@ void main() {
       _expectContrast(t.onPersik, t.persik, '$name onPersik/persik');
       _expectContrast(t.incomeOnPersik, t.persik, '$name incOnPersik/persik');
       _expectContrast(t.expenseOnPersik, t.persik, '$name expOnPersik/persik');
+      // Baris transfer memakai nominal di atas kartu: wajib lolos body text.
+      _expectContrast(t.transfer, t.card, '$name transfer/card');
       _expectContrast(t.lunasFg, t.lunasBg, '$name lunas');
       _expectContrast(t.telatFg, t.telatBg, '$name telat');
       _expectContrast(t.cicilFg, t.cicilBg, '$name cicil');
     }
-    test('plum terang', () => checkAll(AppTokens.plum(Brightness.light), 'plum-light'));
-    test('plum gelap', () => checkAll(AppTokens.plum(Brightness.dark), 'plum-dark'));
-    test('teal terang', () => checkAll(AppTokens.teal(Brightness.light), 'teal-light'));
-    test('teal gelap (PROVISIONAL)', () => checkAll(AppTokens.teal(Brightness.dark), 'teal-dark'));
+
+    test(
+      'plum terang',
+      () => checkAll(AppTokens.plum(Brightness.light), 'plum-light'),
+    );
+    test(
+      'plum gelap',
+      () => checkAll(AppTokens.plum(Brightness.dark), 'plum-dark'),
+    );
+    test(
+      'teal terang',
+      () => checkAll(AppTokens.teal(Brightness.light), 'teal-light'),
+    );
+    test(
+      'teal gelap (PROVISIONAL)',
+      () => checkAll(AppTokens.teal(Brightness.dark), 'teal-dark'),
+    );
   });
 
   group('ThemeController palet', () {
