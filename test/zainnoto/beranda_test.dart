@@ -15,6 +15,7 @@ import 'package:finflow_flutter/theme/app_tokens.dart';
 import 'package:finflow_flutter/widgets/app_header.dart';
 import 'package:finflow_flutter/widgets/notched_card.dart';
 import 'package:finflow_flutter/widgets/status_badge.dart';
+import 'package:finflow_flutter/zainnoto/models/entities.dart';
 import 'package:finflow_flutter/zainnoto/providers/zainnoto_provider.dart';
 import 'package:finflow_flutter/zainnoto/repositories/zainnoto_repository.dart';
 
@@ -62,7 +63,11 @@ Future<ZainNotoProvider> _seeded(WidgetTester tester) async {
   await tester.runAsync(
     () => ExampleSeed.seed(db!, asOf: DateTime(2026, 10, 15)),
   );
-  final provider = ZainNotoProvider(repository: ZainNotoRepository());
+  // Jam disuntik: tes tidak bergantung pada bulan kalender saat dijalankan.
+  final provider = ZainNotoProvider(
+    repository: ZainNotoRepository(),
+    now: () => DateTime(2026, 10, 21),
+  );
   await tester.runAsync(provider.loadGroups);
   return provider;
 }
@@ -227,18 +232,19 @@ void main() {
         reason: 'iuran terkumpul periode Oktober = 5x50.000 + cicil 25.000',
       );
 
-      // Rumus angka beranda (definisi masuk/keluar = akresi periode berjalan,
-      // bukan total seluruh waktu): masuk = iuran terkumpul Oktober,
-      // keluar = pengeluaran dalam rentang tanggal Oktober (seed: nol).
+      // Masuk/Keluar = kalender bulan berjalan (bukan akresi periode).
+      // Seluruh pembayaran seed bertanggal 10 Okt 2026:
+      //   masuk = 5x200.000 + 175.000 + 100.000 + 150.000 = 1.425.000
+      //   keluar = 0 (seed tanpa transaksi keluar)
       expect(
-        provider.incomeThisPeriod,
-        275000,
-        reason: 'incomeThisPeriod: akresi periode berjalan',
+        provider.incomeThisMonth,
+        1425000,
+        reason: 'incomeThisMonth: semua pembayaran bertanggal Oktober',
       );
       expect(
-        provider.expenseThisPeriod,
+        provider.expenseThisMonth,
         0,
-        reason: 'expenseThisPeriod: tanpa transaksi keluar di Oktober',
+        reason: 'expenseThisMonth: tanpa transaksi keluar di Oktober',
       );
 
       await _pumpBeranda(tester, provider);
@@ -251,8 +257,8 @@ void main() {
       );
       expect(
         _under(find.text('Masuk bulan ini'), tester),
-        'Rp 275.000',
-        reason: 'masuk = iuran terkumpul periode berjalan',
+        'Rp 1.425.000',
+        reason: 'masuk = kas masuk kalender Okt (menjelaskan saldo)',
       );
       expect(
         _under(find.text('Keluar bulan ini'), tester),
@@ -336,7 +342,7 @@ void main() {
         lessThan(tester.getTopLeft(find.text('Maya').first).dy),
       );
 
-      // ── Angka beranda tetap periode berjalan walau periode lain dipilih ──
+      // ── Angka beranda tetap kalender bulan berjalan walau periode lain dipilih ──
       final sep = provider.periods.firstWhere(
         (p) => p.label == 'September 2026',
       );
@@ -344,9 +350,9 @@ void main() {
       await tester.pump();
       expect(
         _under(find.text('Masuk bulan ini'), tester),
-        'Rp 275.000',
+        'Rp 1.425.000',
         reason:
-            'beranda mengikuti periode berjalan, bukan yang dipilih '
+            'masuk mengikuti kalender Oktober, bukan periode yang dipilih '
             '(periode Sep terkumpul 350.000)',
       );
       expect(
@@ -381,6 +387,179 @@ void main() {
   );
 
   testWidgets(
+    'Masuk bulan ini: bayar tunggakan hari ini menambah masuk sebesar nominalnya',
+    (tester) async {
+      _viewport(tester);
+      final provider = await _seeded(tester);
+      expect(
+        provider.incomeThisMonth,
+        1425000,
+        reason: 'awal: seluruh pembayaran seed bertanggal 10 Okt',
+      );
+
+      // Dewi menunggak Sep + Okt (100.000). Bayar 50.000 hari ini (21 Okt)
+      // melunasi tunggakan Sep secara FIFO, jadi periode Okt tidak berubah
+      // tetapi kas masuk hari ini bertambah.
+      final dewi = provider.members.firstWhere((m) => m.name == 'Dewi');
+      final id = await tester.runAsync(
+        () => provider.markPaid(
+          memberId: dewi.id,
+          amount: 50000,
+          date: '2026-10-21',
+        ),
+      );
+      expect(id, isNotNull);
+      expect(
+        provider.currentPeriodRows.fold<int>(0, (s, r) => s + r.paid),
+        275000,
+        reason: 'pembayaran 50.000 masuk ke tunggakan Sep (FIFO)',
+      );
+      expect(
+        provider.summary!.balance,
+        1475000,
+        reason: 'saldo bertambah 50.000',
+      );
+      expect(
+        provider.incomeThisMonth,
+        1475000,
+        reason: 'masuk kalender Okt bertambah 50.000: 1.425.000 + 50.000',
+      );
+      expect(provider.expenseThisMonth, 0);
+
+      await _pumpBeranda(tester, provider);
+      expect(
+        _under(find.text('Masuk bulan ini'), tester),
+        'Rp 1.475.000',
+        reason: 'kartu menjelaskan saldo: kas masuk hari ini ikut terhitung',
+      );
+      expect(_under(find.text('Keluar bulan ini'), tester), 'Rp 0');
+    },
+  );
+
+  testWidgets(
+    'Masuk/Keluar bulan kalender: transaksi bulan lalu tidak terhitung',
+    (tester) async {
+      _viewport(tester);
+      final provider = await _seeded(tester);
+
+      // Di luar bulan: pemasukan 75.000 + pengeluaran 20.000 pada 30 Sep.
+      await tester.runAsync(
+        () => provider.addTransaction(
+          type: TxType.otherIncome,
+          amount: 75000,
+          date: '2026-09-30',
+        ),
+      );
+      await tester.runAsync(
+        () => provider.addTransaction(
+          type: TxType.expense,
+          amount: 20000,
+          date: '2026-09-30',
+        ),
+      );
+      // Di dalam bulan: pemasukan 25.000 pada 1 Okt, keluar 30.000 pada 31 Okt.
+      await tester.runAsync(
+        () => provider.addTransaction(
+          type: TxType.otherIncome,
+          amount: 25000,
+          date: '2026-10-01',
+        ),
+      );
+      await tester.runAsync(
+        () => provider.addTransaction(
+          type: TxType.expense,
+          amount: 30000,
+          date: '2026-10-31',
+        ),
+      );
+
+      // Hitung tangan:
+      //   masuk  = 1.425.000 (iuran 10 Okt) + 25.000 (1 Okt) = 1.450.000
+      //   keluar = 30.000 (31 Okt); Sep tidak ikut
+      expect(
+        provider.incomeThisMonth,
+        1450000,
+        reason: 'masuk: 1.425.000 + 25.000, tanpa pemasukan 30 Sep',
+      );
+      expect(
+        provider.expenseThisMonth,
+        30000,
+        reason: 'keluar: hanya 30.000 pada 31 Okt, bukan 20.000 pada 30 Sep',
+      );
+
+      await _pumpBeranda(tester, provider);
+      expect(_under(find.text('Masuk bulan ini'), tester), 'Rp 1.450.000');
+      expect(_under(find.text('Keluar bulan ini'), tester), 'Rp 30.000');
+    },
+  );
+
+  test(
+    'jam disuntik: 31 Okt menghitung, 1 Nov mengeluarkan transaksi Okt',
+    () async {
+      final db = await openTestDatabase();
+      await ExampleSeed.seed(db, asOf: DateTime(2026, 10, 15));
+      var now = DateTime(2026, 10, 31, 23, 59);
+      final provider = ZainNotoProvider(
+        repository: ZainNotoRepository(),
+        now: () => now,
+      );
+      await provider.loadGroups();
+
+      expect(provider.error, isNull);
+      expect(provider.selectedGroup?.name, 'Kas RT 05');
+      expect(provider.transactions, hasLength(8));
+      expect(
+        provider.incomeThisMonth,
+        1425000,
+        reason: 'akhir 31 Okt masih bulan kalender yang sama',
+      );
+      now = DateTime(2026, 11, 1);
+      expect(
+        provider.incomeThisMonth,
+        0,
+        reason: '1 Nov: pembayaran 10 Okt keluar dari bulan berjalan',
+      );
+      expect(provider.expenseThisMonth, 0);
+      expect(
+        provider.totalIncome,
+        1425000,
+        reason: 'total semua waktu tidak terpengaruh jam',
+      );
+    },
+  );
+
+  testWidgets('Bar iuran mingguan berlabel periode, bukan "bulan ini"', (
+    tester,
+  ) async {
+    _viewport(tester);
+    final ctx = await tester.runAsync(seedWeekly);
+    await tester.runAsync(
+      () => ctx!.repo.generatePeriods(
+        groupId: ctx.groupId,
+        upTo: DateTime(2026, 10, 21),
+      ),
+    );
+    final provider = ZainNotoProvider(
+      repository: ctx!.repo,
+      now: () => DateTime(2026, 10, 21),
+    );
+    await tester.runAsync(provider.loadGroups);
+    final label = provider.currentPeriod!.label;
+    expect(label, startsWith('Minggu '), reason: 'periode mingguan');
+
+    await _pumpBeranda(tester, provider);
+
+    // Bar tetap per periode: 2 anggota x 20.000 = 40.000, belum ada bayar.
+    expect(find.text('Rp 0 / 40.000'), findsOneWidget);
+    final heading = tester.widget<Text>(find.text('Iuran $label'));
+    expect(
+      heading.data!.contains('bulan'),
+      isFalse,
+      reason: 'label bar memakai nama periode, bukan "bulan ini"',
+    );
+  });
+
+  testWidgets(
     'Beranda 320dp textScale 1.3 (seed): tanpa overflow & tanpa ellipsis nominal',
     (tester) async {
       _viewport(tester, w: 320, h: 640, textScale: 1.3);
@@ -390,8 +569,8 @@ void main() {
       expect(find.text('Saldo kas bersama'), findsOneWidget);
       expect(
         find.text('Rp 1.425.000'),
-        findsOneWidget,
-        reason: 'nominal saldo utuh',
+        findsNWidgets(2),
+        reason: 'nominal saldo + masuk bulan ini utuh',
       );
       expect(find.text('Rp 275.000 / 400.000'), findsOneWidget);
       expect(find.text('5 lunas · 1 cicil · 2 telat'), findsOneWidget);

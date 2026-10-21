@@ -12,12 +12,19 @@ import '../utils/dates.dart';
 /// period checklist, members, transactions and dues plans, and re-refreshes
 /// after every write so derived statuses stay in sync.
 class ZainNotoProvider extends ChangeNotifier {
-  ZainNotoProvider({ZainNotoRepository? repository, Uuid? uuid})
-    : _repository = repository ?? ZainNotoRepository(),
-      _uuid = uuid ?? const Uuid();
+  ZainNotoProvider({
+    ZainNotoRepository? repository,
+    Uuid? uuid,
+    DateTime Function()? now,
+  }) : _repository = repository ?? ZainNotoRepository(),
+       _uuid = uuid ?? const Uuid(),
+       _now = now ?? DateTime.now;
 
   final ZainNotoRepository _repository;
   final Uuid _uuid;
+
+  /// Jam yang bisa disuntik agar perhitungan bulan kalender deterministik.
+  final DateTime Function() _now;
 
   ZainNotoRepository get repository => _repository;
 
@@ -87,39 +94,37 @@ class ZainNotoProvider extends ChangeNotifier {
     return total;
   }
 
-  /// Iuran terkumpul periode berjalan + pemasukan lain pada rentang tanggal
-  /// periode itu. Tanpa periode → total semua waktu.
-  int get incomeThisPeriod {
-    final period = _currentPeriod;
-    if (period == null) return totalIncome;
+  /// Total kas masuk bulan kalender berjalan: semua transaksi bertipe
+  /// pemasukan (iuran yang dibayar + pemasukan lain) yang tanggalnya jatuh di
+  /// bulan ini. Pembayaran tunggakan atau di muka yang dilakukan hari ini ikut
+  /// terhitung sehingga angka kartu bisa menjelaskan saldo kas.
+  int get incomeThisMonth {
     var total = 0;
-    for (final row in _currentPeriodRows) {
-      if (!row.waived) total += row.paid;
-    }
     for (final tx in _transactions) {
-      if (tx.type == TxType.otherIncome &&
-          tx.date.compareTo(period.startDate) >= 0 &&
-          tx.date.compareTo(period.endDate) <= 0) {
+      if (tx.type.isIncome && _isInCurrentMonth(tx.date)) {
         total += tx.amount;
       }
     }
     return total;
   }
 
-  /// Pengeluaran pada rentang tanggal periode berjalan; tanpa periode →
-  /// total semua waktu.
-  int get expenseThisPeriod {
-    final period = _currentPeriod;
-    if (period == null) return totalExpense;
+  /// Total pengeluaran pada bulan kalender berjalan.
+  int get expenseThisMonth {
     var total = 0;
     for (final tx in _transactions) {
-      if (tx.type == TxType.expense &&
-          tx.date.compareTo(period.startDate) >= 0 &&
-          tx.date.compareTo(period.endDate) <= 0) {
+      if (tx.type == TxType.expense && _isInCurrentMonth(tx.date)) {
         total += tx.amount;
       }
     }
     return total;
+  }
+
+  /// [date] berformat `yyyy-MM-dd`; batas awal/akhir bulan inklusif.
+  bool _isInCurrentMonth(String date) {
+    final now = _now();
+    final start = dateToStr(DateTime(now.year, now.month, 1));
+    final end = dateToStr(DateTime(now.year, now.month + 1, 0));
+    return date.compareTo(start) >= 0 && date.compareTo(end) <= 0;
   }
 
   Member? memberById(String? id) {

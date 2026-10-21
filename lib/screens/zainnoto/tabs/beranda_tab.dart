@@ -384,7 +384,7 @@ class _BalanceCard extends StatelessWidget {
                   Expanded(
                     child: _FlowBox(
                       label: 'Masuk bulan ini',
-                      value: formatRupiah(provider.incomeThisPeriod),
+                      value: formatRupiah(provider.incomeThisMonth),
                       valueColor: t.incomeOnPersik,
                     ),
                   ),
@@ -392,7 +392,7 @@ class _BalanceCard extends StatelessWidget {
                   Expanded(
                     child: _FlowBox(
                       label: 'Keluar bulan ini',
-                      value: formatRupiah(provider.expenseThisPeriod),
+                      value: formatRupiah(provider.expenseThisMonth),
                       valueColor: t.expenseOnPersik,
                     ),
                   ),
