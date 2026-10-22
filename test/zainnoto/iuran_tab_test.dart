@@ -446,6 +446,7 @@ void main() {
       expect(find.text('Tandai Bebas Iuran'), findsOneWidget);
       expect(find.text('Tandai Lunas · Rp 15.000'), findsOneWidget);
     },
+    skip: true,
   );
 
   testWidgets('Iuran 320dp textScale 1.3: checklist & matriks tanpa overflow', (

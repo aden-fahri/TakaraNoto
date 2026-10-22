@@ -78,6 +78,7 @@ class _PayDuesSheetState extends State<PayDuesSheet> {
     if (amount <= 0 || _saving) return;
     setState(() => _saving = true);
     final provider = context.read<ZainNotoProvider>();
+    final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final name = widget.row.memberName;
     final note = _noteCtrl.text.trim();
@@ -96,7 +97,7 @@ class _PayDuesSheetState extends State<PayDuesSheet> {
       );
       return;
     }
-    Navigator.of(context).pop();
+    navigator.pop();
     messenger.showSnackBar(
       SnackBar(
         content: Text('Pembayaran $name dicatat'),
@@ -121,6 +122,17 @@ class _PayDuesSheetState extends State<PayDuesSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: t.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               Text(
                 'Bayar iuran',
                 style: TextStyle(
@@ -138,33 +150,61 @@ class _PayDuesSheetState extends State<PayDuesSheet> {
                 ),
               ),
               const SizedBox(height: 16),
-              TextField(
-                key: const ValueKey('zn-pay-amount'),
-                controller: _amountCtrl,
-                focusNode: _amountFocus,
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  RupiahInputFormatter(),
-                ],
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  labelText: 'Jumlah bayar',
-                  prefixText: 'Rp ',
-                  filled: true,
-                  fillColor: t.softSurface,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
               Text(
-                'Total tagihan',
+                'Jumlah bayar',
                 style: TextStyle(
                   fontSize: AppText.body,
                   color: t.textMuted,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                height: 52,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: t.pageBg,
+                  border: Border.all(color: t.border),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        key: const ValueKey('zn-pay-amount'),
+                        controller: _amountCtrl,
+                        focusNode: _amountFocus,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          RupiahInputFormatter(),
+                        ],
+                        onChanged: (_) => setState(() {}),
+                        style: TextStyle(
+                          fontSize: AppText.headline,
+                          fontWeight: FontWeight.w600,
+                          color: t.textPrimary,
+                        ),
+                        decoration: InputDecoration(
+                          isCollapsed: true,
+                          border: InputBorder.none,
+                          prefixText: 'Rp ',
+                          prefixStyle: TextStyle(
+                            fontSize: AppText.headline,
+                            fontWeight: FontWeight.w600,
+                            color: t.textPrimary,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Total tagihan',
+                      style: TextStyle(
+                        fontSize: AppText.body,
+                        color: t.textMuted,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 10),
@@ -209,6 +249,14 @@ class _PayDuesSheetState extends State<PayDuesSheet> {
                 ],
               ),
               const SizedBox(height: 16),
+              Text(
+                'Tanggal bayar',
+                style: TextStyle(
+                  fontSize: AppText.body,
+                  color: t.textMuted,
+                ),
+              ),
+              const SizedBox(height: 6),
               GestureDetector(
                 key: const ValueKey('zn-pay-date'),
                 behavior: HitTestBehavior.opaque,
@@ -242,21 +290,39 @@ class _PayDuesSheetState extends State<PayDuesSheet> {
                 ),
               ),
               const SizedBox(height: 16),
-              TextField(
-                key: const ValueKey('zn-pay-note'),
-                controller: _noteCtrl,
+              Text(
+                'Catatan (opsional)',
                 style: TextStyle(
-                  fontSize: AppText.bodyLarge,
-                  color: t.textPrimary,
+                  fontSize: AppText.body,
+                  color: t.textMuted,
                 ),
-                decoration: InputDecoration(
-                  labelText: 'Catatan (opsional)',
-                  hintText: 'Transfer atau tunai',
-                  filled: true,
-                  fillColor: t.softSurface,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
+              ),
+              const SizedBox(height: 6),
+              Container(
+                height: 52,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: t.pageBg,
+                  border: Border.all(color: t.border),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Center(
+                  child: TextField(
+                    key: const ValueKey('zn-pay-note'),
+                    controller: _noteCtrl,
+                    style: TextStyle(
+                      fontSize: AppText.bodyLarge,
+                      color: t.textPrimary,
+                    ),
+                    decoration: InputDecoration(
+                      isCollapsed: true,
+                      border: InputBorder.none,
+                      hintText: 'Transfer atau tunai',
+                      hintStyle: TextStyle(
+                        fontSize: AppText.bodyLarge,
+                        color: t.textMuted,
+                      ),
+                    ),
                   ),
                 ),
               ),
