@@ -12,6 +12,7 @@ import '../../../zainnoto/models/entities.dart';
 import '../../../zainnoto/providers/zainnoto_provider.dart';
 import '../../../zainnoto/utils/format.dart';
 import '../group_picker_screen.dart';
+import '../widgets/group_chip.dart';
 import '../widgets/group_management_sheet.dart';
 import '../widgets/group_sheets.dart';
 import '../widgets/transaction_form_sheet.dart';
@@ -86,7 +87,7 @@ class BerandaTab extends StatelessWidget {
       height: 172,
       title: 'ZainNoto',
       onPaletteTap: () => showPaletteSheet(context),
-      topRow: _GroupChip(
+      topRow: GroupChip(
         name: group?.name ?? 'Belum ada grup',
         onTap: () => GroupPickerScreen.show(context),
       ),
@@ -211,68 +212,6 @@ class BerandaTab extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ─── Chip grup di header ───────────────────────────────────────────────────────
-class _GroupChip extends StatelessWidget {
-  const _GroupChip({required this.name, required this.onTap});
-
-  final String name;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = context.tokens;
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        key: const ValueKey('zn-group-chip'),
-        height: 24,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(
-          color: t.chip,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              key: const ValueKey('zn-group-chip-dot'),
-              width: 7,
-              height: 7,
-              decoration: BoxDecoration(
-                color: t.persik,
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Flexible(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: AlignmentDirectional.centerStart,
-                child: Text(
-                  name,
-                  maxLines: 1,
-                  style: TextStyle(
-                    fontSize: AppText.label,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-            const Icon(
-              Icons.expand_more_rounded,
-              size: 12,
-              color: Colors.white,
-            ),
-          ],
-        ),
       ),
     );
   }

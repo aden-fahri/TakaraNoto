@@ -393,9 +393,13 @@ class ZainNotoRepository {
   ///
   /// Returns the number of newly created (or reactivated) periods.
   Future<int> generatePeriods({required String groupId, DateTime? upTo}) async {
+    // ignore: avoid_print
+    print('GEN start');
     final db = await _db;
     final target = dateOnly(upTo ?? DateTime.now());
     return db.transaction((txn) async {
+      // ignore: avoid_print
+      print('GEN txn');
       final planRows = await txn.query(
         'zn_dues_plans',
         where: 'group_id = ? AND deleted_at IS NULL',
@@ -706,6 +710,8 @@ class ZainNotoRepository {
         action: 'insert',
         newMap: row,
       );
+      // ignore: avoid_print
+      print('RECORD committed id=$id');
       return id;
     });
   }

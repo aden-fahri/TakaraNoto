@@ -7,12 +7,11 @@ import '../../../zainnoto/models/derived.dart';
 import '../../../zainnoto/models/entities.dart';
 import '../../../zainnoto/providers/zainnoto_provider.dart';
 import 'member_form.dart';
-import '../../../zainnoto/utils/format.dart';
-import 'dues_style.dart';
 import 'payment_detail_sheet.dart';
 
-/// Tampilan Matriks Rekap Iuran: Baris Anggota x Kolom Periode
-/// Desain modern, intuitif, berlabel Bahasa Indonesia, dan responsif.
+/// Matriks rekap iuran dari `docs/mockup/ZN-Matriks.dc.html`: 4 periode
+/// terakhir, kolom anggota 72 + 4 kolom periode sama lebar, sel 30x30 radius
+/// 10 berisi OK / ½ / ! / -, legenda, dan catatan.
 class IuranMatrix extends StatefulWidget {
   const IuranMatrix({super.key});
 
@@ -21,10 +20,24 @@ class IuranMatrix extends StatefulWidget {
 }
 
 class _IuranMatrixState extends State<IuranMatrix> {
-  static const int _maxPeriods = 12;
-  static const double _memberColumnWidth = 135;
-  static const double _periodColumnWidth = 64;
-  static const double _cellSize = 42;
+  static const int _maxPeriods = 4;
+  static const double _memberColumnWidth = 72;
+  static const double _cellSize = 30;
+
+  static const List<String> _shortMonths = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'Mei',
+    'Jun',
+    'Jul',
+    'Agu',
+    'Sep',
+    'Okt',
+    'Nov',
+    'Des',
+  ];
 
   bool _loadScheduled = false;
 
@@ -32,7 +45,6 @@ class _IuranMatrixState extends State<IuranMatrix> {
   Widget build(BuildContext context) {
     final provider = context.watch<ZainNotoProvider>();
     final t = context.tokens;
-    final now = DateTime.now();
 
     if (!provider.matrixNeedsReload) {
       _loadScheduled = false;
@@ -44,7 +56,10 @@ class _IuranMatrixState extends State<IuranMatrix> {
     }
 
     if (provider.isLoadingMatrix && provider.matrixByPeriod.isEmpty) {
-      return Center(child: CircularProgressIndicator(color: t.accent));
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 48),
+        child: Center(child: CircularProgressIndicator(color: t.accent)),
+      );
     }
 
     final allPeriods = provider.periods;
@@ -57,7 +72,8 @@ class _IuranMatrixState extends State<IuranMatrix> {
       return const _MatrixNotice(
         icon: Icons.event_busy_rounded,
         title: 'Belum Ada Periode Iuran',
-        message: 'Atur rencana iuran di menu Kelola untuk membuat periode dan jadwal iuran.',
+        message: 'Atur rencana iuran di menu Kelola untuk membuat periode '
+            'dan jadwal iuran.',
       );
     }
     if (members.isEmpty) {
@@ -73,104 +89,90 @@ class _IuranMatrixState extends State<IuranMatrix> {
     final rowsByPeriod = <String, Map<String, PeriodMemberRow>>{};
     for (final period in periods) {
       final map = <String, PeriodMemberRow>{};
-      for (final row in provider.matrixByPeriod[period.id] ?? const <PeriodMemberRow>[]) {
+      for (final row in provider.matrixByPeriod[period.id] ??
+          const <PeriodMemberRow>[]) {
         map[row.memberId] = row;
       }
       rowsByPeriod[period.id] = map;
     }
 
-    return RefreshIndicator(
-      color: t.accent,
-      onRefresh: () => provider.loadMatrix(maxPeriods: _maxPeriods),
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-        children: [
-          // Matrix Table Container
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: t.card,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: t.border),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _headerRow(periods, t),
-                  const SizedBox(height: 12),
-                  const Divider(height: 1),
-                  const SizedBox(height: 10),
-                  for (final member in members) ...[
-                    _memberRow(member, periods, rowsByPeriod, now, t),
-                    const SizedBox(height: 8),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Legend Card
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              color: t.card,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: t.border),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Keterangan Status:',
-                  style: TextStyle(
-                    fontSize: AppText.body,
-                    fontWeight: FontWeight.w700,
-                    color: t.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                _legend(t),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _headerRow(List<Period> periods, AppTokens t) {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(
-          width: _memberColumnWidth,
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: t.card,
+            border: Border.all(color: t.border),
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(
+            children: [
+              _headerRow(periods, t),
+              for (final member in members)
+                _memberRow(
+                  member,
+                  periods,
+                  rowsByPeriod,
+                  provider.now,
+                  t,
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        _Legend(tokens: t),
+        const SizedBox(height: 14),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
-            'Nama Anggota',
+            'Anggota baru hanya ditagih sejak periode bergabungnya. '
+            'Ketuk sel untuk melihat atau mencatat pembayaran.',
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: AppText.body,
-              fontWeight: FontWeight.w700,
+              height: 1.6,
               color: t.textMuted,
             ),
           ),
         ),
-        for (final period in periods)
+      ],
+    );
+  }
+
+  Widget _headerRow(List<Period> periods, AppTokens t) {
+    return SizedBox(
+      height: 34,
+      child: Row(
+        children: [
           SizedBox(
-            width: _periodColumnWidth,
-            child: Center(
-              child: _PeriodHeader(label: periodShortLabel(period)),
+            width: _memberColumnWidth,
+            child: Text(
+              'Anggota',
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: AppText.label,
+                fontWeight: FontWeight.w600,
+                color: t.textMuted,
+              ),
             ),
           ),
-      ],
+          for (final period in periods)
+            Expanded(
+              child: Center(
+                child: Text(
+                  _headerLabel(period),
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: AppText.label,
+                    fontWeight: FontWeight.w600,
+                    color: t.textMuted,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -181,180 +183,145 @@ class _IuranMatrixState extends State<IuranMatrix> {
     DateTime now,
     AppTokens t,
   ) {
-    return Row(
-      children: [
-        SizedBox(
-          width: _memberColumnWidth,
-          child: Row(
-            children: [
-              Container(
-                width: 26,
-                height: 26,
-                decoration: BoxDecoration(
-                  color: t.accent.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
-                    style: TextStyle(
-                      fontSize: AppText.label,
-                      fontWeight: FontWeight.w700,
-                      color: t.accent,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  member.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: AppText.bodyLarge,
-                    fontWeight: FontWeight.w600,
-                    color: t.textPrimary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        for (final period in periods)
+    return Container(
+      height: 48,
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: t.border)),
+      ),
+      child: Row(
+        children: [
           SizedBox(
-            width: _periodColumnWidth,
-            child: Center(
-              child: _cell(
-                row: rowsByPeriod[period.id]?[member.id],
-                period: period,
-                now: now,
-                t: t,
+            width: _memberColumnWidth,
+            child: Text(
+              member.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: AppText.bodyLarge,
+                fontWeight: FontWeight.w500,
+                color: t.textPrimary,
               ),
             ),
           ),
-      ],
+          for (final period in periods)
+            Expanded(
+              child: Center(
+                child: _cell(
+                  memberId: member.id,
+                  row: rowsByPeriod[period.id]?[member.id],
+                  period: period,
+                  now: now,
+                  t: t,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
   Widget _cell({
+    required String memberId,
     required PeriodMemberRow? row,
     required Period period,
     required DateTime now,
     required AppTokens t,
   }) {
-    if (row == null) {
-      return Container(
-        width: _cellSize,
-        height: _cellSize,
-        decoration: BoxDecoration(
-          color: t.softSurface.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: t.border.withValues(alpha: 0.6)),
-        ),
-        child: Center(
-          child: Text('—', style: TextStyle(color: t.textMuted, fontSize: AppText.body)),
-        ),
-      );
-    }
-
-    final overdue = row.isOverdue(now);
-    final color = duesStatusColor(t, row.status, overdue: overdue);
-
+    final (mark, bg, fg) = _cellStyle(row, now, t);
     return GestureDetector(
-      onTap: () => PaymentDetailSheet.show(context, row: row, period: period),
+      onTap: row == null
+          ? null
+          : () => PaymentDetailSheet.show(context, row: row, period: period),
       child: Container(
+        key: ValueKey('zn-cell-$memberId-${period.id}'),
         width: _cellSize,
         height: _cellSize,
+        alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.14),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.35), width: 1.2),
+          color: bg,
+          borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(
-          _statusIcon(row.status, overdue),
-          size: 19,
-          color: color,
+        child: Text(
+          mark,
+          style: TextStyle(
+            fontSize: AppText.label,
+            fontWeight: FontWeight.w600,
+            color: fg,
+          ),
         ),
       ),
     );
   }
 
-  IconData _statusIcon(ChargeStatus status, bool overdue) {
-    switch (status) {
+  (String, Color, Color) _cellStyle(
+    PeriodMemberRow? row,
+    DateTime now,
+    AppTokens t,
+  ) {
+    if (row == null) return ('-', t.softSurface, t.textMuted);
+    switch (row.status) {
       case ChargeStatus.paid:
-        return Icons.check_circle_rounded;
+        return ('OK', t.lunasBg, t.lunasFg);
       case ChargeStatus.partial:
-        return Icons.timelapse_rounded;
+        return ('½', t.cicilBg, t.cicilFg);
       case ChargeStatus.waived:
-        return Icons.block_rounded;
+        return ('-', t.softSurface, t.textMuted);
       case ChargeStatus.unpaid:
-        return overdue ? Icons.warning_rounded : Icons.schedule_rounded;
+        if (row.isOverdue(now)) return ('!', t.telatBg, t.telatFg);
+        return ('·', t.softSurface, t.textMuted);
     }
   }
 
-  Widget _legend(AppTokens t) {
-    final partialColor = duesStatusColor(t, ChargeStatus.partial);
+  String _headerLabel(Period period) {
+    final start = DateTime.tryParse(period.startDate);
+    if (start == null) return period.label;
+    if (period.label.startsWith('Minggu')) {
+      return '${start.day} ${_shortMonths[start.month - 1]}';
+    }
+    return _shortMonths[start.month - 1];
+  }
+}
+
+class _Legend extends StatelessWidget {
+  const _Legend({required this.tokens});
+
+  final AppTokens tokens;
+
+  @override
+  Widget build(BuildContext context) {
     return Wrap(
-      spacing: 16,
+      spacing: 14,
       runSpacing: 10,
+      alignment: WrapAlignment.center,
       children: [
-        _legendItem(Icons.check_circle_rounded, t.income, 'Lunas', t),
-        _legendItem(Icons.timelapse_rounded, partialColor, 'Dicicil (Sebagian)', t),
-        _legendItem(Icons.warning_rounded, t.expense, 'Nunggak (Jatuh Tempo)', t),
-        _legendItem(Icons.schedule_rounded, t.textMuted, 'Belum Jatuh Tempo', t),
-        _legendItem(Icons.block_rounded, t.textMuted, 'Bebas Iuran', t),
+        _item('Lunas', tokens.lunasBg),
+        _item('Cicil', tokens.cicilBg),
+        _item('Telat', tokens.telatBg),
+        _item('Belum bergabung', tokens.softSurface),
       ],
     );
   }
 
-  Widget _legendItem(
-    IconData icon,
-    Color color,
-    String label,
-    AppTokens t,
-  ) {
+  Widget _item(String label, Color color) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 15, color: color),
+        Container(
+          width: 16,
+          height: 16,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(5),
+          ),
+        ),
         const SizedBox(width: 6),
         Text(
           label,
           style: TextStyle(
-            fontSize: AppText.label,
-            fontWeight: FontWeight.w500,
-            color: t.textPrimary,
+            fontSize: AppText.body,
+            color: tokens.textMuted,
           ),
         ),
-      ],
-    );
-  }
-}
-
-class _PeriodHeader extends StatelessWidget {
-  const _PeriodHeader({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = context.tokens;
-    final parts = label.split(' ');
-
-    return Column(
-      children: [
-        for (final part in parts)
-          Text(
-            part,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: AppText.label,
-              fontWeight: FontWeight.w700,
-              color: t.textPrimary,
-            ),
-          ),
       ],
     );
   }
@@ -379,46 +346,48 @@ class _MatrixNotice extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.tokens;
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: t.softSurface,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 30, color: t.accent),
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: t.softSurface,
+              shape: BoxShape.circle,
             ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: AppText.title,
-                fontWeight: FontWeight.w700,
-                color: t.textPrimary,
-              ),
+            child: Icon(icon, size: 30, color: t.accent),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: AppText.title,
+              fontWeight: FontWeight.w700,
+              color: t.textPrimary,
             ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: AppText.bodyLarge, height: 1.5, color: t.textMuted),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: AppText.bodyLarge,
+              height: 1.5,
+              color: t.textMuted,
             ),
-            if (actionLabel != null && onAction != null) ...[
-              const SizedBox(height: 20),
-              ElevatedButton.icon(
-                onPressed: onAction,
-                icon: const Icon(Icons.person_add_rounded, size: 18),
-                label: Text(actionLabel!),
-              ),
-            ],
+          ),
+          if (actionLabel != null && onAction != null) ...[
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: onAction,
+              icon: const Icon(Icons.person_add_rounded, size: 18),
+              label: Text(actionLabel!),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }

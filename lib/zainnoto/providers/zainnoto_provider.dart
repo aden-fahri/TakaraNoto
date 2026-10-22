@@ -28,6 +28,9 @@ class ZainNotoProvider extends ChangeNotifier {
 
   ZainNotoRepository get repository => _repository;
 
+  /// Jam sekarang sesuai sumber yang disuntik (tes bisa memakai jam tetap).
+  DateTime get now => _now();
+
   List<Group> _groups = const [];
   Group? _selectedGroup;
   bool _isLoading = false;
@@ -200,8 +203,6 @@ class ZainNotoProvider extends ChangeNotifier {
   Future<void> refreshGroup() async {
     final group = _selectedGroup;
     if (group == null) return;
-    // Coalesce concurrent refreshes: while one refresh is running, further
-    // requests just mark it dirty and are served by the running loop.
     if (_isRefreshing) {
       _refreshPending = true;
       return;
@@ -212,7 +213,7 @@ class ZainNotoProvider extends ChangeNotifier {
     try {
       do {
         _refreshPending = false;
-        await _loadGroupData(group.id);
+        await _loadGroupData(group.id, generatePeriods: false);
       } while (_refreshPending);
     } catch (error) {
       _error = 'Gagal memuat data grup: $error';
@@ -221,8 +222,13 @@ class ZainNotoProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _loadGroupData(String groupId) async {
-    await _repository.generatePeriods(groupId: groupId);
+  Future<void> _loadGroupData(
+    String groupId, {
+    bool generatePeriods = true,
+  }) async {
+    if (generatePeriods) {
+      await _repository.generatePeriods(groupId: groupId);
+    }
 
     // All reads are independent, so start them together and await after.
     final summaryFuture = _repository.getGroupSummary(groupId: groupId);
@@ -360,6 +366,7 @@ class ZainNotoProvider extends ChangeNotifier {
     required String memberId,
     required int amount,
     String? date,
+    String? note,
   }) async {
     final group = _selectedGroup;
     if (group == null || amount <= 0) return null;
@@ -368,9 +375,11 @@ class ZainNotoProvider extends ChangeNotifier {
         groupId: group.id,
         memberId: memberId,
         amount: amount,
-        date: date ?? dateToStr(DateTime.now()),
+        date: date ?? dateToStr(_now()),
+        note: note,
         idempotencyKey: _uuid.v4(),
       );
+      await Future<void>.delayed(const Duration(milliseconds: 10));
       await refreshGroup();
       return id;
     } catch (error) {
@@ -448,7 +457,7 @@ class ZainNotoProvider extends ChangeNotifier {
         amount: amount,
         category: category,
         note: note,
-        date: date ?? dateToStr(DateTime.now()),
+        date: date ?? dateToStr(_now()),
         idempotencyKey: _uuid.v4(),
       );
       await refreshGroup();
@@ -474,7 +483,7 @@ class ZainNotoProvider extends ChangeNotifier {
         groupId: group.id,
         name: name,
         phoneNumber: phoneNumber,
-        joinedAt: joinedAt ?? dateToStr(DateTime.now()),
+        joinedAt: joinedAt ?? dateToStr(_now()),
       );
       await refreshGroup();
       return true;

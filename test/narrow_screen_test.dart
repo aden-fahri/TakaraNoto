@@ -113,7 +113,6 @@ void main() {
       expect(tester.takeException(), isNull);
       _reset(tester);
     },
-    skip: true,
   );
 
   testWidgets(

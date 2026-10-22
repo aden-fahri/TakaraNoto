@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
+import 'package:finflow_flutter/providers/app_mode_controller.dart';
 import 'package:finflow_flutter/screens/zainnoto/tabs/iuran_tab.dart';
 import 'package:finflow_flutter/zainnoto/models/entities.dart';
 import 'package:finflow_flutter/zainnoto/providers/zainnoto_provider.dart';
@@ -12,8 +13,8 @@ import 'helpers.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('tab Iuran: FAB & tombol empty state membuka form anggota '
-      '(nama saja, tanpa nomor HP)', (tester) async {
+  testWidgets('tab Iuran: tombol empty state membuka form anggota '
+      '(nama saja, tanpa nomor HP), tanpa FAB di luar mockup', (tester) async {
     await tester.runAsync(openTestDatabase);
     final repository = ZainNotoRepository();
     final provider = ZainNotoProvider(repository: repository);
@@ -31,37 +32,33 @@ void main() {
     });
 
     await tester.pumpWidget(
-      ChangeNotifierProvider<ZainNotoProvider>.value(
-        value: provider,
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<AppModeController>(
+            create: (_) => AppModeController(initial: AppMode.group),
+          ),
+          ChangeNotifierProvider<ZainNotoProvider>.value(value: provider),
+        ],
         child: const MaterialApp(home: IuranTab()),
       ),
     );
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
-    // Tanpa anggota: FAB dan tombol empty state sama-sama tersedia.
-    expect(find.byType(FloatingActionButton), findsOneWidget);
+    // ZN-Iuran tidak memuat FAB; aksi tambah anggota lewat empty state.
+    expect(find.byType(FloatingActionButton), findsNothing);
     expect(
       find.widgetWithText(ElevatedButton, 'Tambah Anggota'),
       findsOneWidget,
     );
 
-    await tester.tap(find.byType(FloatingActionButton));
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Tambah Anggota'));
     await tester.pumpAndSettle();
 
     // Form anggota cukup nama: tidak ada field nomor HP.
     expect(find.byType(AlertDialog), findsOneWidget);
     expect(find.text('Nomor HP (opsional)'), findsNothing);
     expect(find.byType(TextField), findsOneWidget);
-
-    await tester.tap(find.text('Batal'));
-    await tester.pumpAndSettle();
-    expect(find.byType(AlertDialog), findsNothing);
-
-    // Tombol empty state membuka form yang sama.
-    await tester.tap(find.widgetWithText(ElevatedButton, 'Tambah Anggota'));
-    await tester.pumpAndSettle();
-    expect(find.byType(AlertDialog), findsOneWidget);
-    expect(find.text('Nomor HP (opsional)'), findsNothing);
 
     await tester.tap(find.text('Batal'));
     await tester.pumpAndSettle();
