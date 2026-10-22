@@ -399,10 +399,19 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('Catat pembayaran'));
       await tester.pump();
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 100)),
-      );
+      await tester.runAsync(() async {
+        final sw = Stopwatch()..start();
+        while (sw.elapsed < const Duration(seconds: 5) &&
+            provider.periodRows
+                    .firstWhere((r) => r.memberName == 'Maya')
+                    .paid !=
+                35000) {
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+        }
+      });
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 400));
       await tester.pump(const Duration(milliseconds: 400));
 
       expect(find.text('Bayar iuran'), findsNothing, reason: 'sheet tertutup');

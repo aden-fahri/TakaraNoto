@@ -11,30 +11,24 @@ import '../../../zainnoto/utils/dates.dart';
 import '../../../zainnoto/utils/format.dart';
 
 class PayDuesSheet extends StatefulWidget {
-  const PayDuesSheet({
-    super.key,
-    required this.row,
-    required this.period,
-    required this.navigator,
-  });
+  const PayDuesSheet({super.key, required this.row, required this.period});
 
   final PeriodMemberRow row;
   final Period period;
-  final NavigatorState navigator;
 
   static Future<void> show(
     BuildContext context, {
     required PeriodMemberRow row,
     required Period period,
   }) {
-    final nav = Navigator.of(context);
-    return nav.push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => Material(
-          color: context.tokens.card,
-          child: PayDuesSheet(row: row, period: period, navigator: nav),
-        ),
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.tokens.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
+      builder: (_) => PayDuesSheet(row: row, period: period),
     );
   }
 
@@ -102,8 +96,7 @@ class _PayDuesSheetState extends State<PayDuesSheet> {
       );
       return;
     }
-    widget.navigator.pop();
-    await Future.delayed(Duration.zero);
+    Navigator.of(context).pop();
     messenger.showSnackBar(
       SnackBar(
         content: Text('Pembayaran $name dicatat'),
