@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
@@ -6,6 +7,7 @@ import 'package:finflow_flutter/providers/app_mode_controller.dart';
 import 'package:finflow_flutter/providers/finance_provider.dart';
 import 'package:finflow_flutter/screens/dashboard_screen.dart';
 import 'package:finflow_flutter/screens/zainnoto/zainnoto_shell_screen.dart';
+import 'package:finflow_flutter/services/example_seed.dart';
 
 import 'package:finflow_flutter/widgets/pill_nav_bar.dart';
 import 'package:finflow_flutter/zainnoto/providers/zainnoto_provider.dart';
@@ -104,13 +106,35 @@ void main() {
     'Iuran Kas sempit [overflow 320dp: header banner Row 53px dan toggle Checklist/Matriks 28px]',
     (tester) async {
       _setNarrow(tester);
-      await tester.runAsync(openTestDatabase);
-      final provider = ZainNotoProvider(repository: ZainNotoRepository());
+      final db = await tester.runAsync(openTestDatabase);
+      await tester.runAsync(
+        () => ExampleSeed.seed(db!, asOf: DateTime(2026, 10, 15)),
+      );
+      final provider = ZainNotoProvider(
+        repository: ZainNotoRepository(),
+        now: () => DateTime(2026, 10, 21),
+      );
       await tester.runAsync(provider.loadGroups);
       await tester.pumpWidget(_zainApp(provider));
       await tester.pump();
       await _tapNav(tester, Icons.checklist_rounded);
       expect(tester.takeException(), isNull);
+
+      final nominalTexts = tester
+          .widgetList<Text>(find.byType(Text))
+          .where((w) => (w.data ?? '').contains('Rp'))
+          .toList();
+      expect(nominalTexts, isNotEmpty);
+      for (final text in nominalTexts) {
+        final paragraph = tester.renderObject<RenderParagraph>(
+          find.byWidget(text),
+        );
+        expect(
+          paragraph.didExceedMaxLines,
+          isFalse,
+          reason: 'nominal terpotong: ${text.data}',
+        );
+      }
       _reset(tester);
     },
   );
