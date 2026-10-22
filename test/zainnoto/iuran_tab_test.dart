@@ -466,7 +466,6 @@ void main() {
 
   group(
     'Bayar Iuran B: sheet tertutup setelah submit',
-    skip: 'Bayar iuran: sheet tidak menutup di tes, belum terdiagnosis',
     () {
       testWidgets('sheet ZN-Bayar tertutup', (tester) async {
         _viewport(tester);
