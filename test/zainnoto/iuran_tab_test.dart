@@ -351,9 +351,8 @@ void main() {
     }
   });
 
-  // Bayar iuran: sheet tidak menutup di tes, belum terdiagnosis
   testWidgets(
-    'Bayar Iuran: sheet ZN-Bayar mencatat cicilan dan detail lama tetap terjangkau',
+    'Bayar Iuran A: sheet ZN-Bayar mencatat cicilan dan detail lama tetap terjangkau',
     (tester) async {
       _viewport(tester);
       final provider = await _seeded(tester);
@@ -400,22 +399,23 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('Catat pembayaran'));
       await tester.pump();
-      await tester.runAsync(() async {
-        final sw = Stopwatch()..start();
-        while (sw.elapsed < const Duration(seconds: 5) &&
-            provider.periodRows
-                    .firstWhere((r) => r.memberName == 'Maya')
-                    .paid !=
-                35000) {
-          await Future<void>.delayed(const Duration(milliseconds: 50));
-        }
-      });
+      final sw = Stopwatch()..start();
+      while (sw.elapsed < const Duration(seconds: 10) &&
+          (provider.isRefreshing ||
+              provider.periodRows
+                      .firstWhere((r) => r.memberName == 'Maya')
+                      .paid !=
+                  35000)) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)),
+        );
+        await tester.pump(const Duration(milliseconds: 20));
+      }
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump(const Duration(milliseconds: 400));
 
-      expect(find.text('Bayar iuran'), findsNothing, reason: 'sheet tertutup');
       final maya = provider.periodRows.firstWhere(
         (row) => row.memberName == 'Maya',
       );
@@ -441,13 +441,67 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('Riwayat Pembayaran'), findsOneWidget);
-      expect(find.byTooltip('Edit transaksi'), findsOneWidget);
-      expect(find.byTooltip('Hapus transaksi'), findsOneWidget);
+      expect(
+        find.byTooltip('Edit transaksi'),
+        findsNWidgets(2),
+        reason: 'dua pembayaran Maya: seed 25.000 + cicilan 10.000',
+      );
+      expect(
+        find.byTooltip('Hapus transaksi'),
+        findsNWidgets(2),
+        reason: 'dua pembayaran Maya: seed 25.000 + cicilan 10.000',
+      );
       expect(find.text('Bayar Sebagian'), findsOneWidget);
       expect(find.text('Tandai Bebas Iuran'), findsOneWidget);
       expect(find.text('Tandai Lunas · Rp 15.000'), findsOneWidget);
+
+      for (var i = 0; i < 10; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)),
+        );
+        await tester.pump();
+      }
     },
-    skip: true,
+  );
+
+  group(
+    'Bayar Iuran B: sheet tertutup setelah submit',
+    skip: 'Bayar iuran: sheet tidak menutup di tes, belum terdiagnosis',
+    () {
+      testWidgets('sheet ZN-Bayar tertutup', (tester) async {
+        _viewport(tester);
+        final provider = await _seeded(tester);
+        await _pumpIuran(tester, provider);
+
+        await tester.tap(find.byKey(const ValueKey('zn-pay-Maya')));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+
+        await tester.tap(find.text('Catat pembayaran'));
+        await tester.pump();
+        final sw = Stopwatch()..start();
+        while (sw.elapsed < const Duration(seconds: 10) &&
+            (provider.isRefreshing ||
+                provider.periodRows
+                        .firstWhere((r) => r.memberName == 'Maya')
+                        .paid ==
+                    25000)) {
+          await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 20)),
+          );
+          await tester.pump(const Duration(milliseconds: 20));
+        }
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pump(const Duration(milliseconds: 400));
+
+        expect(
+          find.text('Bayar iuran'),
+          findsNothing,
+          reason: 'sheet tertutup',
+        );
+      });
+    },
   );
 
   testWidgets('Iuran 320dp textScale 1.3: checklist & matriks tanpa overflow', (
